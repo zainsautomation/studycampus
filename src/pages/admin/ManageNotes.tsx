@@ -1,0 +1,232 @@
+import { useEffect, useState, useCallback } from 'react';
+import { motion } from 'framer-motion';
+import { Plus, Pencil, Trash2, Upload, FileText, X } from 'lucide-react';
+import { MainLayout } from '@/components/layout/MainLayout';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
+import { useAuth } from '@/hooks/useAuth';
+
+interface Subject { id: string; name: string; color: string; }
+interface Note { id: string; title: string; description: string | null; file_url: string | null; file_name: string | null; file_type: string | null; file_size: number | null; download_count: number | null; subject_id: string | null; created_at: string; subjects: Subject | null; }
+
+export default function ManageNotes() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingNote, setEditingNote] = useState<Note | null>(null);
+  const [formData, setFormData] = useState({ title: '', description: '', subject_id: '' });
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
+
+  const fetchData = useCallback(async () => {
+    const [notesRes, subjectsRes] = await Promise.all([
+      supabase.from('notes').select('*, subjects(id, name, color)').order('created_at', { ascending: false }),
+      supabase.from('subjects').select('*').order('name'),
+    ]);
+    setNotes(notesRes.data || []);
+    setSubjects(subjectsRes.data || []);
+    setIsLoading(false);
+  }, []);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  const resetForm = () => {
+    setFormData({ title: '', description: '', subject_id: '' });
+    setSelectedFile(null);
+    setEditingNote(null);
+  };
+
+  const handleOpenDialog = (note?: Note) => {
+    if (note) {
+      setEditingNote(note);
+      setFormData({ title: note.title, description: note.description || '', subject_id: note.subject_id || '' });
+    } else {
+      resetForm();
+    }
+    setIsDialogOpen(true);
+  };
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === 'dragenter' || e.type === 'dragover') setDragActive(true);
+    else if (e.type === 'dragleave') setDragActive(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      setSelectedFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.title.trim()) return;
+
+    setIsUploading(true);
+    let fileUrl = editingNote?.file_url || null;
+    let fileName = editingNote?.file_name || null;
+    let fileType = editingNote?.file_type || null;
+    let fileSize = editingNote?.file_size || null;
+
+    try {
+      // Upload file if selected
+      if (selectedFile) {
+        const fileExt = selectedFile.name.split('.').pop();
+        const filePath = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage.from('notes').upload(filePath, selectedFile);
+        if (uploadError) throw uploadError;
+
+        const { data: urlData } = supabase.storage.from('notes').getPublicUrl(filePath);
+        fileUrl = urlData.publicUrl;
+        fileName = selectedFile.name;
+        fileType = selectedFile.type;
+        fileSize = selectedFile.size;
+      }
+
+      const noteData = {
+        title: formData.title,
+        description: formData.description || null,
+        subject_id: formData.subject_id || null,
+        file_url: fileUrl,
+        file_name: fileName,
+        file_type: fileType,
+        file_size: fileSize,
+        created_by: user?.id,
+      };
+
+      if (editingNote) {
+        const { error } = await supabase.from('notes').update(noteData).eq('id', editingNote.id);
+        if (error) throw error;
+        toast({ title: 'Note updated successfully' });
+      } else {
+        const { error } = await supabase.from('notes').insert(noteData);
+        if (error) throw error;
+        toast({ title: 'Note created successfully' });
+      }
+
+      setIsDialogOpen(false);
+      resetForm();
+      fetchData();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      const { error } = await supabase.from('notes').delete().eq('id', id);
+      if (error) throw error;
+      toast({ title: 'Note deleted successfully' });
+      fetchData();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  };
+
+  return (
+    <MainLayout>
+      <div className="container py-6 md:py-8">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-display font-bold">Manage Notes</h1>
+              <p className="text-muted-foreground mt-1">Upload and manage study materials</p>
+            </div>
+            <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
+              <DialogTrigger asChild>
+                <Button onClick={() => handleOpenDialog()}><Plus className="w-4 h-4 mr-2" />Add Note</Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-lg">
+                <DialogHeader><DialogTitle>{editingNote ? 'Edit Note' : 'Add New Note'}</DialogTitle></DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div><Label htmlFor="title">Title *</Label><Input id="title" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} required /></div>
+                  <div><Label htmlFor="description">Description</Label><Textarea id="description" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} /></div>
+                  <div><Label htmlFor="subject">Subject</Label>
+                    <Select value={formData.subject_id} onValueChange={(val) => setFormData({ ...formData, subject_id: val })}>
+                      <SelectTrigger><SelectValue placeholder="Select subject" /></SelectTrigger>
+                      <SelectContent>{subjects.map((s) => (<SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>))}</SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>File (PDF, DOC, PPT)</Label>
+                    <div className={`mt-2 border-2 border-dashed rounded-lg p-6 text-center transition-colors ${dragActive ? 'border-primary bg-primary/5' : 'border-border'}`} onDragEnter={handleDrag} onDragLeave={handleDrag} onDragOver={handleDrag} onDrop={handleDrop}>
+                      {selectedFile ? (
+                        <div className="flex items-center justify-center gap-2">
+                          <FileText className="w-5 h-5 text-primary" />
+                          <span className="text-sm">{selectedFile.name}</span>
+                          <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => setSelectedFile(null)}><X className="w-4 h-4" /></Button>
+                        </div>
+                      ) : (
+                        <>
+                          <Upload className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
+                          <p className="text-sm text-muted-foreground">Drag & drop or click to upload</p>
+                          <input type="file" accept=".pdf,.doc,.docx,.ppt,.pptx" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={(e) => e.target.files?.[0] && setSelectedFile(e.target.files[0])} />
+                        </>
+                      )}
+                    </div>
+                    {editingNote?.file_name && !selectedFile && <p className="text-xs text-muted-foreground mt-2">Current file: {editingNote.file_name}</p>}
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+                    <Button type="submit" disabled={isUploading}>{isUploading ? 'Uploading...' : editingNote ? 'Update' : 'Create'}</Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          <Card>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-muted/50"><tr className="text-left"><th className="p-4 font-medium">Title</th><th className="p-4 font-medium hidden md:table-cell">Subject</th><th className="p-4 font-medium hidden sm:table-cell">Downloads</th><th className="p-4 font-medium hidden lg:table-cell">Date</th><th className="p-4 font-medium text-right">Actions</th></tr></thead>
+                  <tbody className="divide-y divide-border">
+                    {notes.map((note) => (
+                      <tr key={note.id} className="hover:bg-muted/30">
+                        <td className="p-4"><div className="flex items-center gap-2"><FileText className="w-4 h-4 text-accent flex-shrink-0" /><span className="font-medium truncate max-w-[200px]">{note.title}</span></div></td>
+                        <td className="p-4 hidden md:table-cell">{note.subjects ? <Badge variant="outline" style={{ borderColor: note.subjects.color, color: note.subjects.color }}>{note.subjects.name}</Badge> : '-'}</td>
+                        <td className="p-4 hidden sm:table-cell">{note.download_count || 0}</td>
+                        <td className="p-4 hidden lg:table-cell text-sm text-muted-foreground">{format(new Date(note.created_at), 'MMM dd, yyyy')}</td>
+                        <td className="p-4 text-right">
+                          <div className="flex justify-end gap-1">
+                            <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(note)}><Pencil className="w-4 h-4" /></Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-destructive hover:text-destructive"><Trash2 className="w-4 h-4" /></Button></AlertDialogTrigger>
+                              <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Delete Note?</AlertDialogTitle><AlertDialogDescription>This will permanently delete "{note.title}".</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(note.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {notes.length === 0 && <tr><td colSpan={5} className="p-8 text-center text-muted-foreground">No notes yet</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+    </MainLayout>
+  );
+}

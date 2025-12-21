@@ -12,6 +12,12 @@ import Notes from "./pages/Notes";
 import Announcements from "./pages/Announcements";
 import Updates from "./pages/Updates";
 import NotFound from "./pages/NotFound";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import ManageNotes from "./pages/admin/ManageNotes";
+import ManageAnnouncements from "./pages/admin/ManageAnnouncements";
+import ManageUpdates from "./pages/admin/ManageUpdates";
+import ManageSubjects from "./pages/admin/ManageSubjects";
+import ManageUsers from "./pages/admin/ManageUsers";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +36,12 @@ const App = () => (
               <Route path="/notes" element={<ProtectedRoute><Notes /></ProtectedRoute>} />
               <Route path="/announcements" element={<ProtectedRoute><Announcements /></ProtectedRoute>} />
               <Route path="/updates" element={<ProtectedRoute><Updates /></ProtectedRoute>} />
+              <Route path="/admin" element={<ProtectedRoute requireAdmin><AdminDashboard /></ProtectedRoute>} />
+              <Route path="/admin/notes" element={<ProtectedRoute requireAdmin><ManageNotes /></ProtectedRoute>} />
+              <Route path="/admin/announcements" element={<ProtectedRoute requireAdmin><ManageAnnouncements /></ProtectedRoute>} />
+              <Route path="/admin/updates" element={<ProtectedRoute requireAdmin><ManageUpdates /></ProtectedRoute>} />
+              <Route path="/admin/subjects" element={<ProtectedRoute requireAdmin><ManageSubjects /></ProtectedRoute>} />
+              <Route path="/admin/users" element={<ProtectedRoute requireAdmin><ManageUsers /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
