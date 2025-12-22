@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Pencil, Trash2, Calendar } from 'lucide-react';
-import { MainLayout } from '@/components/layout/MainLayout';
+import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +17,16 @@ import { format } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
 
 interface Update { id: string; title: string; description: string | null; event_date: string; event_time: string | null; event_type: string | null; created_at: string; }
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.05 } }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 10 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.3 } }
+};
 
 export default function ManageUpdates() {
   const { user } = useAuth();
@@ -101,78 +111,128 @@ export default function ManageUpdates() {
   };
 
   return (
-    <MainLayout>
-      <div className="container py-6 md:py-8">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-display font-bold">Manage Events</h1>
-              <p className="text-muted-foreground mt-1">Schedule exams, assignments, and events</p>
-            </div>
-            <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
-              <DialogTrigger asChild>
-                <Button onClick={() => handleOpenDialog()}><Plus className="w-4 h-4 mr-2" />Add Event</Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-lg">
-                <DialogHeader><DialogTitle>{editingUpdate ? 'Edit Event' : 'New Event'}</DialogTitle></DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div><Label htmlFor="title">Title *</Label><Input id="title" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} required /></div>
-                  <div><Label htmlFor="description">Description</Label><Textarea id="description" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} /></div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div><Label htmlFor="event_date">Date *</Label><Input type="date" id="event_date" value={formData.event_date} onChange={(e) => setFormData({ ...formData, event_date: e.target.value })} required /></div>
-                    <div><Label htmlFor="event_time">Time</Label><Input type="time" id="event_time" value={formData.event_time} onChange={(e) => setFormData({ ...formData, event_time: e.target.value })} /></div>
+    <AdminLayout title="Manage Events" description="Schedule exams, assignments, and events">
+      <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-6">
+        <motion.div variants={itemVariants} className="flex justify-end">
+          <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
+            <DialogTrigger asChild>
+              <Button onClick={() => handleOpenDialog()} className="gap-2">
+                <Plus className="w-4 h-4" />Add Event
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg">
+              <DialogHeader><DialogTitle>{editingUpdate ? 'Edit Event' : 'New Event'}</DialogTitle></DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <Label htmlFor="title">Title *</Label>
+                  <Input id="title" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} required />
+                </div>
+                <div>
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea id="description" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="event_date">Date *</Label>
+                    <Input type="date" id="event_date" value={formData.event_date} onChange={(e) => setFormData({ ...formData, event_date: e.target.value })} required />
                   </div>
-                  <div><Label>Event Type</Label>
-                    <Select value={formData.event_type} onValueChange={(val) => setFormData({ ...formData, event_type: val })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="general">General</SelectItem>
-                        <SelectItem value="exam">Exam</SelectItem>
-                        <SelectItem value="assignment">Assignment</SelectItem>
-                        <SelectItem value="holiday">Holiday</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <div>
+                    <Label htmlFor="event_time">Time</Label>
+                    <Input type="time" id="event_time" value={formData.event_time} onChange={(e) => setFormData({ ...formData, event_time: e.target.value })} />
                   </div>
-                  <div className="flex justify-end gap-2">
-                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-                    <Button type="submit">{editingUpdate ? 'Update' : 'Create'}</Button>
-                  </div>
-                </form>
-              </DialogContent>
-            </Dialog>
-          </div>
+                </div>
+                <div>
+                  <Label>Event Type</Label>
+                  <Select value={formData.event_type} onValueChange={(val) => setFormData({ ...formData, event_type: val })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="general">General</SelectItem>
+                      <SelectItem value="exam">Exam</SelectItem>
+                      <SelectItem value="assignment">Assignment</SelectItem>
+                      <SelectItem value="holiday">Holiday</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+                  <Button type="submit">{editingUpdate ? 'Update' : 'Create'}</Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </motion.div>
 
-          <Card>
+        <motion.div variants={itemVariants}>
+          <Card className="overflow-hidden">
             <CardContent className="p-0">
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-muted/50"><tr className="text-left"><th className="p-4 font-medium">Title</th><th className="p-4 font-medium">Date</th><th className="p-4 font-medium hidden md:table-cell">Type</th><th className="p-4 font-medium hidden sm:table-cell">Time</th><th className="p-4 font-medium text-right">Actions</th></tr></thead>
+                  <thead className="bg-muted/50">
+                    <tr className="text-left">
+                      <th className="p-4 font-medium">Title</th>
+                      <th className="p-4 font-medium">Date</th>
+                      <th className="p-4 font-medium hidden md:table-cell">Type</th>
+                      <th className="p-4 font-medium hidden sm:table-cell">Time</th>
+                      <th className="p-4 font-medium text-right">Actions</th>
+                    </tr>
+                  </thead>
                   <tbody className="divide-y divide-border">
-                    {updates.map((update) => (
-                      <tr key={update.id} className="hover:bg-muted/30">
-                        <td className="p-4"><div className="flex items-center gap-2"><Calendar className="w-4 h-4 text-primary flex-shrink-0" /><span className="font-medium truncate max-w-[200px]">{update.title}</span></div></td>
+                    {updates.map((update, index) => (
+                      <motion.tr 
+                        key={update.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.03 }}
+                        className="hover:bg-muted/30 transition-colors"
+                      >
+                        <td className="p-4">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="w-4 h-4 text-primary flex-shrink-0" />
+                            <span className="font-medium truncate max-w-[200px]">{update.title}</span>
+                          </div>
+                        </td>
                         <td className="p-4 text-sm">{format(new Date(update.event_date), 'MMM dd, yyyy')}</td>
-                        <td className="p-4 hidden md:table-cell"><Badge variant="outline" className={getTypeStyles(update.event_type)}>{update.event_type || 'general'}</Badge></td>
+                        <td className="p-4 hidden md:table-cell">
+                          <Badge variant="outline" className={getTypeStyles(update.event_type)}>{update.event_type || 'general'}</Badge>
+                        </td>
                         <td className="p-4 hidden sm:table-cell text-sm text-muted-foreground">{update.event_time || '-'}</td>
                         <td className="p-4 text-right">
                           <div className="flex justify-end gap-1">
-                            <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(update)}><Pencil className="w-4 h-4" /></Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(update)} className="hover:bg-primary/10"><Pencil className="w-4 h-4" /></Button>
                             <AlertDialog>
-                              <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-destructive hover:text-destructive"><Trash2 className="w-4 h-4" /></Button></AlertDialogTrigger>
-                              <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Delete Event?</AlertDialogTitle><AlertDialogDescription>This will permanently delete "{update.title}".</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(update.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/10"><Trash2 className="w-4 h-4" /></Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete Event?</AlertDialogTitle>
+                                  <AlertDialogDescription>This will permanently delete "{update.title}".</AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleDelete(update.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
                             </AlertDialog>
                           </div>
                         </td>
-                      </tr>
+                      </motion.tr>
                     ))}
-                    {updates.length === 0 && <tr><td colSpan={5} className="p-8 text-center text-muted-foreground">No events yet</td></tr>}
+                    {updates.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="p-12 text-center text-muted-foreground">
+                          <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                          <p>No events yet. Click "Add Event" to create one.</p>
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
             </CardContent>
           </Card>
         </motion.div>
-      </div>
-    </MainLayout>
+      </motion.div>
+    </AdminLayout>
   );
 }
