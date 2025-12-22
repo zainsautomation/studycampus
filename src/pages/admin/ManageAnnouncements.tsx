@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Pencil, Trash2, Megaphone, Pin } from 'lucide-react';
-import { MainLayout } from '@/components/layout/MainLayout';
+import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +18,16 @@ import { format } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
 
 interface Announcement { id: string; title: string; content: string; priority: string | null; is_pinned: boolean | null; created_at: string; }
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.05 } }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 10 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.3 } }
+};
 
 export default function ManageAnnouncements() {
   const { user } = useAuth();
@@ -94,77 +104,123 @@ export default function ManageAnnouncements() {
   };
 
   return (
-    <MainLayout>
-      <div className="container py-6 md:py-8">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-display font-bold">Manage Announcements</h1>
-              <p className="text-muted-foreground mt-1">Create and manage class announcements</p>
-            </div>
-            <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
-              <DialogTrigger asChild>
-                <Button onClick={() => handleOpenDialog()}><Plus className="w-4 h-4 mr-2" />Add Announcement</Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-lg">
-                <DialogHeader><DialogTitle>{editingAnnouncement ? 'Edit Announcement' : 'New Announcement'}</DialogTitle></DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div><Label htmlFor="title">Title *</Label><Input id="title" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} required /></div>
-                  <div><Label htmlFor="content">Content *</Label><Textarea id="content" rows={4} value={formData.content} onChange={(e) => setFormData({ ...formData, content: e.target.value })} required /></div>
-                  <div><Label>Priority</Label>
-                    <Select value={formData.priority} onValueChange={(val) => setFormData({ ...formData, priority: val })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="normal">Normal</SelectItem>
-                        <SelectItem value="important">Important</SelectItem>
-                        <SelectItem value="urgent">Urgent</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="is_pinned">Pin to top</Label>
-                    <Switch id="is_pinned" checked={formData.is_pinned} onCheckedChange={(checked) => setFormData({ ...formData, is_pinned: checked })} />
-                  </div>
-                  <div className="flex justify-end gap-2">
-                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-                    <Button type="submit">{editingAnnouncement ? 'Update' : 'Create'}</Button>
-                  </div>
-                </form>
-              </DialogContent>
-            </Dialog>
-          </div>
+    <AdminLayout title="Manage Announcements" description="Create and manage class announcements">
+      <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-6">
+        <motion.div variants={itemVariants} className="flex justify-end">
+          <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
+            <DialogTrigger asChild>
+              <Button onClick={() => handleOpenDialog()} className="gap-2">
+                <Plus className="w-4 h-4" />Add Announcement
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg">
+              <DialogHeader><DialogTitle>{editingAnnouncement ? 'Edit Announcement' : 'New Announcement'}</DialogTitle></DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <Label htmlFor="title">Title *</Label>
+                  <Input id="title" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} required />
+                </div>
+                <div>
+                  <Label htmlFor="content">Content *</Label>
+                  <Textarea id="content" rows={4} value={formData.content} onChange={(e) => setFormData({ ...formData, content: e.target.value })} required />
+                </div>
+                <div>
+                  <Label>Priority</Label>
+                  <Select value={formData.priority} onValueChange={(val) => setFormData({ ...formData, priority: val })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="normal">Normal</SelectItem>
+                      <SelectItem value="important">Important</SelectItem>
+                      <SelectItem value="urgent">Urgent</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                  <Label htmlFor="is_pinned" className="cursor-pointer">Pin to top</Label>
+                  <Switch id="is_pinned" checked={formData.is_pinned} onCheckedChange={(checked) => setFormData({ ...formData, is_pinned: checked })} />
+                </div>
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+                  <Button type="submit">{editingAnnouncement ? 'Update' : 'Create'}</Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </motion.div>
 
-          <Card>
+        <motion.div variants={itemVariants}>
+          <Card className="overflow-hidden">
             <CardContent className="p-0">
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-muted/50"><tr className="text-left"><th className="p-4 font-medium">Title</th><th className="p-4 font-medium hidden md:table-cell">Priority</th><th className="p-4 font-medium hidden sm:table-cell">Pinned</th><th className="p-4 font-medium hidden lg:table-cell">Date</th><th className="p-4 font-medium text-right">Actions</th></tr></thead>
+                  <thead className="bg-muted/50">
+                    <tr className="text-left">
+                      <th className="p-4 font-medium">Title</th>
+                      <th className="p-4 font-medium hidden md:table-cell">Priority</th>
+                      <th className="p-4 font-medium hidden sm:table-cell">Pinned</th>
+                      <th className="p-4 font-medium hidden lg:table-cell">Date</th>
+                      <th className="p-4 font-medium text-right">Actions</th>
+                    </tr>
+                  </thead>
                   <tbody className="divide-y divide-border">
-                    {announcements.map((ann) => (
-                      <tr key={ann.id} className="hover:bg-muted/30">
-                        <td className="p-4"><div className="flex items-center gap-2"><Megaphone className="w-4 h-4 text-warning flex-shrink-0" /><span className="font-medium truncate max-w-[200px]">{ann.title}</span></div></td>
-                        <td className="p-4 hidden md:table-cell"><Badge className={getPriorityStyles(ann.priority)}>{ann.priority || 'normal'}</Badge></td>
-                        <td className="p-4 hidden sm:table-cell">{ann.is_pinned && <Pin className="w-4 h-4 text-primary" />}</td>
+                    {announcements.map((ann, index) => (
+                      <motion.tr 
+                        key={ann.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.03 }}
+                        className="hover:bg-muted/30 transition-colors"
+                      >
+                        <td className="p-4">
+                          <div className="flex items-center gap-2">
+                            <Megaphone className="w-4 h-4 text-warning flex-shrink-0" />
+                            <span className="font-medium truncate max-w-[200px]">{ann.title}</span>
+                          </div>
+                        </td>
+                        <td className="p-4 hidden md:table-cell">
+                          <Badge className={getPriorityStyles(ann.priority)}>{ann.priority || 'normal'}</Badge>
+                        </td>
+                        <td className="p-4 hidden sm:table-cell">
+                          {ann.is_pinned && <Pin className="w-4 h-4 text-primary" />}
+                        </td>
                         <td className="p-4 hidden lg:table-cell text-sm text-muted-foreground">{format(new Date(ann.created_at), 'MMM dd, yyyy')}</td>
                         <td className="p-4 text-right">
                           <div className="flex justify-end gap-1">
-                            <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(ann)}><Pencil className="w-4 h-4" /></Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(ann)} className="hover:bg-primary/10"><Pencil className="w-4 h-4" /></Button>
                             <AlertDialog>
-                              <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-destructive hover:text-destructive"><Trash2 className="w-4 h-4" /></Button></AlertDialogTrigger>
-                              <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Delete Announcement?</AlertDialogTitle><AlertDialogDescription>This will permanently delete "{ann.title}".</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(ann.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/10"><Trash2 className="w-4 h-4" /></Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete Announcement?</AlertDialogTitle>
+                                  <AlertDialogDescription>This will permanently delete "{ann.title}".</AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleDelete(ann.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
                             </AlertDialog>
                           </div>
                         </td>
-                      </tr>
+                      </motion.tr>
                     ))}
-                    {announcements.length === 0 && <tr><td colSpan={5} className="p-8 text-center text-muted-foreground">No announcements yet</td></tr>}
+                    {announcements.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="p-12 text-center text-muted-foreground">
+                          <Megaphone className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                          <p>No announcements yet. Click "Add Announcement" to create one.</p>
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
             </CardContent>
           </Card>
         </motion.div>
-      </div>
-    </MainLayout>
+      </motion.div>
+    </AdminLayout>
   );
 }

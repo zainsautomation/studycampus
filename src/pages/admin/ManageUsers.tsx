@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Copy, Trash2, Users, Ticket, CheckCircle, XCircle, Eye, EyeOff } from 'lucide-react';
-import { MainLayout } from '@/components/layout/MainLayout';
+import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,6 +26,16 @@ function generateCode(): string {
   return code;
 }
 
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.05 } }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 10 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.3 } }
+};
+
 export default function ManageUsers() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -43,7 +53,6 @@ export default function ManageUsers() {
     ]);
     setInviteCodes(codesRes.data || []);
     
-    // Fetch profiles for each student
     if (rolesRes.data && rolesRes.data.length > 0) {
       const userIds = rolesRes.data.map(r => r.user_id);
       const { data: profilesData } = await supabase.from('profiles').select('id, full_name, email').in('id', userIds);
@@ -111,16 +120,11 @@ export default function ManageUsers() {
   };
 
   return (
-    <MainLayout>
-      <div className="container py-6 md:py-8">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-display font-bold">User Management</h1>
-            <p className="text-muted-foreground mt-1">Manage invite codes and students</p>
-          </div>
-
+    <AdminLayout title="User Management" description="Manage invite codes and students">
+      <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-6">
+        <motion.div variants={itemVariants}>
           <Tabs defaultValue="codes" className="space-y-6">
-            <TabsList>
+            <TabsList className="grid w-full max-w-md grid-cols-2">
               <TabsTrigger value="codes" className="gap-2"><Ticket className="w-4 h-4" />Invite Codes</TabsTrigger>
               <TabsTrigger value="students" className="gap-2"><Users className="w-4 h-4" />Students</TabsTrigger>
             </TabsList>
@@ -128,7 +132,9 @@ export default function ManageUsers() {
             <TabsContent value="codes" className="space-y-4">
               <div className="flex justify-end">
                 <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
-                  <DialogTrigger asChild><Button><Plus className="w-4 h-4 mr-2" />Generate Code</Button></DialogTrigger>
+                  <DialogTrigger asChild>
+                    <Button className="gap-2"><Plus className="w-4 h-4" />Generate Code</Button>
+                  </DialogTrigger>
                   <DialogContent>
                     <DialogHeader><DialogTitle>Generate Invite Code</DialogTitle></DialogHeader>
                     <form onSubmit={handleCreateCode} className="space-y-4">
@@ -139,12 +145,21 @@ export default function ManageUsers() {
                           <Button type="button" variant="outline" onClick={() => setFormData({ ...formData, code: generateCode() })}>Regenerate</Button>
                         </div>
                       </div>
-                      <div><Label htmlFor="description">Description</Label><Input id="description" placeholder="e.g., Fall 2024 Class" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} /></div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div><Label htmlFor="max_uses">Max Uses</Label><Input type="number" id="max_uses" min={1} value={formData.max_uses} onChange={(e) => setFormData({ ...formData, max_uses: parseInt(e.target.value) || 50 })} /></div>
-                        <div><Label htmlFor="expires_at">Expires</Label><Input type="date" id="expires_at" value={formData.expires_at} onChange={(e) => setFormData({ ...formData, expires_at: e.target.value })} /></div>
+                      <div>
+                        <Label htmlFor="description">Description</Label>
+                        <Input id="description" placeholder="e.g., Fall 2024 Class" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} />
                       </div>
-                      <div className="flex justify-end gap-2">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="max_uses">Max Uses</Label>
+                          <Input type="number" id="max_uses" min={1} value={formData.max_uses} onChange={(e) => setFormData({ ...formData, max_uses: parseInt(e.target.value) || 50 })} />
+                        </div>
+                        <div>
+                          <Label htmlFor="expires_at">Expires</Label>
+                          <Input type="date" id="expires_at" value={formData.expires_at} onChange={(e) => setFormData({ ...formData, expires_at: e.target.value })} />
+                        </div>
+                      </div>
+                      <div className="flex justify-end gap-2 pt-2">
                         <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
                         <Button type="submit">Create</Button>
                       </div>
@@ -153,23 +168,45 @@ export default function ManageUsers() {
                 </Dialog>
               </div>
 
-              <Card>
+              <Card className="overflow-hidden">
                 <CardContent className="p-0">
                   <div className="overflow-x-auto">
                     <table className="w-full">
-                      <thead className="bg-muted/50"><tr className="text-left"><th className="p-4 font-medium">Code</th><th className="p-4 font-medium hidden md:table-cell">Description</th><th className="p-4 font-medium">Usage</th><th className="p-4 font-medium hidden sm:table-cell">Status</th><th className="p-4 font-medium text-right">Actions</th></tr></thead>
+                      <thead className="bg-muted/50">
+                        <tr className="text-left">
+                          <th className="p-4 font-medium">Code</th>
+                          <th className="p-4 font-medium hidden md:table-cell">Description</th>
+                          <th className="p-4 font-medium">Usage</th>
+                          <th className="p-4 font-medium hidden sm:table-cell">Status</th>
+                          <th className="p-4 font-medium text-right">Actions</th>
+                        </tr>
+                      </thead>
                       <tbody className="divide-y divide-border">
-                        {inviteCodes.map((code) => (
-                          <tr key={code.id} className="hover:bg-muted/30">
+                        {inviteCodes.map((code, index) => (
+                          <motion.tr 
+                            key={code.id}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: index * 0.03 }}
+                            className="hover:bg-muted/30 transition-colors"
+                          >
                             <td className="p-4">
                               <div className="flex items-center gap-2">
                                 <span className="font-mono font-medium">{showCode[code.id] ? code.code : '••••••••'}</span>
-                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowCode({ ...showCode, [code.id]: !showCode[code.id] })}>{showCode[code.id] ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}</Button>
-                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => copyCode(code.code)}><Copy className="w-3 h-3" /></Button>
+                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowCode({ ...showCode, [code.id]: !showCode[code.id] })}>
+                                  {showCode[code.id] ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => copyCode(code.code)}>
+                                  <Copy className="w-3 h-3" />
+                                </Button>
                               </div>
                             </td>
                             <td className="p-4 hidden md:table-cell text-sm text-muted-foreground">{code.description || '-'}</td>
-                            <td className="p-4"><Badge variant="outline">{code.current_uses || 0} / {code.max_uses || '∞'}</Badge></td>
+                            <td className="p-4">
+                              <Badge variant="outline" className={code.current_uses && code.max_uses && code.current_uses >= code.max_uses ? 'border-destructive text-destructive' : ''}>
+                                {code.current_uses || 0} / {code.max_uses || '∞'}
+                              </Badge>
+                            </td>
                             <td className="p-4 hidden sm:table-cell">
                               <div className="flex items-center gap-2">
                                 {code.is_active ? <CheckCircle className="w-4 h-4 text-success" /> : <XCircle className="w-4 h-4 text-destructive" />}
@@ -178,13 +215,33 @@ export default function ManageUsers() {
                             </td>
                             <td className="p-4 text-right">
                               <AlertDialog>
-                                <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-destructive hover:text-destructive"><Trash2 className="w-4 h-4" /></Button></AlertDialogTrigger>
-                                <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Delete Invite Code?</AlertDialogTitle><AlertDialogDescription>This will permanently delete this invite code.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => deleteCode(code.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/10">
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete Invite Code?</AlertDialogTitle>
+                                    <AlertDialogDescription>This will permanently delete this invite code.</AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => deleteCode(code.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
                               </AlertDialog>
                             </td>
-                          </tr>
+                          </motion.tr>
                         ))}
-                        {inviteCodes.length === 0 && <tr><td colSpan={5} className="p-8 text-center text-muted-foreground">No invite codes yet</td></tr>}
+                        {inviteCodes.length === 0 && (
+                          <tr>
+                            <td colSpan={5} className="p-12 text-center text-muted-foreground">
+                              <Ticket className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                              <p>No invite codes yet. Click "Generate Code" to create one.</p>
+                            </td>
+                          </tr>
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -193,21 +250,45 @@ export default function ManageUsers() {
             </TabsContent>
 
             <TabsContent value="students">
-              <Card>
-                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Users className="w-5 h-5 text-primary" />Registered Students ({students.length})</CardTitle></CardHeader>
+              <Card className="overflow-hidden">
+                <CardHeader className="border-b border-border">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Users className="w-5 h-5 text-primary" />
+                    Registered Students ({students.length})
+                  </CardTitle>
+                </CardHeader>
                 <CardContent className="p-0">
                   <div className="overflow-x-auto">
                     <table className="w-full">
-                      <thead className="bg-muted/50"><tr className="text-left"><th className="p-4 font-medium">Name</th><th className="p-4 font-medium">Email</th><th className="p-4 font-medium hidden md:table-cell">Joined</th></tr></thead>
+                      <thead className="bg-muted/50">
+                        <tr className="text-left">
+                          <th className="p-4 font-medium">Name</th>
+                          <th className="p-4 font-medium">Email</th>
+                          <th className="p-4 font-medium hidden md:table-cell">Joined</th>
+                        </tr>
+                      </thead>
                       <tbody className="divide-y divide-border">
-                        {students.map((student) => (
-                          <tr key={student.id} className="hover:bg-muted/30">
+                        {students.map((student, index) => (
+                          <motion.tr 
+                            key={student.id}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: index * 0.03 }}
+                            className="hover:bg-muted/30 transition-colors"
+                          >
                             <td className="p-4 font-medium">{student.full_name || 'No name'}</td>
                             <td className="p-4 text-sm text-muted-foreground">{student.email || '-'}</td>
                             <td className="p-4 hidden md:table-cell text-sm text-muted-foreground">{format(new Date(student.created_at), 'MMM dd, yyyy')}</td>
-                          </tr>
+                          </motion.tr>
                         ))}
-                        {students.length === 0 && <tr><td colSpan={3} className="p-8 text-center text-muted-foreground">No students registered yet</td></tr>}
+                        {students.length === 0 && (
+                          <tr>
+                            <td colSpan={3} className="p-12 text-center text-muted-foreground">
+                              <Users className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                              <p>No students registered yet</p>
+                            </td>
+                          </tr>
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -216,7 +297,7 @@ export default function ManageUsers() {
             </TabsContent>
           </Tabs>
         </motion.div>
-      </div>
-    </MainLayout>
+      </motion.div>
+    </AdminLayout>
   );
 }

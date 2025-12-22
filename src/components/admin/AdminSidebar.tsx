@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { 
   LayoutDashboard, 
   FileText, 
@@ -6,7 +7,8 @@ import {
   Calendar, 
   BookOpen, 
   Users,
-  ChevronLeft
+  ChevronLeft,
+  GraduationCap
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -20,39 +22,93 @@ const adminNavItems = [
   { href: '/admin/users', label: 'Users', icon: Users },
 ];
 
+const sidebarVariants = {
+  hidden: { x: -20, opacity: 0 },
+  visible: { 
+    x: 0, 
+    opacity: 1,
+    transition: { staggerChildren: 0.05, delayChildren: 0.1 }
+  }
+};
+
+const itemVariants = {
+  hidden: { x: -10, opacity: 0 },
+  visible: { x: 0, opacity: 1 }
+};
+
 export function AdminSidebar() {
   const location = useLocation();
 
   return (
-    <aside className="hidden lg:flex w-64 flex-col border-r border-border bg-card">
+    <motion.aside 
+      variants={sidebarVariants}
+      initial="hidden"
+      animate="visible"
+      className="hidden lg:flex w-64 flex-col border-r border-border bg-card"
+    >
+      {/* Logo/Brand */}
       <div className="p-4 border-b border-border">
-        <Link to="/dashboard" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
-          <ChevronLeft className="w-4 h-4" />
-          <span className="text-sm">Back to Portal</span>
+        <Link to="/admin" className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
+            <GraduationCap className="w-5 h-5 text-primary-foreground" />
+          </div>
+          <div>
+            <h2 className="font-display font-semibold text-sm">Admin Panel</h2>
+            <p className="text-xs text-muted-foreground">Manage everything</p>
+          </div>
         </Link>
       </div>
-      <nav className="flex-1 p-4 space-y-1">
-        {adminNavItems.map((item) => {
+
+      {/* Back to Portal */}
+      <div className="p-3 border-b border-border">
+        <Link to="/dashboard">
+          <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground">
+            <ChevronLeft className="w-4 h-4" />
+            Back to Portal
+          </Button>
+        </Link>
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex-1 p-3 space-y-1">
+        {adminNavItems.map((item, index) => {
           const isActive = location.pathname === item.href || 
             (item.href !== '/admin' && location.pathname.startsWith(item.href));
           return (
-            <Link
-              key={item.href}
-              to={item.href}
-              className={cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-                isActive
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-              )}
-            >
-              <item.icon className="w-5 h-5" />
-              {item.label}
-            </Link>
+            <motion.div key={item.href} variants={itemVariants}>
+              <Link
+                to={item.href}
+                className={cn(
+                  'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200',
+                  isActive
+                    ? 'bg-primary text-primary-foreground shadow-md'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                )}
+              >
+                <item.icon className={cn(
+                  "w-5 h-5 transition-transform",
+                  isActive && "scale-110"
+                )} />
+                {item.label}
+                {isActive && (
+                  <motion.div
+                    layoutId="activeIndicator"
+                    className="ml-auto w-1.5 h-1.5 rounded-full bg-primary-foreground"
+                  />
+                )}
+              </Link>
+            </motion.div>
           );
         })}
       </nav>
-    </aside>
+
+      {/* Footer */}
+      <div className="p-4 border-t border-border">
+        <p className="text-xs text-muted-foreground text-center">
+          Student Portal Admin
+        </p>
+      </div>
+    </motion.aside>
   );
 }
 
@@ -60,30 +116,46 @@ export function AdminMobileNav() {
   const location = useLocation();
 
   return (
-    <div className="lg:hidden border-b border-border bg-card overflow-x-auto">
-      <div className="flex p-2 gap-1">
+    <div className="lg:hidden border-b border-border bg-card">
+      {/* Mobile Header */}
+      <div className="flex items-center justify-between p-3 border-b border-border">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+            <GraduationCap className="w-4 h-4 text-primary-foreground" />
+          </div>
+          <span className="font-display font-semibold text-sm">Admin</span>
+        </div>
         <Link to="/dashboard">
-          <Button variant="ghost" size="sm" className="gap-1">
-            <ChevronLeft className="w-4 h-4" />
-            Back
+          <Button variant="ghost" size="sm" className="gap-1 text-xs">
+            <ChevronLeft className="w-3 h-3" />
+            Portal
           </Button>
         </Link>
-        {adminNavItems.map((item) => {
-          const isActive = location.pathname === item.href || 
-            (item.href !== '/admin' && location.pathname.startsWith(item.href));
-          return (
-            <Link key={item.href} to={item.href}>
-              <Button
-                variant={isActive ? 'default' : 'ghost'}
-                size="sm"
-                className="gap-1 whitespace-nowrap"
-              >
-                <item.icon className="w-4 h-4" />
-                <span className="hidden sm:inline">{item.label}</span>
-              </Button>
-            </Link>
-          );
-        })}
+      </div>
+      
+      {/* Scrollable Nav */}
+      <div className="overflow-x-auto">
+        <div className="flex p-2 gap-1 min-w-max">
+          {adminNavItems.map((item) => {
+            const isActive = location.pathname === item.href || 
+              (item.href !== '/admin' && location.pathname.startsWith(item.href));
+            return (
+              <Link key={item.href} to={item.href}>
+                <Button
+                  variant={isActive ? 'default' : 'ghost'}
+                  size="sm"
+                  className={cn(
+                    "gap-1.5 whitespace-nowrap transition-all",
+                    isActive && "shadow-md"
+                  )}
+                >
+                  <item.icon className="w-4 h-4" />
+                  <span>{item.label}</span>
+                </Button>
+              </Link>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

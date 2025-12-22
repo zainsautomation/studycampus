@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Pencil, Trash2, BookOpen } from 'lucide-react';
-import { MainLayout } from '@/components/layout/MainLayout';
+import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,16 @@ import { useAuth } from '@/hooks/useAuth';
 interface Subject { id: string; name: string; description: string | null; color: string | null; icon: string | null; created_at: string; }
 
 const COLORS = ['#2563EB', '#0EA5E9', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#6366F1'];
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.05 } }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, scale: 0.95 },
+  visible: { opacity: 1, scale: 1, transition: { duration: 0.3 } }
+};
 
 export default function ManageSubjects() {
   const { user } = useAuth();
@@ -84,69 +94,116 @@ export default function ManageSubjects() {
   };
 
   return (
-    <MainLayout>
-      <div className="container py-6 md:py-8">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-display font-bold">Manage Subjects</h1>
-              <p className="text-muted-foreground mt-1">Organize notes by subjects</p>
-            </div>
-            <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
-              <DialogTrigger asChild>
-                <Button onClick={() => handleOpenDialog()}><Plus className="w-4 h-4 mr-2" />Add Subject</Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader><DialogTitle>{editingSubject ? 'Edit Subject' : 'New Subject'}</DialogTitle></DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div><Label htmlFor="name">Name *</Label><Input id="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required /></div>
-                  <div><Label htmlFor="description">Description</Label><Textarea id="description" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} /></div>
-                  <div>
-                    <Label>Color</Label>
-                    <div className="flex gap-2 mt-2">
-                      {COLORS.map((color) => (
-                        <button key={color} type="button" onClick={() => setFormData({ ...formData, color })} className={`w-8 h-8 rounded-full transition-transform ${formData.color === color ? 'ring-2 ring-offset-2 ring-primary scale-110' : ''}`} style={{ backgroundColor: color }} />
-                      ))}
-                    </div>
+    <AdminLayout title="Manage Subjects" description="Organize notes by subjects">
+      <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-6">
+        <motion.div variants={itemVariants} className="flex justify-end">
+          <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
+            <DialogTrigger asChild>
+              <Button onClick={() => handleOpenDialog()} className="gap-2">
+                <Plus className="w-4 h-4" />Add Subject
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader><DialogTitle>{editingSubject ? 'Edit Subject' : 'New Subject'}</DialogTitle></DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <Label htmlFor="name">Name *</Label>
+                  <Input id="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
+                </div>
+                <div>
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea id="description" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Color</Label>
+                  <div className="flex gap-2 mt-2">
+                    {COLORS.map((color) => (
+                      <motion.button 
+                        key={color} 
+                        type="button" 
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => setFormData({ ...formData, color })} 
+                        className={`w-8 h-8 rounded-full transition-all ${formData.color === color ? 'ring-2 ring-offset-2 ring-primary scale-110' : 'hover:scale-105'}`} 
+                        style={{ backgroundColor: color }} 
+                      />
+                    ))}
                   </div>
-                  <div className="flex justify-end gap-2">
-                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-                    <Button type="submit">{editingSubject ? 'Update' : 'Create'}</Button>
-                  </div>
-                </form>
-              </DialogContent>
-            </Dialog>
-          </div>
+                </div>
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+                  <Button type="submit">{editingSubject ? 'Update' : 'Create'}</Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </motion.div>
 
-          <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {subjects.map((subject) => (
-              <Card key={subject.id} className="group hover:shadow-lg transition-shadow">
+        <motion.div 
+          variants={containerVariants}
+          className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
+        >
+          {subjects.map((subject, index) => (
+            <motion.div
+              key={subject.id}
+              variants={itemVariants}
+              whileHover={{ scale: 1.02, y: -2 }}
+              transition={{ duration: 0.2 }}
+            >
+              <Card className="group hover:shadow-lg transition-all overflow-hidden">
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg" style={{ backgroundColor: `${subject.color}20` }}>
+                      <motion.div 
+                        className="p-2.5 rounded-xl transition-transform group-hover:scale-110"
+                        style={{ backgroundColor: `${subject.color}20` }}
+                      >
                         <BookOpen className="w-5 h-5" style={{ color: subject.color || undefined }} />
-                      </div>
+                      </motion.div>
                       <div>
-                        <h3 className="font-semibold">{subject.name}</h3>
+                        <h3 className="font-semibold" style={{ color: subject.color || undefined }}>{subject.name}</h3>
                         {subject.description && <p className="text-xs text-muted-foreground line-clamp-1">{subject.description}</p>}
                       </div>
                     </div>
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleOpenDialog(subject)}><Pencil className="w-3 h-3" /></Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-primary/10" onClick={() => handleOpenDialog(subject)}>
+                        <Pencil className="w-3 h-3" />
+                      </Button>
                       <AlertDialog>
-                        <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"><Trash2 className="w-3 h-3" /></Button></AlertDialogTrigger>
-                        <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Delete Subject?</AlertDialogTitle><AlertDialogDescription>This will permanently delete "{subject.name}". Notes with this subject will keep their content.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(subject.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10">
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Subject?</AlertDialogTitle>
+                            <AlertDialogDescription>This will permanently delete "{subject.name}". Notes with this subject will keep their content.</AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleDelete(subject.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
                       </AlertDialog>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-            ))}
-            {subjects.length === 0 && <Card className="col-span-full"><CardContent className="p-8 text-center text-muted-foreground">No subjects yet. Create one to organize your notes.</CardContent></Card>}
-          </div>
+            </motion.div>
+          ))}
+          {subjects.length === 0 && (
+            <motion.div variants={itemVariants} className="col-span-full">
+              <Card>
+                <CardContent className="p-12 text-center text-muted-foreground">
+                  <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                  <p>No subjects yet. Create one to organize your notes.</p>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
         </motion.div>
-      </div>
-    </MainLayout>
+      </motion.div>
+    </AdminLayout>
   );
 }
