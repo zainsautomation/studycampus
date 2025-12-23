@@ -13,21 +13,21 @@ export function AdminLayout({ children, title, description }: AdminLayoutProps) 
   return (
     <div className="min-h-screen flex w-full bg-background">
       <AdminSidebar />
-      <div className="flex-1 flex flex-col min-h-screen">
+      <div className="flex-1 flex flex-col min-h-screen min-w-0">
         <AdminMobileNav />
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-x-hidden overflow-y-auto">
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, ease: 'easeOut' }}
-            className="p-4 md:p-6 lg:p-8"
+            className="p-4 md:p-6 lg:p-8 max-w-full"
           >
             <div className="mb-6">
               <motion.h1 
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.1 }}
-                className="text-2xl md:text-3xl font-display font-bold"
+                className="text-xl sm:text-2xl md:text-3xl font-display font-bold"
               >
                 {title}
               </motion.h1>
@@ -36,7 +36,7 @@ export function AdminLayout({ children, title, description }: AdminLayoutProps) 
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.15 }}
-                  className="text-muted-foreground mt-1"
+                  className="text-muted-foreground mt-1 text-sm md:text-base"
                 >
                   {description}
                 </motion.p>

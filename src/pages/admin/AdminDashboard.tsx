@@ -9,7 +9,7 @@ import {
   Clock,
   Activity
 } from 'lucide-react';
-import { MainLayout } from '@/components/layout/MainLayout';
+import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
@@ -107,13 +107,8 @@ export default function AdminDashboard() {
   ];
 
   return (
-    <MainLayout>
-      <div className="container py-6 md:py-8">
-        <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-6">
-          <motion.div variants={itemVariants}>
-            <h1 className="text-2xl md:text-3xl font-display font-bold">Admin Dashboard</h1>
-            <p className="text-muted-foreground mt-1">Manage your class portal</p>
-          </motion.div>
+    <AdminLayout title="Admin Dashboard" description="Manage your class portal">
+      <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-6">
 
           {/* Stats Grid */}
           <motion.div variants={itemVariants} className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
@@ -167,8 +162,7 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
           </motion.div>
-        </motion.div>
-      </div>
-    </MainLayout>
+      </motion.div>
+    </AdminLayout>
   );
 }
