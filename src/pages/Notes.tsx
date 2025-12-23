@@ -83,11 +83,54 @@ export default function Notes() {
 
   const handleDownload = async (note: Note) => {
     if (note.file_url) {
-      window.open(note.file_url, '_blank');
-      await supabase
-        .from('notes')
-        .update({ download_count: (note.download_count || 0) + 1 })
-        .eq('id', note.id);
+      try {
+        // Extract bucket and path from the URL
+        // URL format: https://<project>.supabase.co/storage/v1/object/public/<bucket>/<path>
+        const urlParts = note.file_url.split('/storage/v1/object/public/');
+        if (urlParts.length === 2) {
+          const pathParts = urlParts[1].split('/');
+          const bucket = pathParts[0];
+          const filePath = pathParts.slice(1).join('/');
+          
+          const { data, error } = await supabase.storage
+            .from(bucket)
+            .download(filePath);
+          
+          if (error) throw error;
+          
+          // Create download link
+          const url = URL.createObjectURL(data);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = note.file_name || 'download';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        } else {
+          // Fallback for external URLs - force download
+          const response = await fetch(note.file_url);
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = note.file_name || 'download';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }
+        
+        // Update download count
+        await supabase
+          .from('notes')
+          .update({ download_count: (note.download_count || 0) + 1 })
+          .eq('id', note.id);
+      } catch (error) {
+        console.error('Download failed:', error);
+        // Fallback: open in new tab
+        window.open(note.file_url, '_blank');
+      }
     }
   };
 

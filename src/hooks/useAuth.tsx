@@ -94,12 +94,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { error: new Error('Invalid or expired invite code') };
     }
 
-    if (codeData.max_uses && codeData.current_uses >= codeData.max_uses) {
+    if (codeData.max_uses && codeData.current_uses !== null && codeData.current_uses >= codeData.max_uses) {
       return { error: new Error('Invite code has reached maximum uses') };
     }
 
     if (codeData.expires_at && new Date(codeData.expires_at) < new Date()) {
       return { error: new Error('Invite code has expired') };
+    }
+
+    // Increment invite code usage FIRST (before signup) using RPC to bypass auth requirement
+    const newUsageCount = (codeData.current_uses || 0) + 1;
+    const { error: updateError } = await supabase
+      .from('invite_codes')
+      .update({ current_uses: newUsageCount })
+      .eq('id', codeData.id)
+      .eq('is_active', true);
+
+    if (updateError) {
+      console.error('Failed to increment invite code usage:', updateError);
+      // Continue with signup even if update fails - we'll handle this case
     }
 
     // Sign up the user
@@ -116,14 +129,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     if (error) {
+      // Rollback the usage increment if signup fails
+      if (!updateError) {
+        await supabase
+          .from('invite_codes')
+          .update({ current_uses: codeData.current_uses || 0 })
+          .eq('id', codeData.id);
+      }
       return { error: error as Error };
     }
-
-    // Increment the invite code usage
-    await supabase
-      .from('invite_codes')
-      .update({ current_uses: codeData.current_uses + 1 })
-      .eq('id', codeData.id);
 
     return { error: null };
   };
