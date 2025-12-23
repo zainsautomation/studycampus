@@ -116,26 +116,26 @@ export function AdminMobileNav() {
   const location = useLocation();
 
   return (
-    <div className="lg:hidden border-b border-border bg-card">
+    <div className="lg:hidden border-b border-border bg-card sticky top-0 z-40">
       {/* Mobile Header */}
-      <div className="flex items-center justify-between p-3 border-b border-border">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
             <GraduationCap className="w-4 h-4 text-primary-foreground" />
           </div>
-          <span className="font-display font-semibold text-sm">Admin</span>
+          <span className="font-display font-semibold text-sm">Admin Panel</span>
         </div>
         <Link to="/dashboard">
-          <Button variant="ghost" size="sm" className="gap-1 text-xs">
+          <Button variant="outline" size="sm" className="gap-1.5 text-xs">
             <ChevronLeft className="w-3 h-3" />
-            Portal
+            Back to Portal
           </Button>
         </Link>
       </div>
       
       {/* Scrollable Nav */}
-      <div className="overflow-x-auto">
-        <div className="flex p-2 gap-1 min-w-max">
+      <div className="overflow-x-auto scrollbar-hide">
+        <div className="flex px-2 py-2 gap-1.5 min-w-max">
           {adminNavItems.map((item) => {
             const isActive = location.pathname === item.href || 
               (item.href !== '/admin' && location.pathname.startsWith(item.href));
@@ -145,11 +145,11 @@ export function AdminMobileNav() {
                   variant={isActive ? 'default' : 'ghost'}
                   size="sm"
                   className={cn(
-                    "gap-1.5 whitespace-nowrap transition-all",
+                    "gap-1.5 whitespace-nowrap transition-all text-xs px-3",
                     isActive && "shadow-md"
                   )}
                 >
-                  <item.icon className="w-4 h-4" />
+                  <item.icon className="w-3.5 h-3.5" />
                   <span>{item.label}</span>
                 </Button>
               </Link>
