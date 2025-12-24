@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Download, FileText, ChevronRight, BookOpen, ArrowLeft, Link, ExternalLink, Copy, Check } from 'lucide-react';
+import { Search, Download, FileText, ChevronRight, BookOpen, ArrowLeft, ExternalLink, Copy, Check } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
+import { NoteDetailsDialog } from '@/components/notes/NoteDetailsDialog';
 
 interface Subject {
   id: string;
@@ -20,11 +21,11 @@ interface Subject {
 interface Note {
   id: string;
   title: string;
-  description: string;
-  file_url: string;
-  file_name: string;
-  file_type: string;
-  download_count: number;
+  description: string | null;
+  file_url: string | null;
+  file_name: string | null;
+  file_type: string | null;
+  download_count: number | null;
   created_at: string;
   subjects: Subject | null;
   link_url: string | null;
@@ -53,6 +54,14 @@ export default function Notes() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
+
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [activeNote, setActiveNote] = useState<Note | null>(null);
+
+  const openDetails = (note: Note) => {
+    setActiveNote(note);
+    setDetailsOpen(true);
+  };
 
   const handleCopyLink = async (note: Note) => {
     if (note.link_url) {
@@ -354,7 +363,10 @@ export default function Notes() {
                       whileHover={{ scale: 1.02, y: -4 }}
                       transition={{ duration: 0.2 }}
                     >
-                      <Card className="h-full overflow-hidden group">
+                      <Card
+                        className="h-full overflow-hidden group cursor-pointer"
+                        onClick={() => openDetails(note)}
+                      >
                         <CardContent className="p-5">
                           <div className="flex items-start justify-between mb-4">
                             <div 
@@ -388,12 +400,15 @@ export default function Notes() {
                                   <Button
                                     size="icon"
                                     variant="ghost"
-                                    onClick={() => handleCopyLink(note)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleCopyLink(note);
+                                    }}
                                     className="h-8 w-8 hover:bg-muted"
                                     title="Copy link"
                                   >
                                     {copiedLinkId === note.id ? (
-                                      <Check className="w-4 h-4 text-green-500" />
+                                      <Check className="w-4 h-4" />
                                     ) : (
                                       <Copy className="w-4 h-4" />
                                     )}
@@ -401,7 +416,10 @@ export default function Notes() {
                                   <Button
                                     size="icon"
                                     variant="ghost"
-                                    onClick={() => handleOpenLink(note)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleOpenLink(note);
+                                    }}
                                     className="h-8 w-8 hover:bg-muted"
                                     title="Open link"
                                   >
@@ -413,7 +431,10 @@ export default function Notes() {
                                 <Button
                                   size="sm"
                                   variant="ghost"
-                                  onClick={() => handleDownload(note)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDownload(note);
+                                  }}
                                   className="gap-1.5 hover:bg-primary hover:text-primary-foreground transition-colors"
                                 >
                                   <Download className="w-4 h-4" />
@@ -428,6 +449,20 @@ export default function Notes() {
                   ))}
                 </motion.div>
               )}
+
+              <NoteDetailsDialog
+                open={detailsOpen}
+                onOpenChange={(open) => {
+                  setDetailsOpen(open);
+                  if (!open) setActiveNote(null);
+                }}
+                note={activeNote}
+                subject={selectedSubject}
+                copiedLinkId={copiedLinkId}
+                onCopyLink={handleCopyLink}
+                onOpenLink={handleOpenLink}
+                onDownload={handleDownload}
+              />
             </motion.div>
           )}
         </AnimatePresence>
