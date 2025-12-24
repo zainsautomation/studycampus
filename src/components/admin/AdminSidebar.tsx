@@ -8,10 +8,13 @@ import {
   BookOpen, 
   Users,
   ChevronLeft,
-  GraduationCap
+  GraduationCap,
+  Moon,
+  Sun
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { useTheme } from '@/hooks/useTheme';
 
 const adminNavItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
@@ -38,6 +41,11 @@ const itemVariants = {
 
 export function AdminSidebar() {
   const location = useLocation();
+  const { resolvedTheme, setTheme } = useTheme();
+
+  const toggleTheme = () => {
+    setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
+  };
 
   return (
     <motion.aside 
@@ -48,15 +56,32 @@ export function AdminSidebar() {
     >
       {/* Logo/Brand */}
       <div className="p-4 border-b border-border">
-        <Link to="/admin" className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-            <GraduationCap className="w-5 h-5 text-primary-foreground" />
-          </div>
-          <div>
-            <h2 className="font-display font-semibold text-sm">Admin Panel</h2>
-            <p className="text-xs text-muted-foreground">Manage everything</p>
-          </div>
-        </Link>
+        <div className="flex items-center justify-between gap-3">
+          <Link to="/admin" className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
+              <GraduationCap className="w-5 h-5 text-primary-foreground" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="font-display font-semibold text-sm">Admin Panel</h2>
+              <p className="text-xs text-muted-foreground">Manage everything</p>
+            </div>
+          </Link>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleTheme}
+            className="h-9 w-9 rounded-lg"
+            aria-label="Toggle theme"
+            title="Toggle theme"
+          >
+            {resolvedTheme === 'dark' ? (
+              <Moon className="h-4 w-4" />
+            ) : (
+              <Sun className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
       </div>
 
       {/* Back to Portal */}
@@ -114,6 +139,11 @@ export function AdminSidebar() {
 
 export function AdminMobileNav() {
   const location = useLocation();
+  const { resolvedTheme, setTheme } = useTheme();
+
+  const toggleTheme = () => {
+    setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
+  };
 
   return (
     <div className="lg:hidden border-b border-border bg-card sticky top-0 z-40">
@@ -125,12 +155,30 @@ export function AdminMobileNav() {
           </div>
           <span className="font-display font-semibold text-sm">Admin Panel</span>
         </div>
-        <Link to="/dashboard">
-          <Button variant="outline" size="sm" className="gap-1.5 text-xs">
-            <ChevronLeft className="w-3 h-3" />
-            Back to Portal
+
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleTheme}
+            className="h-9 w-9 rounded-lg"
+            aria-label="Toggle theme"
+            title="Toggle theme"
+          >
+            {resolvedTheme === 'dark' ? (
+              <Moon className="h-4 w-4" />
+            ) : (
+              <Sun className="h-4 w-4" />
+            )}
           </Button>
-        </Link>
+
+          <Link to="/dashboard">
+            <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+              <ChevronLeft className="w-3 h-3" />
+              Back to Portal
+            </Button>
+          </Link>
+        </div>
       </div>
       
       {/* Scrollable Nav */}
