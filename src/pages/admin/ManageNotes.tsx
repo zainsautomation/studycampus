@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Pencil, Trash2, Upload, FileText, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, Upload, FileText, X, Link } from 'lucide-react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,7 +17,7 @@ import { format } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
 
 interface Subject { id: string; name: string; color: string; }
-interface Note { id: string; title: string; description: string | null; file_url: string | null; file_name: string | null; file_type: string | null; file_size: number | null; download_count: number | null; subject_id: string | null; created_at: string; subjects: Subject | null; }
+interface Note { id: string; title: string; description: string | null; file_url: string | null; file_name: string | null; file_type: string | null; file_size: number | null; download_count: number | null; subject_id: string | null; created_at: string; subjects: Subject | null; link_url: string | null; }
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -37,7 +37,7 @@ export default function ManageNotes() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
-  const [formData, setFormData] = useState({ title: '', description: '', subject_id: '' });
+  const [formData, setFormData] = useState({ title: '', description: '', subject_id: '', link_url: '' });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
@@ -55,7 +55,7 @@ export default function ManageNotes() {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const resetForm = () => {
-    setFormData({ title: '', description: '', subject_id: '' });
+    setFormData({ title: '', description: '', subject_id: '', link_url: '' });
     setSelectedFile(null);
     setEditingNote(null);
   };
@@ -63,7 +63,7 @@ export default function ManageNotes() {
   const handleOpenDialog = (note?: Note) => {
     if (note) {
       setEditingNote(note);
-      setFormData({ title: note.title, description: note.description || '', subject_id: note.subject_id || '' });
+      setFormData({ title: note.title, description: note.description || '', subject_id: note.subject_id || '', link_url: note.link_url || '' });
     } else {
       resetForm();
     }
@@ -119,6 +119,7 @@ export default function ManageNotes() {
         file_name: fileName,
         file_type: fileType,
         file_size: fileSize,
+        link_url: formData.link_url || null,
         created_by: user?.id,
       };
 
@@ -202,6 +203,21 @@ export default function ManageNotes() {
                     )}
                   </div>
                   {editingNote?.file_name && !selectedFile && <p className="text-xs text-muted-foreground mt-2">Current file: {editingNote.file_name}</p>}
+                </div>
+                <div>
+                  <Label htmlFor="link_url">External Link (Optional)</Label>
+                  <div className="relative mt-1">
+                    <Link className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input 
+                      id="link_url" 
+                      type="url"
+                      placeholder="https://example.com/resource" 
+                      value={formData.link_url} 
+                      onChange={(e) => setFormData({ ...formData, link_url: e.target.value })} 
+                      className="pl-10"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">Add a link to external resources like Google Drive, YouTube, etc.</p>
                 </div>
                 <div className="flex justify-end gap-2 pt-2">
                   <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
