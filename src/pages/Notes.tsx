@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Download, FileText, ChevronRight, BookOpen, ArrowLeft } from 'lucide-react';
+import { Search, Download, FileText, ChevronRight, BookOpen, ArrowLeft, Link, ExternalLink, Copy, Check } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -27,6 +27,7 @@ interface Note {
   download_count: number;
   created_at: string;
   subjects: Subject | null;
+  link_url: string | null;
 }
 
 const containerVariants = {
@@ -51,6 +52,21 @@ export default function Notes() {
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
+
+  const handleCopyLink = async (note: Note) => {
+    if (note.link_url) {
+      await navigator.clipboard.writeText(note.link_url);
+      setCopiedLinkId(note.id);
+      setTimeout(() => setCopiedLinkId(null), 2000);
+    }
+  };
+
+  const handleOpenLink = (note: Note) => {
+    if (note.link_url) {
+      window.open(note.link_url, '_blank', 'noopener,noreferrer');
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -366,16 +382,45 @@ export default function Notes() {
                             <span className="text-xs text-muted-foreground">
                               {format(new Date(note.created_at), 'MMM dd, yyyy')}
                             </span>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleDownload(note)}
-                              disabled={!note.file_url}
-                              className="gap-1.5 hover:bg-primary hover:text-primary-foreground transition-colors"
-                            >
-                              <Download className="w-4 h-4" />
-                              Download
-                            </Button>
+                            <div className="flex items-center gap-1">
+                              {note.link_url && (
+                                <>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    onClick={() => handleCopyLink(note)}
+                                    className="h-8 w-8 hover:bg-muted"
+                                    title="Copy link"
+                                  >
+                                    {copiedLinkId === note.id ? (
+                                      <Check className="w-4 h-4 text-green-500" />
+                                    ) : (
+                                      <Copy className="w-4 h-4" />
+                                    )}
+                                  </Button>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    onClick={() => handleOpenLink(note)}
+                                    className="h-8 w-8 hover:bg-muted"
+                                    title="Open link"
+                                  >
+                                    <ExternalLink className="w-4 h-4" />
+                                  </Button>
+                                </>
+                              )}
+                              {note.file_url && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleDownload(note)}
+                                  className="gap-1.5 hover:bg-primary hover:text-primary-foreground transition-colors"
+                                >
+                                  <Download className="w-4 h-4" />
+                                  Download
+                                </Button>
+                              )}
+                            </div>
                           </div>
                         </CardContent>
                       </Card>

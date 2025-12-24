@@ -94,6 +94,7 @@ export type Database = {
           file_type: string | null
           file_url: string | null
           id: string
+          link_url: string | null
           subject_id: string | null
           title: string
           updated_at: string
@@ -108,6 +109,7 @@ export type Database = {
           file_type?: string | null
           file_url?: string | null
           id?: string
+          link_url?: string | null
           subject_id?: string | null
           title: string
           updated_at?: string
@@ -122,6 +124,7 @@ export type Database = {
           file_type?: string | null
           file_url?: string | null
           id?: string
+          link_url?: string | null
           subject_id?: string | null
           title?: string
           updated_at?: string
