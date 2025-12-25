@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Download, FileText, ChevronRight, BookOpen, ArrowLeft, ExternalLink, Copy, Check } from 'lucide-react';
+import { Search, Download, FileText, ChevronRight, BookOpen, ArrowLeft, ExternalLink, Copy, Check, Bookmark } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { NoteDetailsDialog } from '@/components/notes/NoteDetailsDialog';
+import { useSavedNotes } from '@/hooks/useSavedNotes';
 
 interface Subject {
   id: string;
@@ -54,6 +55,7 @@ export default function Notes() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
+  const { isNoteSaved, toggleSaveNote } = useSavedNotes();
 
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [activeNote, setActiveNote] = useState<Note | null>(null);
@@ -378,9 +380,23 @@ export default function Notes() {
                                 style={{ color: selectedSubject.color }}
                               />
                             </div>
-                            <Badge variant="outline" className="text-xs">
-                              {note.file_type?.split('/').pop()?.toUpperCase() || 'FILE'}
-                            </Badge>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleSaveNote(note.id);
+                                }}
+                                className={`h-8 w-8 ${isNoteSaved(note.id) ? 'text-primary' : 'text-muted-foreground hover:text-primary'}`}
+                                title={isNoteSaved(note.id) ? 'Remove from saved' : 'Save note'}
+                              >
+                                <Bookmark className={`w-4 h-4 ${isNoteSaved(note.id) ? 'fill-current' : ''}`} />
+                              </Button>
+                              <Badge variant="outline" className="text-xs">
+                                {note.file_type?.split('/').pop()?.toUpperCase() || 'FILE'}
+                              </Badge>
+                            </div>
                           </div>
                           <h3 className="font-semibold mb-2 line-clamp-2 group-hover:text-primary transition-colors">
                             {note.title}

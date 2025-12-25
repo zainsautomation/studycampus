@@ -10,6 +10,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Notes from "./pages/Notes";
+import SavedNotes from "./pages/SavedNotes";
 import Announcements from "./pages/Announcements";
 import Updates from "./pages/Updates";
 import NotFound from "./pages/NotFound";
@@ -35,6 +36,7 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/notes" element={<ProtectedRoute><Notes /></ProtectedRoute>} />
+              <Route path="/saved-notes" element={<ProtectedRoute><SavedNotes /></ProtectedRoute>} />
               <Route path="/announcements" element={<ProtectedRoute><Announcements /></ProtectedRoute>} />
               <Route path="/updates" element={<ProtectedRoute><Updates /></ProtectedRoute>} />
               <Route path="/admin" element={<ProtectedRoute requireAdmin><AdminDashboard /></ProtectedRoute>} />
