@@ -166,6 +166,35 @@ export type Database = {
         }
         Relationships: []
       }
+      saved_notes: {
+        Row: {
+          id: string
+          note_id: string
+          saved_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          note_id: string
+          saved_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          note_id?: string
+          saved_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_notes_note_id_fkey"
+            columns: ["note_id"]
+            isOneToOne: false
+            referencedRelation: "notes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subjects: {
         Row: {
           color: string | null

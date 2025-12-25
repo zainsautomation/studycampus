@@ -10,6 +10,7 @@ import {
   User,
   LayoutDashboard,
   BookOpen,
+  Bookmark,
   Megaphone,
   Calendar,
   Settings
@@ -29,6 +30,7 @@ import {
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/notes', label: 'Notes', icon: BookOpen },
+  { href: '/saved-notes', label: 'Saved', icon: Bookmark },
   { href: '/announcements', label: 'Announcements', icon: Megaphone },
   { href: '/updates', label: 'Updates', icon: Calendar },
 ];
