@@ -37,10 +37,11 @@ export default function ManageNotes() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
-  const [formData, setFormData] = useState({ title: '', description: '', subject_id: '', link_url: '' });
+  const [formData, setFormData] = useState({ title: '', description: '', subject_id: '', link_url: '', file_name: '' });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  const [keepExistingFile, setKeepExistingFile] = useState(true);
 
   const fetchData = useCallback(async () => {
     const [notesRes, subjectsRes] = await Promise.all([
@@ -55,15 +56,23 @@ export default function ManageNotes() {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const resetForm = () => {
-    setFormData({ title: '', description: '', subject_id: '', link_url: '' });
+    setFormData({ title: '', description: '', subject_id: '', link_url: '', file_name: '' });
     setSelectedFile(null);
     setEditingNote(null);
+    setKeepExistingFile(true);
   };
 
   const handleOpenDialog = (note?: Note) => {
     if (note) {
       setEditingNote(note);
-      setFormData({ title: note.title, description: note.description || '', subject_id: note.subject_id || '', link_url: note.link_url || '' });
+      setFormData({ 
+        title: note.title, 
+        description: note.description || '', 
+        subject_id: note.subject_id || '', 
+        link_url: note.link_url || '',
+        file_name: note.file_name || ''
+      });
+      setKeepExistingFile(true);
     } else {
       resetForm();
     }
@@ -91,10 +100,10 @@ export default function ManageNotes() {
     if (!formData.title.trim()) return;
 
     setIsUploading(true);
-    let fileUrl = editingNote?.file_url || null;
-    let fileName = editingNote?.file_name || null;
-    let fileType = editingNote?.file_type || null;
-    let fileSize = editingNote?.file_size || null;
+    let fileUrl = (editingNote && keepExistingFile) ? editingNote.file_url : null;
+    let fileName = (editingNote && keepExistingFile) ? (formData.file_name || editingNote.file_name) : null;
+    let fileType = (editingNote && keepExistingFile) ? editingNote.file_type : null;
+    let fileSize = (editingNote && keepExistingFile) ? editingNote.file_size : null;
 
     try {
       if (selectedFile) {
@@ -106,9 +115,13 @@ export default function ManageNotes() {
 
         const { data: urlData } = supabase.storage.from('notes').getPublicUrl(filePath);
         fileUrl = urlData.publicUrl;
-        fileName = selectedFile.name;
+        // Use custom file name if provided, otherwise use original file name
+        fileName = formData.file_name?.trim() || selectedFile.name;
         fileType = selectedFile.type;
         fileSize = selectedFile.size;
+      } else if (editingNote && keepExistingFile && formData.file_name?.trim()) {
+        // Just renaming existing file
+        fileName = formData.file_name.trim();
       }
 
       const noteData = {
@@ -184,25 +197,71 @@ export default function ManageNotes() {
                 </div>
                 <div>
                   <Label>File (PDF, DOC, PPT)</Label>
-                  <div 
-                    className={`mt-2 border-2 border-dashed rounded-lg p-6 text-center transition-all relative ${dragActive ? 'border-primary bg-primary/5 scale-[1.02]' : 'border-border hover:border-primary/50'}`} 
-                    onDragEnter={handleDrag} onDragLeave={handleDrag} onDragOver={handleDrag} onDrop={handleDrop}
-                  >
-                    {selectedFile ? (
-                      <div className="flex items-center justify-center gap-2">
-                        <FileText className="w-5 h-5 text-primary" />
-                        <span className="text-sm font-medium">{selectedFile.name}</span>
-                        <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => setSelectedFile(null)}><X className="w-4 h-4" /></Button>
+                  {/* Show existing file info when editing */}
+                  {editingNote?.file_name && keepExistingFile && !selectedFile && (
+                    <div className="mt-2 p-3 bg-muted/50 rounded-lg border border-border">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <FileText className="w-5 h-5 text-primary flex-shrink-0" />
+                          <span className="text-sm font-medium truncate">{formData.file_name || editingNote.file_name}</span>
+                        </div>
+                        <Button 
+                          type="button" 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10 flex-shrink-0"
+                          onClick={() => setKeepExistingFile(false)}
+                        >
+                          <X className="w-4 h-4 mr-1" />
+                          Remove
+                        </Button>
                       </div>
-                    ) : (
-                      <>
-                        <Upload className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
-                        <p className="text-sm text-muted-foreground">Drag & drop or click to upload</p>
-                        <input type="file" accept=".pdf,.doc,.docx,.ppt,.pptx" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={(e) => e.target.files?.[0] && setSelectedFile(e.target.files[0])} />
-                      </>
-                    )}
-                  </div>
-                  {editingNote?.file_name && !selectedFile && <p className="text-xs text-muted-foreground mt-2">Current file: {editingNote.file_name}</p>}
+                      <div className="mt-2">
+                        <Label htmlFor="file_name" className="text-xs">Rename file (display name)</Label>
+                        <Input 
+                          id="file_name"
+                          value={formData.file_name} 
+                          onChange={(e) => setFormData({ ...formData, file_name: e.target.value })}
+                          placeholder="Enter new file name"
+                          className="mt-1 h-8 text-sm"
+                        />
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Upload area - show when no existing file or file was removed */}
+                  {(!editingNote?.file_name || !keepExistingFile || selectedFile) && (
+                    <div 
+                      className={`mt-2 border-2 border-dashed rounded-lg p-6 text-center transition-all relative ${dragActive ? 'border-primary bg-primary/5 scale-[1.02]' : 'border-border hover:border-primary/50'}`} 
+                      onDragEnter={handleDrag} onDragLeave={handleDrag} onDragOver={handleDrag} onDrop={handleDrop}
+                    >
+                      {selectedFile ? (
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-center gap-2">
+                            <FileText className="w-5 h-5 text-primary" />
+                            <span className="text-sm font-medium">{selectedFile.name}</span>
+                            <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => setSelectedFile(null)}><X className="w-4 h-4" /></Button>
+                          </div>
+                          <div>
+                            <Label htmlFor="new_file_name" className="text-xs">Custom display name (optional)</Label>
+                            <Input 
+                              id="new_file_name"
+                              value={formData.file_name} 
+                              onChange={(e) => setFormData({ ...formData, file_name: e.target.value })}
+                              placeholder={selectedFile.name}
+                              className="mt-1 h-8 text-sm max-w-xs mx-auto"
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <Upload className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
+                          <p className="text-sm text-muted-foreground">Drag & drop or click to upload</p>
+                          <input type="file" accept=".pdf,.doc,.docx,.ppt,.pptx" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={(e) => e.target.files?.[0] && setSelectedFile(e.target.files[0])} />
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <Label htmlFor="link_url">External Link (Optional)</Label>
