@@ -7,12 +7,16 @@ import {
   Calendar, 
   TrendingUp,
   Clock,
-  Activity
+  Activity,
+  Download,
+  Bookmark
 } from 'lucide-react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell } from 'recharts';
 
 interface Stats {
   totalNotes: number;
@@ -20,6 +24,8 @@ interface Stats {
   totalUpdates: number;
   totalStudents: number;
   totalSubjects: number;
+  totalBookmarks: number;
+  totalDownloads: number;
 }
 
 interface RecentActivity {
@@ -27,6 +33,13 @@ interface RecentActivity {
   type: 'note' | 'announcement' | 'update';
   title: string;
   created_at: string;
+}
+
+interface TopNote {
+  id: string;
+  title: string;
+  download_count: number;
+  bookmark_count: number;
 }
 
 const containerVariants = {
@@ -39,6 +52,17 @@ const itemVariants = {
   visible: { opacity: 1, y: 0 }
 };
 
+const chartConfig = {
+  downloads: {
+    label: "Downloads",
+    color: "hsl(var(--primary))",
+  },
+  bookmarks: {
+    label: "Bookmarks",
+    color: "hsl(var(--accent))",
+  },
+};
+
 export default function AdminDashboard() {
   const [stats, setStats] = useState<Stats>({
     totalNotes: 0,
@@ -46,28 +70,98 @@ export default function AdminDashboard() {
     totalUpdates: 0,
     totalStudents: 0,
     totalSubjects: 0,
+    totalBookmarks: 0,
+    totalDownloads: 0,
   });
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
+  const [topDownloadedNotes, setTopDownloadedNotes] = useState<TopNote[]>([]);
+  const [topBookmarkedNotes, setTopBookmarkedNotes] = useState<TopNote[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchStats = async () => {
       // Fetch counts
-      const [notesRes, announcementsRes, updatesRes, studentsRes, subjectsRes] = await Promise.all([
-        supabase.from('notes').select('id', { count: 'exact', head: true }),
+      const [notesRes, announcementsRes, updatesRes, studentsRes, subjectsRes, bookmarksRes] = await Promise.all([
+        supabase.from('notes').select('id, download_count'),
         supabase.from('announcements').select('id', { count: 'exact', head: true }),
         supabase.from('updates').select('id', { count: 'exact', head: true }),
         supabase.from('user_roles').select('id', { count: 'exact', head: true }).eq('role', 'student'),
         supabase.from('subjects').select('id', { count: 'exact', head: true }),
+        supabase.from('saved_notes').select('id', { count: 'exact', head: true }),
       ]);
 
+      const totalDownloads = notesRes.data?.reduce((sum, note) => sum + (note.download_count || 0), 0) || 0;
+
       setStats({
-        totalNotes: notesRes.count || 0,
+        totalNotes: notesRes.data?.length || 0,
         totalAnnouncements: announcementsRes.count || 0,
         totalUpdates: updatesRes.count || 0,
         totalStudents: studentsRes.count || 0,
         totalSubjects: subjectsRes.count || 0,
+        totalBookmarks: bookmarksRes.count || 0,
+        totalDownloads,
       });
+
+      // Fetch top downloaded notes
+      const { data: topDownloaded } = await supabase
+        .from('notes')
+        .select('id, title, download_count')
+        .order('download_count', { ascending: false })
+        .limit(5);
+
+      // Fetch bookmark counts for each note
+      const notesWithBookmarks: TopNote[] = [];
+      if (topDownloaded) {
+        for (const note of topDownloaded) {
+          const { count } = await supabase
+            .from('saved_notes')
+            .select('id', { count: 'exact', head: true })
+            .eq('note_id', note.id);
+          notesWithBookmarks.push({
+            ...note,
+            download_count: note.download_count || 0,
+            bookmark_count: count || 0,
+          });
+        }
+      }
+      setTopDownloadedNotes(notesWithBookmarks);
+
+      // Fetch top bookmarked notes
+      const { data: bookmarkCounts } = await supabase
+        .from('saved_notes')
+        .select('note_id');
+
+      if (bookmarkCounts) {
+        const countMap: Record<string, number> = {};
+        bookmarkCounts.forEach(b => {
+          countMap[b.note_id] = (countMap[b.note_id] || 0) + 1;
+        });
+
+        const sortedNoteIds = Object.entries(countMap)
+          .sort(([, a], [, b]) => b - a)
+          .slice(0, 5)
+          .map(([id]) => id);
+
+        if (sortedNoteIds.length > 0) {
+          const { data: bookmarkedNotes } = await supabase
+            .from('notes')
+            .select('id, title, download_count')
+            .in('id', sortedNoteIds);
+
+          if (bookmarkedNotes) {
+            const topBookmarked = sortedNoteIds.map(id => {
+              const note = bookmarkedNotes.find(n => n.id === id);
+              return {
+                id,
+                title: note?.title || 'Unknown',
+                download_count: note?.download_count || 0,
+                bookmark_count: countMap[id],
+              };
+            });
+            setTopBookmarkedNotes(topBookmarked);
+          }
+        }
+      }
 
       // Fetch recent activity
       const [recentNotes, recentAnnouncements, recentUpdates] = await Promise.all([
@@ -100,10 +194,18 @@ export default function AdminDashboard() {
 
   const statCards = [
     { label: 'Total Notes', value: stats.totalNotes, icon: FileText, color: 'text-accent', bg: 'bg-accent/10' },
-    { label: 'Announcements', value: stats.totalAnnouncements, icon: Megaphone, color: 'text-warning', bg: 'bg-warning/10' },
-    { label: 'Events', value: stats.totalUpdates, icon: Calendar, color: 'text-primary', bg: 'bg-primary/10' },
+    { label: 'Total Downloads', value: stats.totalDownloads, icon: Download, color: 'text-primary', bg: 'bg-primary/10' },
+    { label: 'Total Bookmarks', value: stats.totalBookmarks, icon: Bookmark, color: 'text-warning', bg: 'bg-warning/10' },
     { label: 'Students', value: stats.totalStudents, icon: Users, color: 'text-success', bg: 'bg-success/10' },
     { label: 'Subjects', value: stats.totalSubjects, icon: TrendingUp, color: 'text-urgent', bg: 'bg-urgent/10' },
+  ];
+
+  const chartColors = [
+    'hsl(var(--primary))',
+    'hsl(var(--accent))',
+    'hsl(var(--warning))',
+    'hsl(var(--success))',
+    'hsl(var(--urgent))',
   ];
 
   return (
@@ -127,6 +229,77 @@ export default function AdminDashboard() {
                 </CardContent>
               </Card>
             ))}
+          </motion.div>
+
+          {/* Analytics Charts */}
+          <motion.div variants={itemVariants} className="grid md:grid-cols-2 gap-4">
+            {/* Top Downloaded Notes */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Download className="w-5 h-5 text-primary" />
+                  Top Downloaded Notes
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {topDownloadedNotes.length === 0 ? (
+                  <p className="text-muted-foreground text-sm text-center py-8">No download data yet</p>
+                ) : (
+                  <ChartContainer config={chartConfig} className="h-[250px] w-full">
+                    <BarChart data={topDownloadedNotes} layout="vertical" margin={{ left: 10, right: 20 }}>
+                      <XAxis type="number" hide />
+                      <YAxis 
+                        type="category" 
+                        dataKey="title" 
+                        width={120}
+                        tick={{ fontSize: 12 }}
+                        tickFormatter={(value) => value.length > 15 ? `${value.slice(0, 15)}...` : value}
+                      />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Bar dataKey="download_count" name="Downloads" radius={[0, 4, 4, 0]}>
+                        {topDownloadedNotes.map((_, index) => (
+                          <Cell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ChartContainer>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Top Bookmarked Notes */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Bookmark className="w-5 h-5 text-warning" />
+                  Most Saved Notes
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {topBookmarkedNotes.length === 0 ? (
+                  <p className="text-muted-foreground text-sm text-center py-8">No bookmark data yet</p>
+                ) : (
+                  <ChartContainer config={chartConfig} className="h-[250px] w-full">
+                    <BarChart data={topBookmarkedNotes} layout="vertical" margin={{ left: 10, right: 20 }}>
+                      <XAxis type="number" hide />
+                      <YAxis 
+                        type="category" 
+                        dataKey="title" 
+                        width={120}
+                        tick={{ fontSize: 12 }}
+                        tickFormatter={(value) => value.length > 15 ? `${value.slice(0, 15)}...` : value}
+                      />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Bar dataKey="bookmark_count" name="Bookmarks" radius={[0, 4, 4, 0]}>
+                        {topBookmarkedNotes.map((_, index) => (
+                          <Cell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ChartContainer>
+                )}
+              </CardContent>
+            </Card>
           </motion.div>
 
           {/* Recent Activity */}
