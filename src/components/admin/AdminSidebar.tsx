@@ -10,7 +10,8 @@ import {
   ChevronLeft,
   GraduationCap,
   Moon,
-  Sun
+  Sun,
+  BarChart3
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -23,6 +24,7 @@ const adminNavItems = [
   { href: '/admin/updates', label: 'Events', icon: Calendar },
   { href: '/admin/subjects', label: 'Subjects', icon: BookOpen },
   { href: '/admin/users', label: 'Users', icon: Users },
+  { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
 ];
 
 const sidebarVariants = {
