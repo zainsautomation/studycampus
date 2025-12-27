@@ -82,37 +82,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signUp = async (email: string, password: string, fullName: string, inviteCode: string) => {
-    // First validate invite code
-    const { data: codeData, error: codeError } = await supabase
-      .from('invite_codes')
-      .select('*')
-      .eq('code', inviteCode)
-      .eq('is_active', true)
-      .maybeSingle();
+    // Validate invite code via edge function (server-side)
+    const { data: validateData, error: validateError } = await supabase.functions.invoke('validate-invite-code', {
+      body: { code: inviteCode }
+    });
 
-    if (codeError || !codeData) {
-      return { error: new Error('Invalid or expired invite code') };
+    if (validateError) {
+      console.error('Error validating invite code:', validateError);
+      return { error: new Error('Failed to validate invite code') };
     }
 
-    if (codeData.max_uses && codeData.current_uses !== null && codeData.current_uses >= codeData.max_uses) {
-      return { error: new Error('Invite code has reached maximum uses') };
+    if (!validateData?.valid) {
+      return { error: new Error(validateData?.error || 'Invalid or expired invite code') };
     }
 
-    if (codeData.expires_at && new Date(codeData.expires_at) < new Date()) {
-      return { error: new Error('Invite code has expired') };
-    }
+    const { codeId, currentUses } = validateData;
 
-    // Increment invite code usage FIRST (before signup) using RPC to bypass auth requirement
-    const newUsageCount = (codeData.current_uses || 0) + 1;
-    const { error: updateError } = await supabase
-      .from('invite_codes')
-      .update({ current_uses: newUsageCount })
-      .eq('id', codeData.id)
-      .eq('is_active', true);
+    // Use the invite code (increment usage) via edge function
+    const { data: useData, error: useError } = await supabase.functions.invoke('use-invite-code', {
+      body: { codeId, currentUses }
+    });
 
-    if (updateError) {
-      console.error('Failed to increment invite code usage:', updateError);
-      // Continue with signup even if update fails - we'll handle this case
+    if (useError || !useData?.success) {
+      console.error('Failed to use invite code:', useError || useData?.error);
+      // Continue with signup even if increment fails
     }
 
     // Sign up the user
@@ -129,13 +122,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     if (error) {
-      // Rollback the usage increment if signup fails
-      if (!updateError) {
-        await supabase
-          .from('invite_codes')
-          .update({ current_uses: codeData.current_uses || 0 })
-          .eq('id', codeData.id);
-      }
       return { error: error as Error };
     }
 
