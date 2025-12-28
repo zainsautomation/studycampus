@@ -130,7 +130,7 @@ export default function ManageSubjects() {
                     ))}
                   </div>
                 </div>
-                <div className="flex justify-end gap-2 pt-2">
+                <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-2">
                   <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
                   <Button type="submit">{editingSubject ? 'Update' : 'Create'}</Button>
                 </div>

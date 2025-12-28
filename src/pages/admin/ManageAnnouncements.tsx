@@ -139,7 +139,7 @@ export default function ManageAnnouncements() {
                   <Label htmlFor="is_pinned" className="cursor-pointer">Pin to top</Label>
                   <Switch id="is_pinned" checked={formData.is_pinned} onCheckedChange={(checked) => setFormData({ ...formData, is_pinned: checked })} />
                 </div>
-                <div className="flex justify-end gap-2 pt-2">
+                <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-2">
                   <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
                   <Button type="submit">{editingAnnouncement ? 'Update' : 'Create'}</Button>
                 </div>

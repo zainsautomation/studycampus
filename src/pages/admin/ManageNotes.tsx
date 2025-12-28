@@ -177,7 +177,7 @@ export default function ManageNotes() {
                 <Plus className="w-4 h-4" />Add Note
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-lg">
+            <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
               <DialogHeader><DialogTitle>{editingNote ? 'Edit Note' : 'Add New Note'}</DialogTitle></DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
@@ -278,7 +278,7 @@ export default function ManageNotes() {
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">Add a link to external resources like Google Drive, YouTube, etc.</p>
                 </div>
-                <div className="flex justify-end gap-2 pt-2">
+                <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-2">
                   <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
                   <Button type="submit" disabled={isUploading}>{isUploading ? 'Uploading...' : editingNote ? 'Update' : 'Create'}</Button>
                 </div>
