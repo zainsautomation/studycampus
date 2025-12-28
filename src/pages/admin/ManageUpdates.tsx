@@ -131,7 +131,7 @@ export default function ManageUpdates() {
                   <Label htmlFor="description">Description</Label>
                   <Textarea id="description" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="event_date">Date *</Label>
                     <Input type="date" id="event_date" value={formData.event_date} onChange={(e) => setFormData({ ...formData, event_date: e.target.value })} required />
@@ -153,7 +153,7 @@ export default function ManageUpdates() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="flex justify-end gap-2 pt-2">
+                <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-2">
                   <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
                   <Button type="submit">{editingUpdate ? 'Update' : 'Create'}</Button>
                 </div>
