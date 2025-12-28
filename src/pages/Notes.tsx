@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Download, FileText, ChevronRight, BookOpen, ArrowLeft, ExternalLink, Copy, Check, Bookmark } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -49,6 +50,7 @@ const itemVariants = {
 };
 
 export default function Notes() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [notes, setNotes] = useState<Note[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
@@ -92,9 +94,40 @@ export default function Notes() {
       setSubjects(subjectsData || []);
       setNotes(notesData || []);
       setIsLoading(false);
+
+      // Handle URL params for deep linking
+      const subjectParam = searchParams.get('subject');
+      const noteParam = searchParams.get('note');
+
+      if (subjectParam && subjectsData) {
+        const subject = subjectsData.find((s: Subject) => s.id === subjectParam);
+        if (subject) {
+          setSelectedSubject(subject);
+        }
+      }
+
+      if (noteParam && notesData) {
+        const note = notesData.find((n: Note) => n.id === noteParam);
+        if (note) {
+          // If no subject param but note has a subject, auto-select it
+          if (!subjectParam && note.subjects) {
+            const subject = subjectsData?.find((s: Subject) => s.id === note.subjects?.id);
+            if (subject) {
+              setSelectedSubject(subject);
+            }
+          }
+          setActiveNote(note);
+          setDetailsOpen(true);
+        }
+      }
+
+      // Clear URL params after processing
+      if (subjectParam || noteParam) {
+        setSearchParams({}, { replace: true });
+      }
     };
     fetchData();
-  }, []);
+  }, [searchParams, setSearchParams]);
 
   const getNotesCount = (subjectId: string) => {
     return notes.filter(note => note.subjects?.id === subjectId).length;

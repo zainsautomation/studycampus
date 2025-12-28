@@ -32,6 +32,7 @@ interface Note {
   description: string;
   file_name: string;
   created_at: string;
+  subject_id: string | null;
   subjects: { name: string; color: string } | null;
 }
 
@@ -311,9 +312,10 @@ export default function Dashboard() {
                 ) : (
                   <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     {notes.map((note) => (
-                      <div
+                      <Link
                         key={note.id}
-                        className="p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors group"
+                        to={`/notes${note.subject_id ? `?subject=${note.subject_id}&note=${note.id}` : `?note=${note.id}`}`}
+                        className="p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors group cursor-pointer block"
                       >
                         <div className="flex items-center gap-3 mb-2">
                           <div className="p-2 rounded-lg bg-accent/10 group-hover:bg-accent/20 transition-colors">
@@ -333,7 +335,7 @@ export default function Dashboard() {
                         <p className="text-xs text-muted-foreground mt-1">
                           {format(new Date(note.created_at), 'MMM dd, yyyy')}
                         </p>
-                      </div>
+                      </Link>
                     ))}
                   </div>
                 )}
