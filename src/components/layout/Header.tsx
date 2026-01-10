@@ -13,7 +13,10 @@ import {
   Bookmark,
   Megaphone,
   Calendar,
-  Settings
+  Settings,
+  HelpCircle,
+  MessageSquare,
+  GitPullRequest
 } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -33,6 +36,9 @@ const navItems = [
   { href: '/saved-notes', label: 'Saved', icon: Bookmark },
   { href: '/announcements', label: 'Announcements', icon: Megaphone },
   { href: '/updates', label: 'Updates', icon: Calendar },
+  { href: '/qa', label: 'Q&A', icon: HelpCircle },
+  { href: '/posts', label: 'Posts', icon: MessageSquare },
+  { href: '/requests', label: 'Requests', icon: GitPullRequest },
 ];
 
 export function Header() {

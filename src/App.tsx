@@ -21,6 +21,13 @@ import ManageUpdates from "./pages/admin/ManageUpdates";
 import ManageSubjects from "./pages/admin/ManageSubjects";
 import ManageUsers from "./pages/admin/ManageUsers";
 import Analytics from "./pages/admin/Analytics";
+import QandA from "./pages/QandA";
+import QuestionDetail from "./pages/QuestionDetail";
+import Posts from "./pages/Posts";
+import Requests from "./pages/Requests";
+import ManageQandA from "./pages/admin/ManageQandA";
+import ManagePosts from "./pages/admin/ManagePosts";
+import ManageRequests from "./pages/admin/ManageRequests";
 
 const queryClient = new QueryClient();
 
@@ -40,6 +47,10 @@ const App = () => (
               <Route path="/saved-notes" element={<ProtectedRoute><SavedNotes /></ProtectedRoute>} />
               <Route path="/announcements" element={<ProtectedRoute><Announcements /></ProtectedRoute>} />
               <Route path="/updates" element={<ProtectedRoute><Updates /></ProtectedRoute>} />
+              <Route path="/qa" element={<ProtectedRoute><QandA /></ProtectedRoute>} />
+              <Route path="/qa/:questionId" element={<ProtectedRoute><QuestionDetail /></ProtectedRoute>} />
+              <Route path="/posts" element={<ProtectedRoute><Posts /></ProtectedRoute>} />
+              <Route path="/requests" element={<ProtectedRoute><Requests /></ProtectedRoute>} />
               <Route path="/admin" element={<ProtectedRoute requireAdmin><AdminDashboard /></ProtectedRoute>} />
               <Route path="/admin/notes" element={<ProtectedRoute requireAdmin><ManageNotes /></ProtectedRoute>} />
               <Route path="/admin/announcements" element={<ProtectedRoute requireAdmin><ManageAnnouncements /></ProtectedRoute>} />
@@ -47,6 +58,9 @@ const App = () => (
               <Route path="/admin/subjects" element={<ProtectedRoute requireAdmin><ManageSubjects /></ProtectedRoute>} />
               <Route path="/admin/users" element={<ProtectedRoute requireAdmin><ManageUsers /></ProtectedRoute>} />
               <Route path="/admin/analytics" element={<ProtectedRoute requireAdmin><Analytics /></ProtectedRoute>} />
+              <Route path="/admin/qa" element={<ProtectedRoute requireAdmin><ManageQandA /></ProtectedRoute>} />
+              <Route path="/admin/posts" element={<ProtectedRoute requireAdmin><ManagePosts /></ProtectedRoute>} />
+              <Route path="/admin/requests" element={<ProtectedRoute requireAdmin><ManageRequests /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
