@@ -11,7 +11,10 @@ import {
   GraduationCap,
   Moon,
   Sun,
-  BarChart3
+  BarChart3,
+  HelpCircle,
+  MessageSquare,
+  GitPullRequest
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -25,6 +28,9 @@ const adminNavItems = [
   { href: '/admin/subjects', label: 'Subjects', icon: BookOpen },
   { href: '/admin/users', label: 'Users', icon: Users },
   { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
+  { href: '/admin/qa', label: 'Q&A', icon: HelpCircle },
+  { href: '/admin/posts', label: 'Posts', icon: MessageSquare },
+  { href: '/admin/requests', label: 'Requests', icon: GitPullRequest },
 ];
 
 const sidebarVariants = {
