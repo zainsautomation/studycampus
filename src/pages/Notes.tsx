@@ -7,10 +7,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { NoteDetailsDialog } from '@/components/notes/NoteDetailsDialog';
 import { useSavedNotes } from '@/hooks/useSavedNotes';
+import { useAppSettings } from '@/hooks/useAppSettings';
 
 interface Subject {
   id: string;
@@ -58,6 +60,7 @@ export default function Notes() {
   const [isLoading, setIsLoading] = useState(true);
   const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
   const { isNoteSaved, toggleSaveNote } = useSavedNotes();
+  const { downloadsEnabled } = useAppSettings();
 
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [activeNote, setActiveNote] = useState<Note | null>(null);
@@ -476,7 +479,7 @@ export default function Notes() {
                                   </Button>
                                 </>
                               )}
-                              {note.file_url && (
+                              {note.file_url && downloadsEnabled && (
                                 <Button
                                   size="sm"
                                   variant="ghost"
@@ -489,6 +492,18 @@ export default function Notes() {
                                   <Download className="w-4 h-4" />
                                   Download
                                 </Button>
+                              )}
+                              {note.file_url && !downloadsEnabled && (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span className="text-xs text-muted-foreground px-2">Downloads disabled</span>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Downloads are currently disabled by admin</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
                               )}
                             </div>
                           </div>

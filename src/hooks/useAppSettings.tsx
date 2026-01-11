@@ -5,6 +5,7 @@ interface AppSettings {
   posts_enabled: boolean;
   qa_enabled: boolean;
   requests_enabled: boolean;
+  downloads_enabled: boolean;
 }
 
 export function useAppSettings() {
@@ -23,6 +24,7 @@ export function useAppSettings() {
         posts_enabled: true,
         qa_enabled: true,
         requests_enabled: true,
+        downloads_enabled: true,
       };
       
       data?.forEach((setting: { key: string; value: unknown }) => {
@@ -54,11 +56,13 @@ export function useAppSettings() {
       posts_enabled: true,
       qa_enabled: true,
       requests_enabled: true,
+      downloads_enabled: true,
     },
     isLoading,
     updateSetting,
     postsEnabled: settings?.posts_enabled ?? true,
     qaEnabled: settings?.qa_enabled ?? true,
     requestsEnabled: settings?.requests_enabled ?? true,
+    downloadsEnabled: settings?.downloads_enabled ?? true,
   };
 }

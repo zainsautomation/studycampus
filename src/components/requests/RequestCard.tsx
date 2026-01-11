@@ -1,9 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ThumbsUp, MessageSquare } from "lucide-react";
+import { StatusBadge } from "./StatusBadge";
+import { ThumbsUp, Clock, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface RequestCardProps {
   request: {
@@ -22,13 +23,14 @@ interface RequestCardProps {
   hasUpvoted: boolean;
   currentUserId: string | undefined;
   onUpvote: () => void;
+  index?: number;
 }
 
-const statusColors: Record<string, string> = {
-  pending: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300",
-  in_progress: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300",
-  completed: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
-  rejected: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300",
+const statusBorderColors: Record<string, string> = {
+  pending: "border-l-warning",
+  in_progress: "border-l-primary",
+  completed: "border-l-success",
+  rejected: "border-l-destructive",
 };
 
 const typeLabels: Record<string, string> = {
@@ -36,60 +38,90 @@ const typeLabels: Record<string, string> = {
   feature: "Feature Request",
 };
 
-export function RequestCard({ request, hasUpvoted, currentUserId, onUpvote }: RequestCardProps) {
+export function RequestCard({ request, hasUpvoted, currentUserId, onUpvote, index = 0 }: RequestCardProps) {
   const isOwn = currentUserId === request.user_id;
+  const borderColor = statusBorderColors[request.status] || "border-l-muted";
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.2 }}
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ 
+        duration: 0.3, 
+        delay: index * 0.05,
+        ease: [0.25, 0.46, 0.45, 0.94]
+      }}
+      whileHover={{ 
+        scale: 1.01,
+        transition: { duration: 0.2 }
+      }}
     >
-      <Card>
+      <Card className={`transition-all duration-300 hover:shadow-lg border-l-4 ${borderColor} overflow-hidden`}>
         <CardHeader className="pb-2">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1">
               <div className="flex items-center gap-2 flex-wrap mb-1">
-                <Badge variant="outline">{typeLabels[request.type] || request.type}</Badge>
-                <Badge className={statusColors[request.status] || ""}>
-                  {request.status.replace('_', ' ')}
-                </Badge>
+                <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                  {typeLabels[request.type] || request.type}
+                </span>
+                <StatusBadge status={request.status} />
                 {isOwn && (
-                  <Badge variant="secondary">Your Request</Badge>
+                  <Badge variant="secondary" className="text-xs">Your Request</Badge>
                 )}
               </div>
               <CardTitle className="text-lg">{request.title}</CardTitle>
             </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground mb-3">{request.description}</p>
-          
-          {request.admin_response && (
-            <div className="bg-muted p-3 rounded-lg mb-3">
-              <div className="flex items-center gap-2 mb-1">
-                <MessageSquare className="h-4 w-4 text-primary" />
-                <span className="text-sm font-medium">Admin Response</span>
-              </div>
-              <p className="text-sm">{request.admin_response}</p>
-            </div>
-          )}
-
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <div className="flex items-center gap-2">
+            
+            {/* Upvote Button */}
+            <motion.div whileTap={{ scale: 0.9 }}>
               <Button
                 variant={hasUpvoted ? "default" : "outline"}
                 size="sm"
                 onClick={onUpvote}
-                className="gap-2"
+                className={`gap-2 transition-all duration-200 ${
+                  hasUpvoted 
+                    ? 'bg-primary hover:bg-primary/90 shadow-md' 
+                    : 'hover:border-primary hover:text-primary'
+                }`}
               >
-                <ThumbsUp className="h-4 w-4" />
-                {request.upvotes}
+                <motion.div
+                  animate={hasUpvoted ? { scale: [1, 1.3, 1] } : {}}
+                  transition={{ duration: 0.3 }}
+                >
+                  <ThumbsUp className={`h-4 w-4 ${hasUpvoted ? 'fill-current' : ''}`} />
+                </motion.div>
+                <motion.span
+                  key={request.upvotes}
+                  initial={{ y: -10, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  className="font-semibold tabular-nums"
+                >
+                  {request.upvotes}
+                </motion.span>
               </Button>
-            </div>
-            <span>
-              {request.profiles?.full_name || 'Anonymous'} • {formatDistanceToNow(new Date(request.created_at), { addSuffix: true })}
-            </span>
+            </motion.div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{request.description}</p>
+          
+          <AnimatePresence>
+            {request.admin_response && (
+              <motion.div 
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="bg-muted/50 rounded-lg p-3 mb-3 border-l-2 border-primary"
+              >
+                <p className="text-xs font-medium text-muted-foreground mb-1">Admin Response</p>
+                <p className="text-sm">{request.admin_response}</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-border">
+            <span className="font-medium">{request.profiles?.full_name || 'Anonymous'}</span>
+            <span>{formatDistanceToNow(new Date(request.created_at), { addSuffix: true })}</span>
           </div>
         </CardContent>
       </Card>
