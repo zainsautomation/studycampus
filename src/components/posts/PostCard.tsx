@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Heart, Pin, Trash2, MoreVertical } from "lucide-react";
+import { Heart, Pin, Trash2, MoreVertical, EyeOff } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { motion } from "framer-motion";
 import {
@@ -18,9 +18,10 @@ interface PostCardProps {
     image_url: string | null;
     likes_count: number;
     is_pinned: boolean;
+    is_anonymous?: boolean;
     created_at: string;
     user_id: string;
-    profiles?: { full_name: string | null; avatar_url: string | null } | null;
+    profiles?: { full_name: string | null; avatar_url: string | null; username?: string | null } | null;
   };
   hasLiked: boolean;
   currentUserId: string | undefined;
@@ -40,7 +41,18 @@ export function PostCard({
   onDelete,
 }: PostCardProps) {
   const canDelete = isAdmin || currentUserId === post.user_id;
-  const initials = post.profiles?.full_name?.split(' ').map(n => n[0]).join('').toUpperCase() || '?';
+  const isAnonymous = post.is_anonymous;
+  
+  // Display name logic: anonymous > @username > full_name > 'User'
+  const displayName = isAnonymous 
+    ? 'Anonymous' 
+    : post.profiles?.username 
+      ? `@${post.profiles.username}` 
+      : post.profiles?.full_name || 'User';
+  
+  const initials = isAnonymous 
+    ? '?' 
+    : post.profiles?.full_name?.split(' ').map(n => n[0]).join('').toUpperCase() || '?';
 
   return (
     <motion.div
@@ -53,13 +65,15 @@ export function PostCard({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Avatar className="h-10 w-10">
-                <AvatarImage src={post.profiles?.avatar_url || undefined} />
-                <AvatarFallback>{initials}</AvatarFallback>
+                {!isAnonymous && <AvatarImage src={post.profiles?.avatar_url || undefined} />}
+                <AvatarFallback className={isAnonymous ? "bg-muted" : ""}>
+                  {isAnonymous ? <EyeOff className="h-4 w-4" /> : initials}
+                </AvatarFallback>
               </Avatar>
               <div>
                 <div className="flex items-center gap-2">
-                  <p className="font-medium text-sm">
-                    {post.profiles?.full_name || 'Anonymous'}
+                  <p className={`font-medium text-sm ${isAnonymous ? 'text-muted-foreground italic' : ''}`}>
+                    {displayName}
                   </p>
                   {post.is_pinned && <Pin className="h-4 w-4 text-primary" />}
                 </div>

@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ThumbsUp, CheckCircle2, Trash2 } from "lucide-react";
+import { ThumbsUp, CheckCircle2, Trash2, EyeOff } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { motion } from "framer-motion";
 
@@ -13,7 +13,7 @@ interface AnswerCardProps {
     upvotes: number;
     created_at: string;
     user_id: string;
-    profiles?: { full_name: string | null } | null;
+    profiles?: { full_name: string | null; username?: string | null } | null;
   };
   isQuestionAuthor: boolean;
   currentUserId: string | undefined;
@@ -22,6 +22,7 @@ interface AnswerCardProps {
   onUpvote: () => void;
   onAccept: () => void;
   onDelete: () => void;
+  isAnonymousQuestion?: boolean;
 }
 
 export function AnswerCard({
@@ -34,6 +35,11 @@ export function AnswerCard({
   onAccept,
   onDelete,
 }: AnswerCardProps) {
+  // Display name logic
+  const displayName = answer.profiles?.username 
+    ? `@${answer.profiles.username}` 
+    : answer.profiles?.full_name || 'User';
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -64,7 +70,7 @@ export function AnswerCard({
               <p className="text-sm whitespace-pre-wrap">{answer.content}</p>
               <div className="flex items-center justify-between mt-3 text-xs text-muted-foreground">
                 <span>
-                  {answer.profiles?.full_name || 'Anonymous'} • {formatDistanceToNow(new Date(answer.created_at), { addSuffix: true })}
+                  <span className="font-medium">{displayName}</span> • {formatDistanceToNow(new Date(answer.created_at), { addSuffix: true })}
                 </span>
                 <div className="flex items-center gap-2">
                   {isQuestionAuthor && !answer.is_accepted && (

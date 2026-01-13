@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -18,19 +19,21 @@ import {
 } from "@/components/ui/dialog";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2 } from "lucide-react";
+import { Loader2, EyeOff } from "lucide-react";
 
 interface QuestionFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (data: { title: string; content: string; subject_id: string | null }) => void;
+  onSubmit: (data: { title: string; content: string; subject_id: string | null; is_anonymous: boolean }) => void;
   isSubmitting: boolean;
+  anonymousEnabled?: boolean;
 }
 
-export function QuestionForm({ open, onOpenChange, onSubmit, isSubmitting }: QuestionFormProps) {
+export function QuestionForm({ open, onOpenChange, onSubmit, isSubmitting, anonymousEnabled = false }: QuestionFormProps) {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [subjectId, setSubjectId] = useState<string>("");
+  const [isAnonymous, setIsAnonymous] = useState(false);
 
   const { data: subjects } = useQuery({
     queryKey: ['subjects'],
@@ -47,15 +50,17 @@ export function QuestionForm({ open, onOpenChange, onSubmit, isSubmitting }: Que
       title,
       content,
       subject_id: subjectId || null,
+      is_anonymous: isAnonymous,
     });
     setTitle("");
     setContent("");
     setSubjectId("");
+    setIsAnonymous(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="w-[calc(100%-2rem)] max-w-lg mx-auto max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Ask a Question</DialogTitle>
         </DialogHeader>
@@ -96,6 +101,19 @@ export function QuestionForm({ open, onOpenChange, onSubmit, isSubmitting }: Que
               required
             />
           </div>
+          {anonymousEnabled && (
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="anonymous"
+                checked={isAnonymous}
+                onCheckedChange={(checked) => setIsAnonymous(checked as boolean)}
+              />
+              <Label htmlFor="anonymous" className="text-sm font-normal flex items-center gap-1.5 cursor-pointer">
+                <EyeOff className="h-3.5 w-3.5" />
+                Ask anonymously
+              </Label>
+            </div>
+          )}
           <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel

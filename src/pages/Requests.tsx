@@ -9,11 +9,13 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, GitPullRequest } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useAppSettings } from "@/hooks/useAppSettings";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 
 export default function Requests() {
   const { user } = useAuth();
+  const { anonymousPostsEnabled } = useAppSettings();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -54,7 +56,7 @@ export default function Requests() {
   });
 
   const createRequest = useMutation({
-    mutationFn: async (data: { title: string; description: string; type: string; is_public: boolean }) => {
+    mutationFn: async (data: { title: string; description: string; type: string; is_public: boolean; is_anonymous: boolean }) => {
       const { error } = await supabase.from('requests').insert({
         ...data,
         user_id: user?.id,
@@ -133,6 +135,7 @@ export default function Requests() {
           onOpenChange={setFormOpen}
           onSubmit={(data) => createRequest.mutate(data)}
           isSubmitting={createRequest.isPending}
+          anonymousEnabled={anonymousPostsEnabled}
         />
       </div>
     </MainLayout>

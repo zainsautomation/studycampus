@@ -271,6 +271,7 @@ export type Database = {
           created_at: string
           id: string
           image_url: string | null
+          is_anonymous: boolean | null
           is_pinned: boolean | null
           likes_count: number | null
           updated_at: string
@@ -281,6 +282,7 @@ export type Database = {
           created_at?: string
           id?: string
           image_url?: string | null
+          is_anonymous?: boolean | null
           is_pinned?: boolean | null
           likes_count?: number | null
           updated_at?: string
@@ -291,6 +293,7 @@ export type Database = {
           created_at?: string
           id?: string
           image_url?: string | null
+          is_anonymous?: boolean | null
           is_pinned?: boolean | null
           likes_count?: number | null
           updated_at?: string
@@ -336,6 +339,7 @@ export type Database = {
           content: string
           created_at: string
           id: string
+          is_anonymous: boolean | null
           is_pinned: boolean | null
           is_resolved: boolean | null
           subject_id: string | null
@@ -347,6 +351,7 @@ export type Database = {
           content: string
           created_at?: string
           id?: string
+          is_anonymous?: boolean | null
           is_pinned?: boolean | null
           is_resolved?: boolean | null
           subject_id?: string | null
@@ -358,6 +363,7 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          is_anonymous?: boolean | null
           is_pinned?: boolean | null
           is_resolved?: boolean | null
           subject_id?: string | null
@@ -410,6 +416,7 @@ export type Database = {
           created_at: string
           description: string
           id: string
+          is_anonymous: boolean | null
           is_public: boolean | null
           status: string
           title: string
@@ -423,6 +430,7 @@ export type Database = {
           created_at?: string
           description: string
           id?: string
+          is_anonymous?: boolean | null
           is_public?: boolean | null
           status?: string
           title: string
@@ -436,6 +444,7 @@ export type Database = {
           created_at?: string
           description?: string
           id?: string
+          is_anonymous?: boolean | null
           is_public?: boolean | null
           status?: string
           title?: string

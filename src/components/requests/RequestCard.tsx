@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "./StatusBadge";
-import { ThumbsUp, Clock, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { ThumbsUp, EyeOff } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -15,10 +15,11 @@ interface RequestCardProps {
     status: string;
     admin_response: string | null;
     is_public: boolean;
+    is_anonymous?: boolean;
     upvotes: number;
     created_at: string;
     user_id: string;
-    profiles?: { full_name: string | null } | null;
+    profiles?: { full_name: string | null; username?: string | null } | null;
   };
   hasUpvoted: boolean;
   currentUserId: string | undefined;
@@ -41,6 +42,14 @@ const typeLabels: Record<string, string> = {
 export function RequestCard({ request, hasUpvoted, currentUserId, onUpvote, index = 0 }: RequestCardProps) {
   const isOwn = currentUserId === request.user_id;
   const borderColor = statusBorderColors[request.status] || "border-l-muted";
+  const isAnonymous = request.is_anonymous;
+  
+  // Display name logic
+  const displayName = isAnonymous 
+    ? 'Anonymous' 
+    : request.profiles?.username 
+      ? `@${request.profiles.username}` 
+      : request.profiles?.full_name || 'User';
 
   return (
     <motion.div
@@ -120,7 +129,10 @@ export function RequestCard({ request, hasUpvoted, currentUserId, onUpvote, inde
           </AnimatePresence>
 
           <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-border">
-            <span className="font-medium">{request.profiles?.full_name || 'Anonymous'}</span>
+            <span className={`font-medium flex items-center gap-1.5 ${isAnonymous ? 'italic' : ''}`}>
+              {isAnonymous && <EyeOff className="h-3 w-3" />}
+              {displayName}
+            </span>
             <span>{formatDistanceToNow(new Date(request.created_at), { addSuffix: true })}</span>
           </div>
         </CardContent>

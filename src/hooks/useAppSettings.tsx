@@ -6,6 +6,7 @@ interface AppSettings {
   qa_enabled: boolean;
   requests_enabled: boolean;
   downloads_enabled: boolean;
+  anonymous_posts_enabled: boolean;
 }
 
 export function useAppSettings() {
@@ -25,6 +26,7 @@ export function useAppSettings() {
         qa_enabled: true,
         requests_enabled: true,
         downloads_enabled: true,
+        anonymous_posts_enabled: true,
       };
       
       data?.forEach((setting: { key: string; value: unknown }) => {
@@ -57,6 +59,7 @@ export function useAppSettings() {
       qa_enabled: true,
       requests_enabled: true,
       downloads_enabled: true,
+      anonymous_posts_enabled: true,
     },
     isLoading,
     updateSetting,
@@ -64,5 +67,6 @@ export function useAppSettings() {
     qaEnabled: settings?.qa_enabled ?? true,
     requestsEnabled: settings?.requests_enabled ?? true,
     downloadsEnabled: settings?.downloads_enabled ?? true,
+    anonymousPostsEnabled: settings?.anonymous_posts_enabled ?? true,
   };
 }
