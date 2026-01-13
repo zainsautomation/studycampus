@@ -2,6 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Check, Copy, Download, ExternalLink, FileText } from "lucide-react";
 
 type Subject = {
@@ -30,6 +31,7 @@ interface NoteDetailsDialogProps {
   onCopyLink: (note: Note) => Promise<void>;
   onOpenLink: (note: Note) => void;
   onDownload: (note: Note) => Promise<void>;
+  downloadsEnabled?: boolean;
 }
 
 export function NoteDetailsDialog({
@@ -41,18 +43,19 @@ export function NoteDetailsDialog({
   onCopyLink,
   onOpenLink,
   onDownload,
+  downloadsEnabled = true,
 }: NoteDetailsDialogProps) {
   if (!note) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="w-[calc(100%-2rem)] max-w-lg mx-auto">
         <DialogHeader>
-          <DialogTitle className="font-display">{note.title}</DialogTitle>
+          <DialogTitle className="font-display pr-6">{note.title}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {subject && (
               <Badge
                 variant="secondary"
@@ -67,7 +70,7 @@ export function NoteDetailsDialog({
           </div>
 
           {note.description ? (
-            <ScrollArea className="max-h-56 pr-4">
+            <ScrollArea className="max-h-48 sm:max-h-56 pr-4">
               <p className="text-sm text-muted-foreground whitespace-pre-wrap">
                 {note.description}
               </p>
@@ -78,7 +81,7 @@ export function NoteDetailsDialog({
             </div>
           )}
 
-          <div className="flex flex-wrap items-center justify-end gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2 pt-2">
             {note.link_url && (
               <>
                 <Button
@@ -92,7 +95,7 @@ export function NoteDetailsDialog({
                   ) : (
                     <Copy className="h-4 w-4" />
                   )}
-                  Copy link
+                  <span className="hidden sm:inline">Copy link</span>
                 </Button>
                 <Button
                   variant="default"
@@ -101,12 +104,12 @@ export function NoteDetailsDialog({
                   onClick={() => onOpenLink(note)}
                 >
                   <ExternalLink className="h-4 w-4" />
-                  Open link
+                  <span className="hidden sm:inline">Open link</span>
                 </Button>
               </>
             )}
 
-            {note.file_url && (
+            {note.file_url && downloadsEnabled && (
               <Button
                 variant="default"
                 size="sm"
@@ -116,6 +119,22 @@ export function NoteDetailsDialog({
                 <Download className="h-4 w-4" />
                 Download
               </Button>
+            )}
+
+            {note.file_url && !downloadsEnabled && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground px-3 py-1.5 rounded-md bg-muted/50">
+                      <Download className="h-4 w-4" />
+                      <span>Disabled</span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Downloads are currently disabled by admin</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
 
             {!note.file_url && !note.link_url && (

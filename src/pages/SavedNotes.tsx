@@ -6,12 +6,13 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { NoteDetailsDialog } from '@/components/notes/NoteDetailsDialog';
 import { useSavedNotes } from '@/hooks/useSavedNotes';
 import { useAuth } from '@/hooks/useAuth';
-
+import { useAppSettings } from '@/hooks/useAppSettings';
 interface Subject {
   id: string;
   name: string;
@@ -49,6 +50,7 @@ const itemVariants = {
 export default function SavedNotes() {
   const { user } = useAuth();
   const { savedNoteIds, toggleSaveNote, isNoteSaved } = useSavedNotes();
+  const { downloadsEnabled } = useAppSettings();
   const [notes, setNotes] = useState<Note[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -262,10 +264,10 @@ export default function SavedNotes() {
                                 e.stopPropagation();
                                 toggleSaveNote(note.id);
                               }}
-                              className="h-8 w-8 text-primary"
+                              className="h-8 w-8 group/bookmark"
                               title="Remove from saved"
                             >
-                              <Bookmark className="w-4 h-4 fill-current" />
+                              <Bookmark className="w-4 h-4 fill-amber-500 text-amber-500 transition-transform duration-200 group-hover/bookmark:scale-110" />
                             </Button>
                           </div>
                         </div>
@@ -328,7 +330,7 @@ export default function SavedNotes() {
                                 </Button>
                               </>
                             )}
-                            {note.file_url && (
+                            {note.file_url && downloadsEnabled && (
                               <Button
                                 size="sm"
                                 variant="ghost"
@@ -336,10 +338,22 @@ export default function SavedNotes() {
                                   e.stopPropagation();
                                   handleDownload(note);
                                 }}
-                                className="h-8 gap-1.5 hover:bg-muted"
+                                className="h-8 gap-1.5 hover:bg-primary hover:text-primary-foreground transition-colors"
                               >
                                 <Download className="w-4 h-4" />
                               </Button>
+                            )}
+                            {note.file_url && !downloadsEnabled && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="text-xs text-muted-foreground">Disabled</span>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Downloads disabled by admin</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                             )}
                           </div>
                         </div>
@@ -362,6 +376,7 @@ export default function SavedNotes() {
         onCopyLink={handleCopyLink}
         onOpenLink={handleOpenLink}
         copiedLinkId={copiedLinkId}
+        downloadsEnabled={downloadsEnabled}
       />
     </MainLayout>
   );
