@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { RequestCard } from "@/components/requests/RequestCard";
 import { RequestForm } from "@/components/requests/RequestForm";
+import { RequestCardSkeleton } from "@/components/ui/shimmer-skeleton";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, GitPullRequest } from "lucide-react";
@@ -142,7 +143,7 @@ export default function Requests() {
       return (
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-32 bg-muted animate-pulse rounded-lg" />
+            <RequestCardSkeleton key={i} />
           ))}
         </div>
       );
