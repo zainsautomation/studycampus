@@ -424,10 +424,16 @@ export default function Notes() {
                                   e.stopPropagation();
                                   toggleSaveNote(note.id);
                                 }}
-                                className={`h-8 w-8 ${isNoteSaved(note.id) ? 'text-primary' : 'text-muted-foreground hover:text-primary'}`}
+                                className="h-8 w-8 group/bookmark"
                                 title={isNoteSaved(note.id) ? 'Remove from saved' : 'Save note'}
                               >
-                                <Bookmark className={`w-4 h-4 ${isNoteSaved(note.id) ? 'fill-current' : ''}`} />
+                                <Bookmark 
+                                  className={`w-4 h-4 transition-all duration-300 ${
+                                    isNoteSaved(note.id) 
+                                      ? 'fill-amber-500 text-amber-500 scale-110' 
+                                      : 'text-muted-foreground group-hover/bookmark:text-amber-500'
+                                  }`} 
+                                />
                               </Button>
                               <Badge variant="outline" className="text-xs">
                                 {note.file_type?.split('/').pop()?.toUpperCase() || 'FILE'}
@@ -526,6 +532,7 @@ export default function Notes() {
                 onCopyLink={handleCopyLink}
                 onOpenLink={handleOpenLink}
                 onDownload={handleDownload}
+                downloadsEnabled={downloadsEnabled}
               />
             </motion.div>
           )}
