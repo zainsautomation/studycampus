@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Pencil, Trash2, Upload, FileText, X, Link } from 'lucide-react';
+import { Plus, Pencil, Trash2, Upload, FileText, X, Link, Download } from 'lucide-react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -15,6 +16,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
+import { useAppSettings } from '@/hooks/useAppSettings';
 
 interface Subject { id: string; name: string; color: string; }
 interface Note { id: string; title: string; description: string | null; file_url: string | null; file_name: string | null; file_type: string | null; file_size: number | null; download_count: number | null; subject_id: string | null; created_at: string; subjects: Subject | null; link_url: string | null; }
@@ -32,6 +34,7 @@ const itemVariants = {
 export default function ManageNotes() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { downloadsEnabled, updateSetting } = useAppSettings();
   const [notes, setNotes] = useState<Note[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -42,6 +45,10 @@ export default function ManageNotes() {
   const [isUploading, setIsUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [keepExistingFile, setKeepExistingFile] = useState(true);
+
+  const handleToggleDownloads = () => {
+    updateSetting.mutate({ key: 'downloads_enabled', value: !downloadsEnabled });
+  };
 
   const fetchData = useCallback(async () => {
     const [notesRes, subjectsRes] = await Promise.all([
@@ -170,14 +177,28 @@ export default function ManageNotes() {
   return (
     <AdminLayout title="Manage Notes" description="Upload and manage study materials">
       <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-6">
-        <motion.div variants={itemVariants} className="flex justify-end">
+        <motion.div variants={itemVariants} className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          {/* Downloads Toggle */}
+          <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border border-border">
+            <Download className="w-4 h-4 text-muted-foreground" />
+            <span className="text-sm font-medium">Downloads</span>
+            <Switch
+              checked={downloadsEnabled}
+              onCheckedChange={handleToggleDownloads}
+              aria-label="Toggle downloads"
+            />
+            <span className={`text-xs font-medium ${downloadsEnabled ? 'text-green-500' : 'text-muted-foreground'}`}>
+              {downloadsEnabled ? 'Enabled' : 'Disabled'}
+            </span>
+          </div>
+
           <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
             <DialogTrigger asChild>
               <Button onClick={() => handleOpenDialog()} className="gap-2">
                 <Plus className="w-4 h-4" />Add Note
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+            <DialogContent className="w-[calc(100%-2rem)] max-w-lg max-h-[85vh] overflow-y-auto mx-auto">
               <DialogHeader><DialogTitle>{editingNote ? 'Edit Note' : 'Add New Note'}</DialogTitle></DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
