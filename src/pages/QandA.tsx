@@ -16,12 +16,14 @@ import {
 } from "@/components/ui/select";
 import { Plus, Search, HelpCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useAppSettings } from "@/hooks/useAppSettings";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 
 export default function QandA() {
   const { user } = useAuth();
+  const { anonymousPostsEnabled } = useAppSettings();
   const { toast } = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -72,7 +74,7 @@ export default function QandA() {
   });
 
   const createQuestion = useMutation({
-    mutationFn: async (data: { title: string; content: string; subject_id: string | null }) => {
+    mutationFn: async (data: { title: string; content: string; subject_id: string | null; is_anonymous: boolean }) => {
       const { error } = await supabase.from('questions').insert({
         ...data,
         user_id: user?.id,
@@ -185,6 +187,7 @@ export default function QandA() {
           onOpenChange={setFormOpen}
           onSubmit={(data) => createQuestion.mutate(data)}
           isSubmitting={createQuestion.isPending}
+          anonymousEnabled={anonymousPostsEnabled}
         />
       </div>
     </MainLayout>

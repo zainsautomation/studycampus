@@ -18,7 +18,8 @@ import {
   GitPullRequest,
   Settings,
   ChevronDown,
-  Download
+  Download,
+  EyeOff
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -251,6 +252,17 @@ export function AdminSidebar() {
                   id="downloads-toggle"
                   checked={settings.downloads_enabled}
                   onCheckedChange={(checked) => updateSetting.mutate({ key: 'downloads_enabled', value: checked })}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="anonymous-toggle" className="text-sm flex items-center gap-2 cursor-pointer">
+                  <EyeOff className="h-3.5 w-3.5" />
+                  Anonymous Posts
+                </Label>
+                <Switch
+                  id="anonymous-toggle"
+                  checked={settings.anonymous_posts_enabled}
+                  onCheckedChange={(checked) => updateSetting.mutate({ key: 'anonymous_posts_enabled', value: checked })}
                 />
               </div>
             </motion.div>

@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MessageSquare, CheckCircle2, Pin } from "lucide-react";
+import { MessageSquare, CheckCircle2, Pin, EyeOff } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { motion } from "framer-motion";
 
@@ -11,10 +11,11 @@ interface QuestionCardProps {
     content: string;
     is_resolved: boolean;
     is_pinned: boolean;
+    is_anonymous?: boolean;
     created_at: string;
     user_id: string;
     subject_id: string | null;
-    profiles?: { full_name: string | null } | null;
+    profiles?: { full_name: string | null; username?: string | null } | null;
     subjects?: { name: string; color: string } | null;
     answers?: { count: number }[];
   };
@@ -24,6 +25,14 @@ interface QuestionCardProps {
 
 export function QuestionCard({ question, onClick, index = 0 }: QuestionCardProps) {
   const answerCount = question.answers?.[0]?.count ?? 0;
+  const isAnonymous = question.is_anonymous;
+  
+  // Display name logic
+  const displayName = isAnonymous 
+    ? 'Anonymous' 
+    : question.profiles?.username 
+      ? `@${question.profiles.username}` 
+      : question.profiles?.full_name || 'User';
 
   return (
     <motion.div
@@ -95,7 +104,10 @@ export function QuestionCard({ question, onClick, index = 0 }: QuestionCardProps
               </motion.span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="font-medium">{question.profiles?.full_name || 'Anonymous'}</span>
+              {isAnonymous && <EyeOff className="h-3 w-3" />}
+              <span className={`font-medium ${isAnonymous ? 'italic text-muted-foreground' : ''}`}>
+                {displayName}
+              </span>
               <span className="text-muted-foreground/50">•</span>
               <span>{formatDistanceToNow(new Date(question.created_at), { addSuffix: true })}</span>
             </div>

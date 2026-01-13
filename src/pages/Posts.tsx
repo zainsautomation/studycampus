@@ -14,7 +14,7 @@ export default function Posts() {
   const { user, isAdmin } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { postsEnabled } = useAppSettings();
+  const { postsEnabled, anonymousPostsEnabled } = useAppSettings();
 
   const { data: posts, isLoading } = useQuery({
     queryKey: ['posts'],
@@ -45,10 +45,11 @@ export default function Posts() {
   });
 
   const createPost = useMutation({
-    mutationFn: async (content: string) => {
+    mutationFn: async ({ content, isAnonymous }: { content: string; isAnonymous: boolean }) => {
       const { error } = await supabase.from('posts').insert({
         user_id: user?.id,
         content,
+        is_anonymous: isAnonymous,
       });
       if (error) throw error;
     },
@@ -143,8 +144,9 @@ export default function Posts() {
         </motion.div>
 
         <PostForm
-          onSubmit={(content) => createPost.mutate(content)}
+          onSubmit={(content, isAnonymous) => createPost.mutate({ content, isAnonymous })}
           isSubmitting={createPost.isPending}
+          anonymousEnabled={anonymousPostsEnabled}
         />
 
         {isLoading ? (
