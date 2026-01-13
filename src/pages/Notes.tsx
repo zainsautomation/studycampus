@@ -33,6 +33,7 @@ interface Note {
   created_at: string;
   subjects: Subject | null;
   link_url: string | null;
+  is_downloadable?: boolean;
 }
 
 const containerVariants = {
@@ -485,7 +486,7 @@ export default function Notes() {
                                   </Button>
                                 </>
                               )}
-                              {note.file_url && downloadsEnabled && (
+                              {note.file_url && downloadsEnabled && note.is_downloadable !== false && (
                                 <Button
                                   size="sm"
                                   variant="ghost"
@@ -499,14 +500,14 @@ export default function Notes() {
                                   Download
                                 </Button>
                               )}
-                              {note.file_url && !downloadsEnabled && (
+                              {note.file_url && (!downloadsEnabled || note.is_downloadable === false) && (
                                 <TooltipProvider>
                                   <Tooltip>
                                     <TooltipTrigger asChild>
                                       <span className="text-xs text-muted-foreground px-2">Downloads disabled</span>
                                     </TooltipTrigger>
                                     <TooltipContent>
-                                      <p>Downloads are currently disabled by admin</p>
+                                      <p>{!downloadsEnabled ? 'Downloads are currently disabled by admin' : 'Downloads disabled for this note'}</p>
                                     </TooltipContent>
                                   </Tooltip>
                                 </TooltipProvider>
@@ -532,7 +533,7 @@ export default function Notes() {
                 onCopyLink={handleCopyLink}
                 onOpenLink={handleOpenLink}
                 onDownload={handleDownload}
-                downloadsEnabled={downloadsEnabled}
+                downloadsEnabled={downloadsEnabled && activeNote?.is_downloadable !== false}
               />
             </motion.div>
           )}

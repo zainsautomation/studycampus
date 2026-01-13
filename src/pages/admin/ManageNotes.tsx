@@ -19,7 +19,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAppSettings } from '@/hooks/useAppSettings';
 
 interface Subject { id: string; name: string; color: string; }
-interface Note { id: string; title: string; description: string | null; file_url: string | null; file_name: string | null; file_type: string | null; file_size: number | null; download_count: number | null; subject_id: string | null; created_at: string; subjects: Subject | null; link_url: string | null; }
+interface Note { id: string; title: string; description: string | null; file_url: string | null; file_name: string | null; file_type: string | null; file_size: number | null; download_count: number | null; subject_id: string | null; created_at: string; subjects: Subject | null; link_url: string | null; is_downloadable: boolean; }
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -40,7 +40,7 @@ export default function ManageNotes() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
-  const [formData, setFormData] = useState({ title: '', description: '', subject_id: '', link_url: '', file_name: '' });
+  const [formData, setFormData] = useState({ title: '', description: '', subject_id: '', link_url: '', file_name: '', is_downloadable: true });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
@@ -55,7 +55,7 @@ export default function ManageNotes() {
       supabase.from('notes').select('*, subjects(id, name, color)').order('created_at', { ascending: false }),
       supabase.from('subjects').select('*').order('name'),
     ]);
-    setNotes(notesRes.data || []);
+    setNotes((notesRes.data || []).map(n => ({ ...n, is_downloadable: n.is_downloadable ?? true })));
     setSubjects(subjectsRes.data || []);
     setIsLoading(false);
   }, []);
@@ -63,7 +63,7 @@ export default function ManageNotes() {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const resetForm = () => {
-    setFormData({ title: '', description: '', subject_id: '', link_url: '', file_name: '' });
+    setFormData({ title: '', description: '', subject_id: '', link_url: '', file_name: '', is_downloadable: true });
     setSelectedFile(null);
     setEditingNote(null);
     setKeepExistingFile(true);
@@ -77,7 +77,8 @@ export default function ManageNotes() {
         description: note.description || '', 
         subject_id: note.subject_id || '', 
         link_url: note.link_url || '',
-        file_name: note.file_name || ''
+        file_name: note.file_name || '',
+        is_downloadable: note.is_downloadable ?? true
       });
       setKeepExistingFile(true);
     } else {
@@ -141,6 +142,7 @@ export default function ManageNotes() {
         file_size: fileSize,
         link_url: formData.link_url || null,
         created_by: user?.id,
+        is_downloadable: formData.is_downloadable,
       };
 
       if (editingNote) {
@@ -169,6 +171,22 @@ export default function ManageNotes() {
       if (error) throw error;
       toast({ title: 'Note deleted successfully' });
       fetchData();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  };
+
+  const handleToggleNoteDownloadable = async (noteId: string, isDownloadable: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('notes')
+        .update({ is_downloadable: isDownloadable })
+        .eq('id', noteId);
+      
+      if (error) throw error;
+      
+      setNotes(prev => prev.map(n => n.id === noteId ? { ...n, is_downloadable: isDownloadable } : n));
+      toast({ title: `Downloads ${isDownloadable ? 'enabled' : 'disabled'} for this note` });
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
@@ -299,6 +317,17 @@ export default function ManageNotes() {
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">Add a link to external resources like Google Drive, YouTube, etc.</p>
                 </div>
+                <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-muted/30">
+                  <Switch
+                    id="is_downloadable"
+                    checked={formData.is_downloadable}
+                    onCheckedChange={(checked) => setFormData({ ...formData, is_downloadable: checked })}
+                  />
+                  <Label htmlFor="is_downloadable" className="flex-1 cursor-pointer">
+                    <span className="text-sm font-medium">Allow Download</span>
+                    <p className="text-xs text-muted-foreground">When enabled, users can download this note's file</p>
+                  </Label>
+                </div>
                 <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-2">
                   <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
                   <Button type="submit" disabled={isUploading}>{isUploading ? 'Uploading...' : editingNote ? 'Update' : 'Create'}</Button>
@@ -319,6 +348,7 @@ export default function ManageNotes() {
                       <th className="p-4 font-medium hidden md:table-cell">Subject</th>
                       <th className="p-4 font-medium hidden sm:table-cell">Downloads</th>
                       <th className="p-4 font-medium hidden lg:table-cell">Date</th>
+                      <th className="p-4 font-medium hidden sm:table-cell text-center">DL</th>
                       <th className="p-4 font-medium text-right">Actions</th>
                     </tr>
                   </thead>
@@ -344,6 +374,14 @@ export default function ManageNotes() {
                         </td>
                         <td className="p-4 hidden sm:table-cell">{note.download_count || 0}</td>
                         <td className="p-4 hidden lg:table-cell text-sm text-muted-foreground">{format(new Date(note.created_at), 'MMM dd, yyyy')}</td>
+                        <td className="p-4 hidden sm:table-cell text-center">
+                          <Switch
+                            checked={note.is_downloadable}
+                            onCheckedChange={(checked) => handleToggleNoteDownloadable(note.id, checked)}
+                            className="mx-auto"
+                            title={note.is_downloadable ? 'Downloads enabled' : 'Downloads disabled'}
+                          />
+                        </td>
                         <td className="p-4 text-right">
                           <div className="flex justify-end gap-1">
                             <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(note)} className="hover:bg-primary/10"><Pencil className="w-4 h-4" /></Button>
@@ -368,7 +406,7 @@ export default function ManageNotes() {
                     ))}
                     {notes.length === 0 && (
                       <tr>
-                        <td colSpan={5} className="p-12 text-center text-muted-foreground">
+                        <td colSpan={6} className="p-12 text-center text-muted-foreground">
                           <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
                           <p>No notes yet. Click "Add Note" to create one.</p>
                         </td>
