@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { QuestionCard } from "@/components/qa/QuestionCard";
 import { QuestionForm } from "@/components/qa/QuestionForm";
+import { QuestionCardSkeleton } from "@/components/ui/shimmer-skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -154,7 +155,7 @@ export default function QandA() {
         {isLoading ? (
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-32 bg-muted animate-pulse rounded-lg" />
+              <QuestionCardSkeleton key={i} />
             ))}
           </div>
         ) : questions?.length === 0 ? (
