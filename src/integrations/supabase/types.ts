@@ -188,6 +188,7 @@ export type Database = {
           file_type: string | null
           file_url: string | null
           id: string
+          is_downloadable: boolean | null
           link_url: string | null
           subject_id: string | null
           title: string
@@ -203,6 +204,7 @@ export type Database = {
           file_type?: string | null
           file_url?: string | null
           id?: string
+          is_downloadable?: boolean | null
           link_url?: string | null
           subject_id?: string | null
           title: string
@@ -218,6 +220,7 @@ export type Database = {
           file_type?: string | null
           file_url?: string | null
           id?: string
+          is_downloadable?: boolean | null
           link_url?: string | null
           subject_id?: string | null
           title?: string
@@ -298,27 +301,33 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          bio: string | null
           created_at: string
           email: string | null
           full_name: string | null
           id: string
           updated_at: string
+          username: string | null
         }
         Insert: {
           avatar_url?: string | null
+          bio?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
           id: string
           updated_at?: string
+          username?: string | null
         }
         Update: {
           avatar_url?: string | null
+          bio?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
           id?: string
           updated_at?: string
+          username?: string | null
         }
         Relationships: []
       }
