@@ -187,9 +187,11 @@ export type Database = {
           file_size: number | null
           file_type: string | null
           file_url: string | null
+          google_drive_folder_id: string | null
           id: string
           is_downloadable: boolean | null
           link_url: string | null
+          storage_type: string | null
           subject_id: string | null
           title: string
           updated_at: string
@@ -203,9 +205,11 @@ export type Database = {
           file_size?: number | null
           file_type?: string | null
           file_url?: string | null
+          google_drive_folder_id?: string | null
           id?: string
           is_downloadable?: boolean | null
           link_url?: string | null
+          storage_type?: string | null
           subject_id?: string | null
           title: string
           updated_at?: string
@@ -219,9 +223,11 @@ export type Database = {
           file_size?: number | null
           file_type?: string | null
           file_url?: string | null
+          google_drive_folder_id?: string | null
           id?: string
           is_downloadable?: boolean | null
           link_url?: string | null
+          storage_type?: string | null
           subject_id?: string | null
           title?: string
           updated_at?: string
