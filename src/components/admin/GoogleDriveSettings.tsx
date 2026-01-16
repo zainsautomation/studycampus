@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { useState } from 'react';
 import { Cloud, FolderOpen, Check, X, RefreshCw, LogIn, LogOut, Settings2, FolderTree } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,13 +7,27 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { useGoogleDrive } from '@/hooks/useGoogleDrive';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
+interface GoogleDriveFolder {
+  id: string;
+  name: string;
+  path: string;
+}
+
+export interface GoogleDriveClient {
+  isInitialized: boolean;
+  isSignedIn: boolean;
+  isLoading: boolean;
+  isConfigured: boolean;
+  signIn: () => void;
+  signOut: () => void;
+  openFolderPicker: () => Promise<GoogleDriveFolder | null>;
+  createFolder: (name: string, parentId?: string) => Promise<string | null>;
+}
+
 interface GoogleDriveSettingsProps {
-  clientId: string | null;
-  apiKey: string | null;
+  googleDrive: GoogleDriveClient;
   defaultFolderId: string | null;
   defaultFolderName: string | null;
   autoOrganize: boolean;
@@ -26,8 +39,7 @@ interface GoogleDriveSettingsProps {
 }
 
 export function GoogleDriveSettings({
-  clientId,
-  apiKey,
+  googleDrive,
   defaultFolderId,
   defaultFolderName,
   autoOrganize,
@@ -47,11 +59,8 @@ export function GoogleDriveSettings({
     openFolderPicker,
     createFolder,
     isConfigured,
-  } = useGoogleDrive({ clientId, apiKey });
+  } = googleDrive;
 
-  useEffect(() => {
-    setLocalAutoOrganize(autoOrganize);
-  }, [autoOrganize]);
 
   const handleSelectFolder = async () => {
     const folder = await openFolderPicker();
