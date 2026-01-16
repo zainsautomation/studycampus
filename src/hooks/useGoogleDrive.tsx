@@ -10,6 +10,8 @@ declare global {
 
 const SCOPES = 'https://www.googleapis.com/auth/drive.file';
 const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
+const TOKEN_STORAGE_KEY = 'google_drive_access_token';
+const TOKEN_EXPIRY_KEY = 'google_drive_token_expiry';
 
 interface GoogleDriveFolder {
   id: string;
@@ -37,6 +39,36 @@ export function useGoogleDrive({ clientId, apiKey }: UseGoogleDriveOptions) {
   const [isLoading, setIsLoading] = useState(false);
   const [tokenClient, setTokenClient] = useState<any>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
+
+  // Helper to save token to localStorage
+  const saveTokenToStorage = useCallback((token: string, expiresIn: number) => {
+    localStorage.setItem(TOKEN_STORAGE_KEY, token);
+    const expiryTime = Date.now() + expiresIn * 1000;
+    localStorage.setItem(TOKEN_EXPIRY_KEY, expiryTime.toString());
+  }, []);
+
+  // Helper to get token from localStorage
+  const getTokenFromStorage = useCallback((): string | null => {
+    const token = localStorage.getItem(TOKEN_STORAGE_KEY);
+    const expiry = localStorage.getItem(TOKEN_EXPIRY_KEY);
+    
+    if (!token || !expiry) return null;
+    
+    // Check if token is expired (with 5 min buffer)
+    if (Date.now() > parseInt(expiry) - 300000) {
+      localStorage.removeItem(TOKEN_STORAGE_KEY);
+      localStorage.removeItem(TOKEN_EXPIRY_KEY);
+      return null;
+    }
+    
+    return token;
+  }, []);
+
+  // Clear token from localStorage
+  const clearTokenFromStorage = useCallback(() => {
+    localStorage.removeItem(TOKEN_STORAGE_KEY);
+    localStorage.removeItem(TOKEN_EXPIRY_KEY);
+  }, []);
 
   // Load Google API scripts
   useEffect(() => {
@@ -83,6 +115,13 @@ export function useGoogleDrive({ clientId, apiKey }: UseGoogleDriveOptions) {
           });
         });
 
+        // Check for stored token and restore session
+        const storedToken = getTokenFromStorage();
+        if (storedToken) {
+          setAccessToken(storedToken);
+          setIsSignedIn(true);
+        }
+
         // Initialize GIS token client
         const client = window.google.accounts.oauth2.initTokenClient({
           client_id: clientId,
@@ -91,6 +130,8 @@ export function useGoogleDrive({ clientId, apiKey }: UseGoogleDriveOptions) {
             if (tokenResponse.access_token) {
               setAccessToken(tokenResponse.access_token);
               setIsSignedIn(true);
+              // Save token with expiry (default 1 hour = 3600 seconds)
+              saveTokenToStorage(tokenResponse.access_token, tokenResponse.expires_in || 3600);
             }
           },
         });
@@ -108,7 +149,7 @@ export function useGoogleDrive({ clientId, apiKey }: UseGoogleDriveOptions) {
     };
 
     initializeGoogleApis();
-  }, [clientId, apiKey, toast]);
+  }, [clientId, apiKey, toast, getTokenFromStorage, saveTokenToStorage]);
 
   // Sign in to Google
   const signIn = useCallback(() => {
@@ -129,9 +170,10 @@ export function useGoogleDrive({ clientId, apiKey }: UseGoogleDriveOptions) {
       window.google.accounts.oauth2.revoke(accessToken, () => {
         setAccessToken(null);
         setIsSignedIn(false);
+        clearTokenFromStorage();
       });
     }
-  }, [accessToken]);
+  }, [accessToken, clearTokenFromStorage]);
 
   // List folders in a directory
   const listFolders = useCallback(async (parentId: string = 'root'): Promise<GoogleDriveFolder[]> => {
