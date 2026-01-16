@@ -18,7 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppSettings } from '@/hooks/useAppSettings';
-import { useGoogleDrive } from '@/hooks/useGoogleDrive';
+import { useGoogleDriveContext } from '@/contexts/GoogleDriveContext';
 import { StorageSelector, StorageType } from '@/components/admin/StorageSelector';
 import { GoogleDriveSettings } from '@/components/admin/GoogleDriveSettings';
 import { FolderPicker } from '@/components/admin/FolderPicker';
@@ -52,10 +52,6 @@ const itemVariants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.3 } }
 };
 
-// Get Google credentials from environment or secrets
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || null;
-const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY || null;
-
 export default function ManageNotes() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -67,6 +63,9 @@ export default function ManageNotes() {
     googleDriveDefaultFolderName,
     googleDriveAutoOrganize,
   } = useAppSettings();
+  
+  // Use shared Google Drive context instead of local hook
+  const googleDrive = useGoogleDriveContext();
   
   const [notes, setNotes] = useState<Note[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -88,16 +87,8 @@ export default function ManageNotes() {
   const [isUploading, setIsUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [keepExistingFile, setKeepExistingFile] = useState(true);
-  const [showSettings, setShowSettings] = useState(false);
   const [folderPickerOpen, setFolderPickerOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'notes' | 'settings'>('notes');
-
-  // Google Drive hook
-  const googleDrive = useGoogleDrive({
-    clientId: GOOGLE_CLIENT_ID,
-    apiKey: GOOGLE_API_KEY,
-  });
-
   const handleToggleDownloads = () => {
     updateSetting.mutate({ key: 'downloads_enabled', value: !downloadsEnabled });
   };
