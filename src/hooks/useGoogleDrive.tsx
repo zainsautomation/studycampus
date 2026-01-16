@@ -126,7 +126,10 @@ export function useGoogleDrive({ clientId, apiKey }: UseGoogleDriveOptions) {
 
         // Check for stored token and restore session
         const storedToken = getTokenFromStorage();
+        console.log('[GoogleDrive] Checking stored token:', storedToken ? 'Found' : 'Not found');
+        
         if (storedToken) {
+          console.log('[GoogleDrive] Restoring session from stored token');
           setAccessToken(storedToken);
           setIsSignedIn(true);
           applyTokenToGapi(storedToken);
@@ -137,12 +140,16 @@ export function useGoogleDrive({ clientId, apiKey }: UseGoogleDriveOptions) {
           client_id: clientId,
           scope: SCOPES,
           callback: (tokenResponse: any) => {
+            console.log('[GoogleDrive] Token callback received:', tokenResponse?.error || 'success');
+            
             if (tokenResponse?.error) {
               // Silent request can fail if user hasn't granted access yet
+              console.log('[GoogleDrive] Token error:', tokenResponse.error);
               return;
             }
 
             if (tokenResponse.access_token) {
+              console.log('[GoogleDrive] Got new access token, saving...');
               setAccessToken(tokenResponse.access_token);
               setIsSignedIn(true);
               applyTokenToGapi(tokenResponse.access_token);
@@ -154,8 +161,9 @@ export function useGoogleDrive({ clientId, apiKey }: UseGoogleDriveOptions) {
 
         setTokenClient(client);
         setIsInitialized(true);
+        console.log('[GoogleDrive] Initialization complete, isSignedIn:', !!storedToken);
       } catch (error) {
-        console.error('Failed to initialize Google APIs:', error);
+        console.error('[GoogleDrive] Failed to initialize Google APIs:', error);
         toast({
           title: 'Google Drive Error',
           description: 'Failed to initialize Google Drive integration',
@@ -178,8 +186,8 @@ export function useGoogleDrive({ clientId, apiKey }: UseGoogleDriveOptions) {
       return;
     }
 
-    // Try silent token first (no popup). If it fails, user can click again.
-    tokenClient.requestAccessToken({ prompt: '' });
+    // Request with consent prompt - this ensures the popup appears
+    tokenClient.requestAccessToken({ prompt: 'consent' });
   }, [tokenClient, accessToken, applyTokenToGapi]);
 
   // Sign out from Google
