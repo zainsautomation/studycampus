@@ -662,8 +662,7 @@ export default function ManageNotes() {
 
               {/* Google Drive Settings */}
               <GoogleDriveSettings
-                clientId={GOOGLE_CLIENT_ID}
-                apiKey={GOOGLE_API_KEY}
+                googleDrive={googleDrive}
                 defaultFolderId={googleDriveDefaultFolderId}
                 defaultFolderName={googleDriveDefaultFolderName}
                 autoOrganize={googleDriveAutoOrganize}

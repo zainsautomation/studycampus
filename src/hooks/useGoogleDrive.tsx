@@ -40,6 +40,15 @@ export function useGoogleDrive({ clientId, apiKey }: UseGoogleDriveOptions) {
   const [tokenClient, setTokenClient] = useState<any>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
 
+  const applyTokenToGapi = useCallback((token: string | null) => {
+    try {
+      if (!window.gapi?.client) return;
+      window.gapi.client.setToken(token ? { access_token: token } : null);
+    } catch {
+      // ignore
+    }
+  }, []);
+
   // Helper to save token to localStorage
   const saveTokenToStorage = useCallback((token: string, expiresIn: number) => {
     localStorage.setItem(TOKEN_STORAGE_KEY, token);
@@ -51,16 +60,16 @@ export function useGoogleDrive({ clientId, apiKey }: UseGoogleDriveOptions) {
   const getTokenFromStorage = useCallback((): string | null => {
     const token = localStorage.getItem(TOKEN_STORAGE_KEY);
     const expiry = localStorage.getItem(TOKEN_EXPIRY_KEY);
-    
+
     if (!token || !expiry) return null;
-    
+
     // Check if token is expired (with 5 min buffer)
     if (Date.now() > parseInt(expiry) - 300000) {
       localStorage.removeItem(TOKEN_STORAGE_KEY);
       localStorage.removeItem(TOKEN_EXPIRY_KEY);
       return null;
     }
-    
+
     return token;
   }, []);
 
@@ -120,6 +129,7 @@ export function useGoogleDrive({ clientId, apiKey }: UseGoogleDriveOptions) {
         if (storedToken) {
           setAccessToken(storedToken);
           setIsSignedIn(true);
+          applyTokenToGapi(storedToken);
         }
 
         // Initialize GIS token client
@@ -127,9 +137,15 @@ export function useGoogleDrive({ clientId, apiKey }: UseGoogleDriveOptions) {
           client_id: clientId,
           scope: SCOPES,
           callback: (tokenResponse: any) => {
+            if (tokenResponse?.error) {
+              // Silent request can fail if user hasn't granted access yet
+              return;
+            }
+
             if (tokenResponse.access_token) {
               setAccessToken(tokenResponse.access_token);
               setIsSignedIn(true);
+              applyTokenToGapi(tokenResponse.access_token);
               // Save token with expiry (default 1 hour = 3600 seconds)
               saveTokenToStorage(tokenResponse.access_token, tokenResponse.expires_in || 3600);
             }
@@ -149,20 +165,22 @@ export function useGoogleDrive({ clientId, apiKey }: UseGoogleDriveOptions) {
     };
 
     initializeGoogleApis();
-  }, [clientId, apiKey, toast, getTokenFromStorage, saveTokenToStorage]);
+  }, [clientId, apiKey, toast, getTokenFromStorage, saveTokenToStorage, applyTokenToGapi]);
 
   // Sign in to Google
   const signIn = useCallback(() => {
     if (!tokenClient) return;
-    
+
     if (accessToken) {
       // Already have a token, just confirm signed in
       setIsSignedIn(true);
-    } else {
-      // Request new token
-      tokenClient.requestAccessToken({ prompt: 'consent' });
+      applyTokenToGapi(accessToken);
+      return;
     }
-  }, [tokenClient, accessToken]);
+
+    // Try silent token first (no popup). If it fails, user can click again.
+    tokenClient.requestAccessToken({ prompt: '' });
+  }, [tokenClient, accessToken, applyTokenToGapi]);
 
   // Sign out from Google
   const signOut = useCallback(() => {
@@ -170,10 +188,11 @@ export function useGoogleDrive({ clientId, apiKey }: UseGoogleDriveOptions) {
       window.google.accounts.oauth2.revoke(accessToken, () => {
         setAccessToken(null);
         setIsSignedIn(false);
+        applyTokenToGapi(null);
         clearTokenFromStorage();
       });
     }
-  }, [accessToken, clearTokenFromStorage]);
+  }, [accessToken, clearTokenFromStorage, applyTokenToGapi]);
 
   // List folders in a directory
   const listFolders = useCallback(async (parentId: string = 'root'): Promise<GoogleDriveFolder[]> => {
