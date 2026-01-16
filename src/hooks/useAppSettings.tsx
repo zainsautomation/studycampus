@@ -43,14 +43,19 @@ export function useAppSettings() {
       data?.forEach((setting: { key: string; value: Json }) => {
         const key = setting.key as keyof AppSettings;
         if (key in settingsMap) {
-          // Parse JSON values properly
+          // Handle values directly - they're stored as proper JSON types now
           const value = setting.value;
-          if (typeof value === 'string') {
-            // Handle JSON-encoded strings (e.g., '"supabase"' -> 'supabase')
-            try {
-              const parsed = JSON.parse(value);
-              (settingsMap as any)[key] = parsed;
-            } catch {
+          if (value === null) {
+            (settingsMap as any)[key] = null;
+          } else if (typeof value === 'string') {
+            // Check if it's a JSON-encoded string (legacy data with extra quotes)
+            if (value.startsWith('"') && value.endsWith('"')) {
+              try {
+                (settingsMap as any)[key] = JSON.parse(value);
+              } catch {
+                (settingsMap as any)[key] = value;
+              }
+            } else {
               (settingsMap as any)[key] = value;
             }
           } else {
@@ -65,8 +70,15 @@ export function useAppSettings() {
 
   const updateSetting = useMutation({
     mutationFn: async ({ key, value }: { key: string; value: SettingValue }) => {
-      // Wrap value in JSON for storage
-      const jsonValue = typeof value === 'string' ? `"${value}"` : value;
+      // Store the value properly - null stays as null, strings get quoted, booleans stay as-is
+      let jsonValue: Json;
+      if (value === null) {
+        jsonValue = null;
+      } else if (typeof value === 'string') {
+        jsonValue = value; // Store strings directly without extra quotes
+      } else {
+        jsonValue = value;
+      }
       
       const { data: existing } = await supabase
         .from('app_settings')
@@ -77,13 +89,13 @@ export function useAppSettings() {
       if (existing) {
         const { error } = await supabase
           .from('app_settings')
-          .update({ value: jsonValue as Json })
+          .update({ value: jsonValue })
           .eq('key', key);
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from('app_settings')
-          .insert({ key, value: jsonValue as Json });
+          .insert({ key, value: jsonValue });
         if (error) throw error;
       }
     },
