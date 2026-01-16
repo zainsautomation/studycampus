@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Download, FileText, ChevronRight, BookOpen, ArrowLeft, ExternalLink, Copy, Check, Bookmark } from 'lucide-react';
+import { Search, Download, FileText, ChevronRight, BookOpen, ArrowLeft, ExternalLink, Copy, Check, Bookmark, Eye } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -11,9 +11,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { NoteDetailsDialog } from '@/components/notes/NoteDetailsDialog';
+import { NotePreviewDialog } from '@/components/notes/NotePreviewDialog';
 import { useSavedNotes } from '@/hooks/useSavedNotes';
 import { useAppSettings } from '@/hooks/useAppSettings';
-
 interface Subject {
   id: string;
   name: string;
@@ -64,11 +64,18 @@ export default function Notes() {
   const { downloadsEnabled } = useAppSettings();
 
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [activeNote, setActiveNote] = useState<Note | null>(null);
 
   const openDetails = (note: Note) => {
     setActiveNote(note);
     setDetailsOpen(true);
+  };
+
+  const openPreview = (note: Note) => {
+    setActiveNote(note);
+    setDetailsOpen(false);
+    setPreviewOpen(true);
   };
 
   const handleCopyLink = async (note: Note) => {
@@ -532,6 +539,19 @@ export default function Notes() {
                 copiedLinkId={copiedLinkId}
                 onCopyLink={handleCopyLink}
                 onOpenLink={handleOpenLink}
+                onDownload={handleDownload}
+                onPreview={openPreview}
+                downloadsEnabled={downloadsEnabled && activeNote?.is_downloadable !== false}
+              />
+
+              <NotePreviewDialog
+                open={previewOpen}
+                onOpenChange={(open) => {
+                  setPreviewOpen(open);
+                  if (!open) setActiveNote(null);
+                }}
+                note={activeNote}
+                subject={selectedSubject}
                 onDownload={handleDownload}
                 downloadsEnabled={downloadsEnabled && activeNote?.is_downloadable !== false}
               />

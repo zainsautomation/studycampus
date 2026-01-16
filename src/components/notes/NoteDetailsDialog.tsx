@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Check, Copy, Download, ExternalLink, FileText } from "lucide-react";
+import { Check, Copy, Download, ExternalLink, Eye, FileText } from "lucide-react";
 
 type Subject = {
   id: string;
@@ -31,6 +31,7 @@ interface NoteDetailsDialogProps {
   onCopyLink: (note: Note) => Promise<void>;
   onOpenLink: (note: Note) => void;
   onDownload: (note: Note) => Promise<void>;
+  onPreview?: (note: Note) => void;
   downloadsEnabled?: boolean;
 }
 
@@ -43,9 +44,18 @@ export function NoteDetailsDialog({
   onCopyLink,
   onOpenLink,
   onDownload,
+  onPreview,
   downloadsEnabled = true,
 }: NoteDetailsDialogProps) {
   if (!note) return null;
+
+  const fileType = note.file_type?.toLowerCase() || '';
+  const isPDF = fileType.includes('pdf');
+  const isImage = fileType.includes('image') || 
+    ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].some(ext => 
+      note.file_name?.toLowerCase().endsWith(ext) || fileType.includes(ext)
+    );
+  const canPreview = note.file_url && (isPDF || isImage);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -107,6 +117,18 @@ export function NoteDetailsDialog({
                   <span className="hidden sm:inline">Open link</span>
                 </Button>
               </>
+            )}
+
+            {canPreview && onPreview && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() => onPreview(note)}
+              >
+                <Eye className="h-4 w-4" />
+                <span className="hidden sm:inline">Preview</span>
+              </Button>
             )}
 
             {note.file_url && downloadsEnabled && (
