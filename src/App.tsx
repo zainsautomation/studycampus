@@ -29,7 +29,9 @@ import Requests from "./pages/Requests";
 import ManageQandA from "./pages/admin/ManageQandA";
 import ManagePosts from "./pages/admin/ManagePosts";
 import ManageRequests from "./pages/admin/ManageRequests";
+import Moderation from "./pages/admin/Moderation";
 import Profile from "./pages/Profile";
+import Leaderboard from "./pages/Leaderboard";
 
 const queryClient = new QueryClient();
 
@@ -55,6 +57,7 @@ const App = () => (
                 <Route path="/qa/:questionId" element={<ProtectedRoute><QuestionDetail /></ProtectedRoute>} />
                 <Route path="/posts" element={<ProtectedRoute><Posts /></ProtectedRoute>} />
                 <Route path="/requests" element={<ProtectedRoute><Requests /></ProtectedRoute>} />
+                <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
                 <Route path="/admin" element={<ProtectedRoute requireAdmin><AdminDashboard /></ProtectedRoute>} />
                 <Route path="/admin/notes" element={<ProtectedRoute requireAdmin><ManageNotes /></ProtectedRoute>} />
                 <Route path="/admin/announcements" element={<ProtectedRoute requireAdmin><ManageAnnouncements /></ProtectedRoute>} />
@@ -65,6 +68,7 @@ const App = () => (
                 <Route path="/admin/qa" element={<ProtectedRoute requireAdmin><ManageQandA /></ProtectedRoute>} />
                 <Route path="/admin/posts" element={<ProtectedRoute requireAdmin><ManagePosts /></ProtectedRoute>} />
                 <Route path="/admin/requests" element={<ProtectedRoute requireAdmin><ManageRequests /></ProtectedRoute>} />
+                <Route path="/admin/moderation" element={<ProtectedRoute requireAdmin><Moderation /></ProtectedRoute>} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
