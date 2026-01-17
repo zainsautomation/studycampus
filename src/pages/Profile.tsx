@@ -13,6 +13,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { PointsDisplay } from '@/components/gamification/PointsDisplay';
+import { AchievementGrid } from '@/components/gamification/AchievementGrid';
+import { LevelBadge } from '@/components/gamification/LevelBadge';
+import { useUserPoints } from '@/hooks/useUserPoints';
 
 interface ProfileData {
   full_name: string | null;
@@ -43,6 +47,7 @@ const itemVariants = {
 export default function Profile() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { points, achievements, userAchievements, isLoading: pointsLoading, getLevelProgress, getPointsToNextLevel } = useUserPoints();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
@@ -223,7 +228,7 @@ export default function Profile() {
 
   return (
     <MainLayout>
-      <div className="container py-6 md:py-8 max-w-4xl">
+      <div className="container py-6 md:py-8 max-w-5xl">
         <motion.div
           variants={containerVariants}
           initial="hidden"
@@ -235,15 +240,20 @@ export default function Profile() {
             <div className="p-3 rounded-xl bg-primary/10">
               <User className="w-6 h-6 text-primary" />
             </div>
-            <div>
-              <h1 className="text-2xl md:text-3xl font-display font-bold">My Profile</h1>
+            <div className="flex-1">
+              <div className="flex items-center gap-3">
+                <h1 className="text-2xl md:text-3xl font-display font-bold">My Profile</h1>
+                {points && (
+                  <LevelBadge level={points.level} rankTitle={points.rank_title} size="lg" showRank />
+                )}
+              </div>
               <p className="text-muted-foreground">Manage your account settings</p>
             </div>
           </motion.div>
 
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid lg:grid-cols-3 gap-6">
             {/* Profile Card */}
-            <motion.div variants={itemVariants} className="md:col-span-2">
+            <motion.div variants={itemVariants} className="lg:col-span-2">
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">Profile Information</CardTitle>
@@ -357,6 +367,19 @@ export default function Profile() {
 
             {/* Stats Sidebar */}
             <motion.div variants={itemVariants} className="space-y-4">
+              {/* Points Display */}
+              {points && (
+                <PointsDisplay
+                  totalPoints={points.total_points}
+                  weeklyPoints={points.weekly_points}
+                  level={points.level}
+                  rankTitle={points.rank_title}
+                  streakDays={points.streak_days}
+                  levelProgress={getLevelProgress()}
+                  pointsToNextLevel={getPointsToNextLevel()}
+                />
+              )}
+
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg">Activity Stats</CardTitle>
@@ -405,6 +428,18 @@ export default function Profile() {
               </Card>
             </motion.div>
           </div>
+
+          {/* Achievements Section */}
+          <motion.div variants={itemVariants}>
+            <Card>
+              <CardContent className="pt-6">
+                <AchievementGrid
+                  achievements={achievements}
+                  userAchievements={userAchievements}
+                />
+              </CardContent>
+            </Card>
+          </motion.div>
         </motion.div>
       </div>
     </MainLayout>
