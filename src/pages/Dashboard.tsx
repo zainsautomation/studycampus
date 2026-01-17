@@ -16,6 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
+import { RecentlyViewedNotes } from '@/components/dashboard/RecentlyViewedNotes';
 
 interface Announcement {
   id: string;
@@ -341,6 +342,11 @@ export default function Dashboard() {
                 )}
               </CardContent>
             </Card>
+          </motion.div>
+
+          {/* Recently Viewed Notes */}
+          <motion.div variants={itemVariants}>
+            <RecentlyViewedNotes />
           </motion.div>
         </motion.div>
       </div>

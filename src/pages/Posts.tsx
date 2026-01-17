@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { PostCard } from "@/components/posts/PostCard";
 import { PostForm } from "@/components/posts/PostForm";
 import { PostsDisabledBanner } from "@/components/posts/PostsDisabledBanner";
+import { CategoryFilter, PostCategory } from "@/components/posts/CategoryFilter";
 import { MessageSquare } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -15,15 +17,22 @@ export default function Posts() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { postsEnabled, anonymousPostsEnabled } = useAppSettings();
+  const [selectedCategory, setSelectedCategory] = useState<PostCategory>('all');
 
   const { data: posts, isLoading } = useQuery({
-    queryKey: ['posts'],
+    queryKey: ['posts', selectedCategory],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('posts')
         .select(`*`)
         .order('is_pinned', { ascending: false })
         .order('created_at', { ascending: false });
+      
+      if (selectedCategory !== 'all') {
+        query = query.eq('category', selectedCategory);
+      }
+      
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
@@ -45,11 +54,12 @@ export default function Posts() {
   });
 
   const createPost = useMutation({
-    mutationFn: async ({ content, isAnonymous }: { content: string; isAnonymous: boolean }) => {
+    mutationFn: async ({ content, isAnonymous, category }: { content: string; isAnonymous: boolean; category?: string }) => {
       const { error } = await supabase.from('posts').insert({
         user_id: user?.id,
         content,
         is_anonymous: isAnonymous,
+        category: category || 'discussion',
       });
       if (error) throw error;
     },
@@ -144,9 +154,14 @@ export default function Posts() {
         </motion.div>
 
         <PostForm
-          onSubmit={(content, isAnonymous) => createPost.mutate({ content, isAnonymous })}
+          onSubmit={(content, isAnonymous, category) => createPost.mutate({ content, isAnonymous, category })}
           isSubmitting={createPost.isPending}
           anonymousEnabled={anonymousPostsEnabled}
+        />
+
+        <CategoryFilter 
+          selectedCategory={selectedCategory} 
+          onSelectCategory={setSelectedCategory} 
         />
 
         {isLoading ? (
