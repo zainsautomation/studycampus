@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -17,6 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, EyeOff } from "lucide-react";
@@ -46,6 +46,8 @@ export function QuestionForm({ open, onOpenChange, onSubmit, isSubmitting, anony
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const plainText = content.replace(/<[^>]*>/g, '').trim();
+    if (!title.trim() || !plainText) return;
     onSubmit({
       title,
       content,
@@ -91,14 +93,11 @@ export function QuestionForm({ open, onOpenChange, onSubmit, isSubmitting, anony
             </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="content">Details</Label>
-            <Textarea
-              id="content"
+            <Label>Details</Label>
+            <RichTextEditor
+              content={content}
+              onChange={setContent}
               placeholder="Provide more details about your question..."
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              rows={5}
-              required
             />
           </div>
           {anonymousEnabled && (

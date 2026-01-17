@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Pencil, Trash2, Upload, FileText, X, Link, Download, Cloud, Database, Settings2, FolderOpen } from 'lucide-react';
+import { Plus, Pencil, Trash2, Upload, FileText, X, Link, Download, Cloud, Database, Settings2, FolderOpen, Tag } from 'lucide-react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,8 @@ import { useGoogleDriveContext } from '@/contexts/GoogleDriveContext';
 import { StorageSelector, StorageType } from '@/components/admin/StorageSelector';
 import { GoogleDriveSettings } from '@/components/admin/GoogleDriveSettings';
 import { FolderPicker } from '@/components/admin/FolderPicker';
+import { TagManager } from '@/components/notes/TagManager';
+import { TagSelector } from '@/components/notes/TagSelector';
 
 interface Subject { id: string; name: string; color: string; }
 interface Note { 
@@ -72,6 +74,7 @@ export default function ManageNotes() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [formData, setFormData] = useState({ 
     title: '', 
     description: '', 
@@ -137,6 +140,7 @@ export default function ManageNotes() {
     setSelectedFile(null);
     setEditingNote(null);
     setKeepExistingFile(true);
+    setSelectedTagIds([]);
   };
 
   const handleOpenDialog = (note?: Note) => {

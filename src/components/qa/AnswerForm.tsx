@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { Loader2, Send } from "lucide-react";
 
 interface AnswerFormProps {
@@ -14,24 +14,25 @@ export function AnswerForm({ onSubmit, isSubmitting }: AnswerFormProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!content.trim()) return;
+    const plainText = content.replace(/<[^>]*>/g, '').trim();
+    if (!plainText) return;
     onSubmit(content);
     setContent("");
   };
+
+  const plainText = content.replace(/<[^>]*>/g, '').trim();
 
   return (
     <Card>
       <CardContent className="pt-4">
         <form onSubmit={handleSubmit} className="space-y-3">
-          <Textarea
+          <RichTextEditor
+            content={content}
+            onChange={setContent}
             placeholder="Write your answer..."
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            rows={4}
-            required
           />
           <div className="flex justify-end">
-            <Button type="submit" disabled={isSubmitting || !content.trim()}>
+            <Button type="submit" disabled={isSubmitting || !plainText}>
               {isSubmitting ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (

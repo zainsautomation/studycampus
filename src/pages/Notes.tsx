@@ -12,8 +12,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { NoteDetailsDialog } from '@/components/notes/NoteDetailsDialog';
 import { NotePreviewDialog } from '@/components/notes/NotePreviewDialog';
+import { TagFilter } from '@/components/notes/TagFilter';
 import { useSavedNotes } from '@/hooks/useSavedNotes';
 import { useAppSettings } from '@/hooks/useAppSettings';
+import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
+
 interface Subject {
   id: string;
   name: string;
@@ -57,11 +60,13 @@ export default function Notes() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
+  const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
   const { isNoteSaved, toggleSaveNote } = useSavedNotes();
   const { downloadsEnabled } = useAppSettings();
+  const { trackView } = useRecentlyViewed();
 
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -70,6 +75,8 @@ export default function Notes() {
   const openDetails = (note: Note) => {
     setActiveNote(note);
     setDetailsOpen(true);
+    // Track this view
+    trackView(note.id);
   };
 
   const openPreview = (note: Note) => {
@@ -367,15 +374,18 @@ export default function Notes() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="relative max-w-md"
+                className="flex flex-col sm:flex-row gap-4"
               >
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder={`Search in ${selectedSubject.name}...`}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
+                <div className="relative max-w-md flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder={`Search in ${selectedSubject.name}...`}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <TagFilter selectedTagId={selectedTagId} onSelectTag={setSelectedTagId} />
               </motion.div>
 
               {filteredNotes.length === 0 ? (

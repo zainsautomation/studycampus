@@ -7,6 +7,7 @@ import { AnswerForm } from "@/components/qa/AnswerForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { RichTextDisplay } from "@/components/ui/rich-text-display";
 import { ArrowLeft, CheckCircle2, Pin, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
@@ -222,7 +223,7 @@ export default function QuestionDetail() {
               </div>
             </CardHeader>
             <CardContent>
-              <p className="whitespace-pre-wrap mb-4">{question.content}</p>
+              <RichTextDisplay content={question.content} className="mb-4" />
               <p className="text-sm text-muted-foreground">
                 Asked {formatDistanceToNow(new Date(question.created_at), { addSuffix: true })}
               </p>
