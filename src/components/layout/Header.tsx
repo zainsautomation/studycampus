@@ -76,178 +76,153 @@ export function Header() {
   return (
     <>
       <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
-    <header className="sticky top-0 z-50 w-full border-b border-border glass">
-      <div className="container flex h-16 items-center justify-between">
-        {/* Logo */}
-        <Link to="/dashboard" className="flex items-center gap-2">
-          <motion.div
-            whileHover={{ rotate: 10 }}
-            className="flex items-center justify-center w-9 h-9 rounded-lg gradient-primary"
-          >
-            <GraduationCap className="w-5 h-5 text-primary-foreground" />
-          </motion.div>
-          <span className="font-display font-bold text-lg hidden sm:block">
-            Class Portal
-          </span>
-        </Link>
-
-        {/* Desktop Navigation */}
-        {user && (
-          <nav className="hidden md:flex items-center gap-1">
-            {navItems.map((item) => {
-              const isActive = location.pathname === item.href;
-              return (
-                <Link
-                  key={item.href}
-                  to={item.href}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    isActive
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
-                  }`}
-                >
-                  <item.icon className="w-4 h-4" />
-                  {item.label}
-                </Link>
-              );
-            })}
-            {isAdmin && (
-              <Link
-                to="/admin"
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  location.pathname.startsWith('/admin')
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
-                }`}
-              >
-                <Settings className="w-4 h-4" />
-                Admin
-              </Link>
-            )}
-          </nav>
-        )}
-
-        {/* Right side actions */}
-        <div className="flex items-center gap-2">
-          {/* Search Button */}
-          {user && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setSearchOpen(true)}
-              className="rounded-lg"
-              aria-label="Search (⌘K)"
-            >
-              <Search className="w-5 h-5" />
-            </Button>
-          )}
-
-          {/* Theme Toggle */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleTheme}
-            className="rounded-lg"
-          >
+      <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/95 backdrop-blur-lg">
+        <div className="container flex h-14 items-center justify-between">
+          {/* Logo */}
+          <Link to="/dashboard" className="flex items-center gap-2">
             <motion.div
-              initial={false}
-              animate={{ rotate: resolvedTheme === 'dark' ? 180 : 0 }}
-              transition={{ duration: 0.3 }}
+              whileTap={{ scale: 0.95 }}
+              className="flex items-center justify-center w-8 h-8 rounded-xl gradient-primary"
             >
-              {resolvedTheme === 'dark' ? (
-                <Moon className="w-5 h-5" />
-              ) : (
-                <Sun className="w-5 h-5" />
-              )}
+              <GraduationCap className="w-4 h-4 text-primary-foreground" />
             </motion.div>
-          </Button>
+            <span className="font-display font-bold text-base">
+              Class Portal
+            </span>
+          </Link>
 
-          {/* User Menu */}
+          {/* Desktop Navigation - Simplified */}
           {user && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="rounded-lg">
-                  <User className="w-5 h-5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <div className="px-2 py-1.5">
-                  <p className="text-sm font-medium truncate">{user.email}</p>
-                  <p className="text-xs text-muted-foreground capitalize">{isAdmin ? 'Admin' : 'Student'}</p>
-                </div>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate('/profile')}>
-                  <User className="w-4 h-4 mr-2" />
-                  My Profile
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Sign Out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+            <nav className="hidden lg:flex items-center gap-0.5">
+              {navItems.slice(0, 5).map((item) => {
+                const isActive = location.pathname === item.href;
+                return (
+                  <Link
+                    key={item.href}
+                    to={item.href}
+                    className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                      isActive
+                        ? 'text-primary'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+                    }`}
+                  >
+                    <item.icon className="w-4 h-4" />
+                    {item.label}
+                    {isActive && (
+                      <motion.div
+                        layoutId="desktopNavIndicator"
+                        className="absolute bottom-0 left-2 right-2 h-0.5 bg-primary rounded-full"
+                        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                      />
+                    )}
+                  </Link>
+                );
+              })}
+              
+              {/* More dropdown for secondary items */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors">
+                    <Menu className="w-4 h-4" />
+                    More
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  {navItems.slice(5).map((item) => (
+                    <DropdownMenuItem key={item.href} onClick={() => navigate(item.href)}>
+                      <item.icon className="w-4 h-4 mr-2" />
+                      {item.label}
+                    </DropdownMenuItem>
+                  ))}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate('/leaderboard')}>
+                    <User className="w-4 h-4 mr-2" />
+                    Leaderboard
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
-          {/* Mobile Menu Toggle */}
-          {user && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="md:hidden rounded-lg"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            >
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {/* Mobile Navigation */}
-      {user && mobileMenuOpen && (
-        <motion.nav
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: 'auto' }}
-          exit={{ opacity: 0, height: 0 }}
-          className="md:hidden border-t border-border bg-background"
-        >
-          <div className="container py-4 space-y-1">
-            {navItems.map((item) => {
-              const isActive = location.pathname === item.href;
-              return (
+              {isAdmin && (
                 <Link
-                  key={item.href}
-                  to={item.href}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-                    isActive
-                      ? 'bg-primary text-primary-foreground'
+                  to="/admin"
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    location.pathname.startsWith('/admin')
+                      ? 'text-primary'
                       : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
                   }`}
                 >
-                  <item.icon className="w-5 h-5" />
-                  {item.label}
+                  <Settings className="w-4 h-4" />
+                  Admin
                 </Link>
-              );
-            })}
-            {isAdmin && (
-              <Link
-                to="/admin"
-                onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-                  location.pathname.startsWith('/admin')
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
-                }`}
+              )}
+            </nav>
+          )}
+
+          {/* Right side actions */}
+          <div className="flex items-center gap-1">
+            {/* Search Button */}
+            {user && (
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setSearchOpen(true)}
+                className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
+                aria-label="Search (⌘K)"
               >
-                <Settings className="w-5 h-5" />
-                Admin Panel
-              </Link>
+                <Search className="w-5 h-5" />
+              </motion.button>
+            )}
+
+            {/* Theme Toggle */}
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={toggleTheme}
+              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
+            >
+              <motion.div
+                initial={false}
+                animate={{ rotate: resolvedTheme === 'dark' ? 180 : 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                {resolvedTheme === 'dark' ? (
+                  <Moon className="w-5 h-5" />
+                ) : (
+                  <Sun className="w-5 h-5" />
+                )}
+              </motion.div>
+            </motion.button>
+
+            {/* User Menu */}
+            {user && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <motion.button 
+                    whileTap={{ scale: 0.95 }}
+                    className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
+                  >
+                    <User className="w-5 h-5" />
+                  </motion.button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <div className="px-2 py-1.5">
+                    <p className="text-sm font-medium truncate">{user.email}</p>
+                    <p className="text-xs text-muted-foreground capitalize">{isAdmin ? 'Admin' : 'Student'}</p>
+                  </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate('/profile')}>
+                    <User className="w-4 h-4 mr-2" />
+                    My Profile
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
           </div>
-        </motion.nav>
-      )}
-    </header>
+        </div>
+      </header>
     </>
   );
 }
