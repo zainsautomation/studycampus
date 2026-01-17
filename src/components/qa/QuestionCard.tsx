@@ -24,6 +24,11 @@ interface QuestionCardProps {
     user_id: string;
     subject_id: string | null;
     subjects?: { name: string; color: string } | null;
+    profiles?: {
+      full_name: string | null;
+      username: string | null;
+      avatar_url: string | null;
+    } | null;
     answers?: { count: number }[];
   };
   onClick: () => void;
@@ -34,10 +39,16 @@ export function QuestionCard({ question, onClick, index = 0 }: QuestionCardProps
   const answerCount = question.answers?.[0]?.count ?? 0;
   const isAnonymous = question.is_anonymous;
   
-  // Display name logic - show Anonymous for anonymous posts, otherwise show user or fallback
-  const displayName = isAnonymous ? 'Anonymous' : 'User';
+  // Display actual username/name from profiles
+  const displayName = isAnonymous 
+    ? 'Anonymous' 
+    : question.profiles?.username 
+      ? `@${question.profiles.username}` 
+      : question.profiles?.full_name || 'User';
 
-  const initials = isAnonymous ? '?' : 'U';
+  const initials = isAnonymous 
+    ? '?' 
+    : question.profiles?.full_name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
 
   return (
     <motion.div
@@ -105,6 +116,9 @@ export function QuestionCard({ question, onClick, index = 0 }: QuestionCardProps
             {/* User info with avatar */}
             <div className="flex items-center gap-2.5">
               <Avatar className="h-7 w-7">
+                {!isAnonymous && question.profiles?.avatar_url && (
+                  <AvatarImage src={question.profiles.avatar_url} alt={displayName} />
+                )}
                 <AvatarFallback className={`text-xs ${isAnonymous ? 'bg-muted' : 'bg-primary/10 text-primary'}`}>
                   {isAnonymous ? <EyeOff className="h-3 w-3" /> : initials}
                 </AvatarFallback>

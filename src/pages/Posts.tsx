@@ -35,7 +35,25 @@ export default function Posts() {
       
       const { data, error } = await query;
       if (error) throw error;
-      return data;
+      
+      // Fetch profiles for non-anonymous posts
+      const userIds = data?.filter(p => !p.is_anonymous).map(p => p.user_id) || [];
+      const uniqueUserIds = [...new Set(userIds)];
+      
+      if (uniqueUserIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, full_name, username, avatar_url')
+          .in('id', uniqueUserIds);
+        
+        const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+        return data?.map(post => ({
+          ...post,
+          profiles: post.is_anonymous ? null : profileMap.get(post.user_id) || null
+        }));
+      }
+      
+      return data?.map(post => ({ ...post, profiles: null }));
     },
     enabled: postsEnabled,
   });
@@ -55,12 +73,13 @@ export default function Posts() {
   });
 
   const createPost = useMutation({
-    mutationFn: async ({ content, isAnonymous, category }: { content: string; isAnonymous: boolean; category?: string }) => {
+    mutationFn: async ({ content, isAnonymous, category, imageUrl }: { content: string; isAnonymous: boolean; category?: string; imageUrl?: string }) => {
       const { error } = await supabase.from('posts').insert({
         user_id: user?.id,
         content,
         is_anonymous: isAnonymous,
         category: category || 'discussion',
+        image_url: imageUrl || null,
       });
       if (error) throw error;
     },
@@ -162,7 +181,7 @@ export default function Posts() {
           transition={{ delay: 0.1 }}
         >
           <PostForm
-            onSubmit={(content, isAnonymous, category) => createPost.mutate({ content, isAnonymous, category })}
+            onSubmit={(content, isAnonymous, category, imageUrl) => createPost.mutate({ content, isAnonymous, category, imageUrl })}
             isSubmitting={createPost.isPending}
             anonymousEnabled={anonymousPostsEnabled}
           />

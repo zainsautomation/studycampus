@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -6,24 +6,35 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
-import { Loader2, Send, EyeOff } from "lucide-react";
+import { Loader2, Send, EyeOff, ImagePlus, X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAppSettings } from "@/hooks/useAppSettings";
+import { useToast } from "@/hooks/use-toast";
 
 interface PostFormProps {
-  onSubmit: (content: string, isAnonymous: boolean, category?: string) => void;
+  onSubmit: (content: string, isAnonymous: boolean, category?: string, imageUrl?: string) => void;
   isSubmitting: boolean;
   anonymousEnabled?: boolean;
 }
 
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
+const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
 export function PostForm({ onSubmit, isSubmitting, anonymousEnabled = false }: PostFormProps) {
   const { user } = useAuth();
+  const { toast } = useToast();
+  const { settings } = useAppSettings();
   const [content, setContent] = useState("");
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [category, setCategory] = useState("discussion");
   const [isExpanded, setIsExpanded] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: profile } = useQuery({
     queryKey: ['profile', user?.id],
@@ -39,18 +50,107 @@ export function PostForm({ onSubmit, isSubmitting, anonymousEnabled = false }: P
     enabled: !!user?.id,
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+      toast({
+        title: "Invalid file type",
+        description: "Please select a JPEG, PNG, GIF, or WebP image.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size
+    if (file.size > MAX_IMAGE_SIZE) {
+      toast({
+        title: "File too large",
+        description: "Please select an image under 5MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSelectedImage(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeImage = () => {
+    setSelectedImage(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const uploadImage = async (file: File): Promise<string | null> => {
+    if (!user?.id) return null;
+    
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+
+    // Upload to Supabase storage (default behavior)
+    const { data, error } = await supabase.storage
+      .from('post-images')
+      .upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: false,
+      });
+
+    if (error) {
+      console.error('Upload error:', error);
+      throw error;
+    }
+
+    // Get public URL
+    const { data: publicUrlData } = supabase.storage
+      .from('post-images')
+      .getPublicUrl(data.path);
+
+    return publicUrlData.publicUrl;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const plainText = content.replace(/<[^>]*>/g, '').trim();
-    if (!plainText) return;
-    onSubmit(content, isAnonymous, category);
+    if (!plainText && !selectedImage) return;
+
+    let imageUrl: string | undefined;
+    
+    if (selectedImage) {
+      setIsUploadingImage(true);
+      try {
+        imageUrl = (await uploadImage(selectedImage)) ?? undefined;
+      } catch (error) {
+        toast({
+          title: "Failed to upload image",
+          description: "Please try again.",
+          variant: "destructive",
+        });
+        setIsUploadingImage(false);
+        return;
+      }
+      setIsUploadingImage(false);
+    }
+
+    onSubmit(content, isAnonymous, category, imageUrl);
     setContent("");
     setIsAnonymous(false);
     setIsExpanded(false);
+    removeImage();
   };
 
   const plainText = content.replace(/<[^>]*>/g, '').trim();
   const initials = profile?.full_name?.split(' ').map(n => n[0]).join('').toUpperCase() || '?';
+  const isProcessing = isSubmitting || isUploadingImage;
+  const canSubmit = (plainText || selectedImage) && !isProcessing;
 
   return (
     <Card className="overflow-hidden">
@@ -95,9 +195,48 @@ export function PostForm({ onSubmit, isSubmitting, anonymousEnabled = false }: P
                     onChange={setContent}
                     placeholder="Share something with your classmates..."
                   />
+
+                  {/* Image Preview */}
+                  {imagePreview && (
+                    <div className="relative inline-block">
+                      <img 
+                        src={imagePreview} 
+                        alt="Preview" 
+                        className="max-h-48 rounded-lg object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={removeImage}
+                        className="absolute -top-2 -right-2 p-1.5 rounded-full bg-destructive text-destructive-foreground shadow-md hover:bg-destructive/90 transition-colors"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  )}
                   
                   <div className="flex items-center justify-between flex-wrap gap-3 pt-2 border-t border-border/50">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      {/* Image upload button */}
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept={ACCEPTED_IMAGE_TYPES.join(',')}
+                        onChange={handleImageSelect}
+                        className="hidden"
+                        id="image-upload"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-9 gap-1.5"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isProcessing}
+                      >
+                        <ImagePlus className="h-4 w-4" />
+                        <span className="hidden sm:inline">Image</span>
+                      </Button>
+
                       <Select value={category} onValueChange={setCategory}>
                         <SelectTrigger className="w-[130px] h-9 text-xs">
                           <SelectValue />
@@ -133,12 +272,14 @@ export function PostForm({ onSubmit, isSubmitting, anonymousEnabled = false }: P
                         onClick={() => {
                           setIsExpanded(false);
                           setContent("");
+                          removeImage();
                         }}
+                        disabled={isProcessing}
                       >
                         Cancel
                       </Button>
-                      <Button type="submit" size="sm" disabled={isSubmitting || !plainText}>
-                        {isSubmitting ? (
+                      <Button type="submit" size="sm" disabled={!canSubmit}>
+                        {isProcessing ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
                           <>
