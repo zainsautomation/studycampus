@@ -1,11 +1,20 @@
 import { useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { Camera, Share2, Loader2 } from "lucide-react";
+import { Camera, Share2, Loader2, Eye, Trash2, ImageIcon } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { LevelBadge } from "@/components/gamification/LevelBadge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useLongPress } from "@/hooks/useLongPress";
+import { ImageViewerDialog } from "@/components/ui/ImageViewerDialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface ProfileHeaderProps {
   profile: {
@@ -34,6 +43,8 @@ export function ProfileHeader({
   const { toast } = useToast();
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [isUploadingCover, setIsUploadingCover] = useState(false);
+  const [showImageViewer, setShowImageViewer] = useState(false);
+  const [showAvatarMenu, setShowAvatarMenu] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
 
@@ -48,6 +59,23 @@ export function ProfileHeader({
     }
     return profile.email?.charAt(0).toUpperCase() || "U";
   };
+
+  // Long press handler for avatar
+  const longPressHandlers = useLongPress({
+    delay: 600,
+    onLongPress: () => {
+      if (profile.avatar_url) {
+        setShowImageViewer(true);
+      }
+    },
+    onClick: () => {
+      if (isOwnProfile) {
+        setShowAvatarMenu(true);
+      } else if (profile.avatar_url) {
+        setShowImageViewer(true);
+      }
+    },
+  });
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -109,6 +137,31 @@ export function ProfileHeader({
       });
     } finally {
       setIsUploadingAvatar(false);
+    }
+  };
+
+  const handleRemoveAvatar = async () => {
+    if (!profile.avatar_url) return;
+
+    try {
+      const oldPath = profile.avatar_url.split("/").slice(-2).join("/");
+      await supabase.storage.from("avatars").remove([oldPath]);
+
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .update({ avatar_url: null })
+        .eq("id", profile.id);
+
+      if (updateError) throw updateError;
+
+      onProfileUpdate({ avatar_url: null });
+      toast({ title: "Avatar removed" });
+    } catch (error: any) {
+      toast({
+        title: "Failed to remove avatar",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   };
 
@@ -229,43 +282,70 @@ export function ProfileHeader({
       {/* Avatar & Info */}
       <div className="px-4 sm:px-6 -mt-16 relative z-10">
         <div className="flex flex-col items-center sm:flex-row sm:items-end sm:gap-6">
-          {/* Avatar */}
+          {/* Avatar with menu */}
           <div className="relative">
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="relative"
-            >
-              <Avatar className="h-28 w-28 sm:h-32 sm:w-32 border-4 border-background shadow-xl">
-                <AvatarImage src={profile.avatar_url || undefined} alt={profile.full_name || "User"} />
-                <AvatarFallback className="text-2xl sm:text-3xl font-semibold bg-primary text-primary-foreground">
-                  {getInitials()}
-                </AvatarFallback>
-              </Avatar>
+            <DropdownMenu open={showAvatarMenu} onOpenChange={setShowAvatarMenu}>
+              <DropdownMenuTrigger asChild>
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="relative cursor-pointer touch-none select-none"
+                  {...longPressHandlers}
+                >
+                  <Avatar className="h-28 w-28 sm:h-32 sm:w-32 border-4 border-background shadow-xl">
+                    <AvatarImage src={profile.avatar_url || undefined} alt={profile.full_name || "User"} />
+                    <AvatarFallback className="text-2xl sm:text-3xl font-semibold bg-primary text-primary-foreground">
+                      {getInitials()}
+                    </AvatarFallback>
+                  </Avatar>
+
+                  {isOwnProfile && (
+                    <div className="absolute bottom-1 right-1 p-2 rounded-full bg-primary text-primary-foreground shadow-lg">
+                      {isUploadingAvatar ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Camera className="h-4 w-4" />
+                      )}
+                    </div>
+                  )}
+                </motion.div>
+              </DropdownMenuTrigger>
 
               {isOwnProfile && (
-                <>
-                  <input
-                    ref={avatarInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleAvatarUpload}
-                  />
-                  <button
-                    onClick={() => avatarInputRef.current?.click()}
-                    disabled={isUploadingAvatar}
-                    className="absolute bottom-1 right-1 p-2 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
-                  >
-                    {isUploadingAvatar ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Camera className="h-4 w-4" />
-                    )}
-                  </button>
-                </>
+                <DropdownMenuContent align="center" className="w-48">
+                  {profile.avatar_url && (
+                    <>
+                      <DropdownMenuItem onClick={() => setShowImageViewer(true)}>
+                        <Eye className="h-4 w-4 mr-2" />
+                        View Photo
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
+                  <DropdownMenuItem onClick={() => avatarInputRef.current?.click()}>
+                    <ImageIcon className="h-4 w-4 mr-2" />
+                    {profile.avatar_url ? "Change Photo" : "Add Photo"}
+                  </DropdownMenuItem>
+                  {profile.avatar_url && (
+                    <DropdownMenuItem
+                      onClick={handleRemoveAvatar}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Remove Photo
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
               )}
-            </motion.div>
+            </DropdownMenu>
+
+            <input
+              ref={avatarInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleAvatarUpload}
+            />
           </div>
 
           {/* Name & Username */}
@@ -313,6 +393,14 @@ export function ProfileHeader({
           </Button>
         </div>
       </div>
+
+      {/* Image Viewer Dialog */}
+      <ImageViewerDialog
+        open={showImageViewer}
+        onOpenChange={setShowImageViewer}
+        imageUrl={profile.avatar_url}
+        alt={profile.full_name || "Profile photo"}
+      />
     </div>
   );
 }

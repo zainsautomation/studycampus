@@ -22,6 +22,7 @@ import ManageUpdates from "./pages/admin/ManageUpdates";
 import ManageSubjects from "./pages/admin/ManageSubjects";
 import ManageUsers from "./pages/admin/ManageUsers";
 import Analytics from "./pages/admin/Analytics";
+import ActivityLog from "./pages/admin/ActivityLog";
 import QandA from "./pages/QandA";
 import QuestionDetail from "./pages/QuestionDetail";
 import Posts from "./pages/Posts";
@@ -67,6 +68,7 @@ const App = () => (
                 <Route path="/admin/subjects" element={<ProtectedRoute requireAdmin><ManageSubjects /></ProtectedRoute>} />
                 <Route path="/admin/users" element={<ProtectedRoute requireAdmin><ManageUsers /></ProtectedRoute>} />
                 <Route path="/admin/analytics" element={<ProtectedRoute requireAdmin><Analytics /></ProtectedRoute>} />
+                <Route path="/admin/activity" element={<ProtectedRoute requireAdmin><ActivityLog /></ProtectedRoute>} />
                 <Route path="/admin/qa" element={<ProtectedRoute requireAdmin><ManageQandA /></ProtectedRoute>} />
                 <Route path="/admin/posts" element={<ProtectedRoute requireAdmin><ManagePosts /></ProtectedRoute>} />
                 <Route path="/admin/requests" element={<ProtectedRoute requireAdmin><ManageRequests /></ProtectedRoute>} />

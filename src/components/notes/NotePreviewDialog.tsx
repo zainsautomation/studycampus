@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Download, Maximize2, Minimize2, X, ExternalLink } from 'lucide-react';
+import { Download, Maximize2, Minimize2, X, ExternalLink, AlertCircle } from 'lucide-react';
 import { PDFViewer } from './PDFViewer';
 
 type Subject = {
@@ -31,6 +31,13 @@ interface NotePreviewDialogProps {
   downloadsEnabled?: boolean;
 }
 
+// Helper to detect Google Drive URLs
+const isGoogleDriveUrl = (url: string): boolean => {
+  return url.includes('drive.google.com') || 
+         url.includes('docs.google.com') ||
+         url.includes('googleapis.com');
+};
+
 export function NotePreviewDialog({
   open,
   onOpenChange,
@@ -50,7 +57,10 @@ export function NotePreviewDialog({
       note.file_name?.toLowerCase().endsWith(ext) || fileType.includes(ext)
     );
 
-  const canPreview = note.file_url && (isPDF || isImage);
+  const isGoogleDrive = note.file_url ? isGoogleDriveUrl(note.file_url) : false;
+  
+  // Google Drive files can be previewed using embed
+  const canPreview = note.file_url && (isPDF || isImage || isGoogleDrive);
 
   if (!canPreview) {
     return (
@@ -87,6 +97,9 @@ export function NotePreviewDialog({
     );
   }
 
+  // For Google Drive that's not PDF or Image, show special handling
+  const showGoogleDriveEmbed = isGoogleDrive && !isPDF && !isImage;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
@@ -112,14 +125,14 @@ export function NotePreviewDialog({
                   </Badge>
                 )}
                 <Badge variant="outline" className="text-xs">
-                  {isPDF ? 'PDF' : 'IMAGE'}
+                  {isPDF ? 'PDF' : isImage ? 'IMAGE' : isGoogleDrive ? 'DRIVE' : 'FILE'}
                 </Badge>
               </div>
             </div>
           </div>
           
           <div className="flex items-center gap-2">
-            {downloadsEnabled && onDownload && (
+            {downloadsEnabled && onDownload && !isGoogleDrive && (
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -128,6 +141,17 @@ export function NotePreviewDialog({
               >
                 <Download className="h-4 w-4" />
                 <span className="hidden sm:inline">Download</span>
+              </Button>
+            )}
+            {isGoogleDrive && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => window.open(note.file_url!, '_blank')}
+                className="gap-2"
+              >
+                <ExternalLink className="h-4 w-4" />
+                <span className="hidden sm:inline">Open in Drive</span>
               </Button>
             )}
             <Button
@@ -155,7 +179,7 @@ export function NotePreviewDialog({
 
         {/* Content */}
         <div className="flex-1 overflow-hidden">
-          {isPDF && note.file_url && (
+          {(isPDF || (isGoogleDrive && !isImage)) && note.file_url && (
             <PDFViewer fileUrl={note.file_url} className="h-full" />
           )}
           {isImage && note.file_url && (
