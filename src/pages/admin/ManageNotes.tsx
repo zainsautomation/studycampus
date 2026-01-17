@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Pencil, Trash2, Upload, FileText, X, Link, Download, Cloud, Database, Settings2, FolderOpen, Tag, CheckSquare } from 'lucide-react';
+import { Plus, Pencil, Trash2, Upload, FileText, X, Link, Download, Cloud, Database, Settings2, FolderOpen, Tag } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -598,7 +599,98 @@ export default function ManageNotes() {
           {/* Notes Tab Content */}
           <TabsContent value="notes" className="mt-6">
             <motion.div variants={itemVariants}>
-              <Card className="overflow-hidden">
+              {/* Mobile Card View */}
+              <div className="block md:hidden space-y-3">
+                {notes.length === 0 ? (
+                  <Card>
+                    <CardContent className="p-12 text-center text-muted-foreground">
+                      <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                      <p>No notes yet. Click "Add Note" to create one.</p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  notes.map((note) => (
+                    <Card 
+                      key={note.id} 
+                      className={cn(
+                        "transition-colors",
+                        selectedIds.has(note.id) && "ring-2 ring-primary bg-primary/5"
+                      )}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-start gap-3">
+                          <Checkbox
+                            checked={selectedIds.has(note.id)}
+                            onCheckedChange={() => toggleSelect(note.id)}
+                            className="mt-1"
+                          />
+                          <div className="flex-1 min-w-0 space-y-2">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <FileText className="w-4 h-4 text-primary flex-shrink-0" />
+                                <span className="font-medium truncate">{note.title}</span>
+                              </div>
+                              <div className="flex items-center gap-1 flex-shrink-0">
+                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenDialog(note)}>
+                                  <Pencil className="w-4 h-4" />
+                                </Button>
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Delete Note?</AlertDialogTitle>
+                                      <AlertDialogDescription>This will permanently delete "{note.title}".</AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                      <AlertDialogAction onClick={() => handleDelete(note.id)} className="bg-destructive text-destructive-foreground">Delete</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </div>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2 text-xs">
+                              {note.subjects && (
+                                <Badge variant="outline" style={{ borderColor: note.subjects.color, color: note.subjects.color }}>
+                                  {note.subjects.name}
+                                </Badge>
+                              )}
+                              <Badge variant="secondary" className="gap-1">
+                                {note.storage_type === 'google_drive' ? (
+                                  <><Cloud className="w-3 h-3" />Drive</>
+                                ) : (
+                                  <><Database className="w-3 h-3" />Supabase</>
+                                )}
+                              </Badge>
+                              <span className="text-muted-foreground">{note.download_count || 0} downloads</span>
+                            </div>
+                            <div className="flex items-center justify-between pt-1">
+                              <span className="text-xs text-muted-foreground">
+                                {format(new Date(note.created_at), 'MMM dd, yyyy')}
+                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-muted-foreground">Download</span>
+                                <Switch
+                                  checked={note.is_downloadable}
+                                  onCheckedChange={(checked) => handleToggleNoteDownloadable(note.id, checked)}
+                                  className="scale-90"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
+              </div>
+
+              {/* Desktop Table View */}
+              <Card className="overflow-hidden hidden md:block">
                 <CardContent className="p-0">
                   <div className="overflow-x-auto">
                     <table className="w-full">
@@ -612,11 +704,11 @@ export default function ManageNotes() {
                             />
                           </th>
                           <th className="p-4 font-medium">Title</th>
-                          <th className="p-4 font-medium hidden md:table-cell">Subject</th>
+                          <th className="p-4 font-medium">Subject</th>
                           <th className="p-4 font-medium hidden lg:table-cell">Storage</th>
-                          <th className="p-4 font-medium hidden sm:table-cell">Downloads</th>
+                          <th className="p-4 font-medium">Downloads</th>
                           <th className="p-4 font-medium hidden lg:table-cell">Date</th>
-                          <th className="p-4 font-medium hidden sm:table-cell text-center">DL</th>
+                          <th className="p-4 font-medium text-center">DL</th>
                           <th className="p-4 font-medium text-right">Actions</th>
                         </tr>
                       </thead>
@@ -642,7 +734,7 @@ export default function ManageNotes() {
                                 <span className="font-medium truncate max-w-[200px]">{note.title}</span>
                               </div>
                             </td>
-                            <td className="p-4 hidden md:table-cell">
+                            <td className="p-4">
                               {note.subjects ? (
                                 <Badge variant="outline" style={{ borderColor: note.subjects.color, color: note.subjects.color }}>{note.subjects.name}</Badge>
                               ) : '-'}
@@ -662,9 +754,9 @@ export default function ManageNotes() {
                                 )}
                               </Badge>
                             </td>
-                            <td className="p-4 hidden sm:table-cell">{note.download_count || 0}</td>
+                            <td className="p-4">{note.download_count || 0}</td>
                             <td className="p-4 hidden lg:table-cell text-sm text-muted-foreground">{format(new Date(note.created_at), 'MMM dd, yyyy')}</td>
-                            <td className="p-4 hidden sm:table-cell text-center">
+                            <td className="p-4 text-center">
                               <Switch
                                 checked={note.is_downloadable}
                                 onCheckedChange={(checked) => handleToggleNoteDownloadable(note.id, checked)}
