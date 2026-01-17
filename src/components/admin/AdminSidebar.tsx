@@ -20,16 +20,20 @@ import {
   ChevronDown,
   Download,
   EyeOff,
-  Shield
+  Shield,
+  Menu,
+  X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { useTheme } from '@/hooks/useTheme';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const adminNavGroups = [
   {
@@ -285,6 +289,8 @@ export function AdminSidebar() {
 export function AdminMobileNav() {
   const location = useLocation();
   const { resolvedTheme, setTheme } = useTheme();
+  const { settings, updateSetting } = useAppSettings();
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
 
   const toggleTheme = () => {
     setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
@@ -295,56 +301,134 @@ export function AdminMobileNav() {
     return location.pathname.startsWith(path);
   };
 
+  // Get current page title
+  const currentPage = allNavItems.find(item => isActive(item.href));
+
   return (
     <div className="lg:hidden border-b border-border bg-background/95 backdrop-blur-md sticky top-0 z-40">
       {/* Mobile Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center">
-            <GraduationCap className="w-4 h-4 text-primary-foreground" />
+      <div className="flex items-center justify-between px-4 h-14">
+        <div className="flex items-center gap-3">
+          <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-9 w-9">
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-[280px] p-0">
+              <SheetHeader className="p-4 border-b border-border">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-md">
+                    <GraduationCap className="w-5 h-5 text-primary-foreground" />
+                  </div>
+                  <div>
+                    <SheetTitle className="text-left">Admin Panel</SheetTitle>
+                    <p className="text-xs text-muted-foreground">Manage everything</p>
+                  </div>
+                </div>
+              </SheetHeader>
+
+              <ScrollArea className="flex-1 h-[calc(100vh-180px)]">
+                <nav className="p-3 space-y-4">
+                  {adminNavGroups.map((group) => (
+                    <div key={group.label}>
+                      <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 mb-2">
+                        {group.label}
+                      </div>
+                      <div className="space-y-1">
+                        {group.items.map((item) => {
+                          const active = isActive(item.href);
+                          return (
+                            <Link
+                              key={item.href}
+                              to={item.href}
+                              onClick={() => setIsSheetOpen(false)}
+                              className={cn(
+                                'flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-all',
+                                active
+                                  ? 'bg-primary text-primary-foreground shadow-md'
+                                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/80'
+                              )}
+                            >
+                              <item.icon className="w-5 h-5" />
+                              {item.label}
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </nav>
+              </ScrollArea>
+
+              {/* Feature Settings in Sheet */}
+              <div className="border-t border-border p-4 space-y-3">
+                <p className="text-xs font-medium text-muted-foreground uppercase">Quick Settings</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
+                    <Label className="text-xs">Posts</Label>
+                    <Switch
+                      checked={settings.posts_enabled}
+                      onCheckedChange={(checked) => updateSetting.mutate({ key: 'posts_enabled', value: checked })}
+                      className="scale-75"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
+                    <Label className="text-xs">Q&A</Label>
+                    <Switch
+                      checked={settings.qa_enabled}
+                      onCheckedChange={(checked) => updateSetting.mutate({ key: 'qa_enabled', value: checked })}
+                      className="scale-75"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
+                    <Label className="text-xs">Requests</Label>
+                    <Switch
+                      checked={settings.requests_enabled}
+                      onCheckedChange={(checked) => updateSetting.mutate({ key: 'requests_enabled', value: checked })}
+                      className="scale-75"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
+                    <Label className="text-xs">Downloads</Label>
+                    <Switch
+                      checked={settings.downloads_enabled}
+                      onCheckedChange={(checked) => updateSetting.mutate({ key: 'downloads_enabled', value: checked })}
+                      className="scale-75"
+                    />
+                  </div>
+                </div>
+              </div>
+            </SheetContent>
+          </Sheet>
+
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center">
+              <GraduationCap className="w-4 h-4 text-primary-foreground" />
+            </div>
+            <div className="min-w-0">
+              <span className="font-semibold text-sm truncate block">
+                {currentPage?.label || 'Admin'}
+              </span>
+            </div>
           </div>
-          <span className="font-display font-semibold text-sm">Admin Panel</span>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           <Button
             variant="ghost"
             size="icon"
             onClick={toggleTheme}
-            className="h-8 w-8 rounded-lg"
+            className="h-9 w-9"
           >
             {resolvedTheme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </Button>
 
           <Link to="/dashboard">
-            <Button variant="ghost" size="icon" className="h-8 w-8">
+            <Button variant="ghost" size="icon" className="h-9 w-9">
               <ChevronLeft className="h-4 w-4" />
             </Button>
           </Link>
-        </div>
-      </div>
-      
-      {/* Scrollable Nav */}
-      <div className="overflow-x-auto scrollbar-hide">
-        <div className="flex px-2 py-2 gap-1.5 min-w-max">
-          {allNavItems.map((item) => {
-            const active = isActive(item.href);
-            return (
-              <Link key={item.href} to={item.href}>
-                <Button
-                  variant={active ? 'default' : 'ghost'}
-                  size="sm"
-                  className={cn(
-                    "gap-1.5 whitespace-nowrap transition-all text-xs px-3",
-                    active && "shadow-md"
-                  )}
-                >
-                  <item.icon className="w-3.5 h-3.5" />
-                  <span>{item.label}</span>
-                </Button>
-              </Link>
-            );
-          })}
         </div>
       </div>
     </div>

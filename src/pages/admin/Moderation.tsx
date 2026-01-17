@@ -209,23 +209,14 @@ export default function Moderation() {
   return (
     <AdminLayout title="Content Moderation" description="Review reported content">
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-3 rounded-xl bg-warning/10">
-              <Shield className="w-6 h-6 text-warning" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-display font-bold">Content Moderation</h1>
-              <p className="text-muted-foreground">Review reported content</p>
-            </div>
-          </div>
-          {pendingCount > 0 && (
+        {/* Pending Badge */}
+        {pendingCount > 0 && (
+          <div className="flex justify-end">
             <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20">
               {pendingCount} pending
             </Badge>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Tabs */}
         <Tabs value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
