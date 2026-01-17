@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Pencil, Trash2, Upload, FileText, X, Link, Download, Cloud, Database, Settings2, FolderOpen, Tag } from 'lucide-react';
+import { Plus, Pencil, Trash2, Upload, FileText, X, Link, Download, Cloud, Database, Settings2, FolderOpen, Tag, CheckSquare } from 'lucide-react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -24,6 +25,7 @@ import { GoogleDriveSettings } from '@/components/admin/GoogleDriveSettings';
 import { FolderPicker } from '@/components/admin/FolderPicker';
 import { TagManager } from '@/components/notes/TagManager';
 import { TagSelector } from '@/components/notes/TagSelector';
+import { BulkActionBar } from '@/components/admin/BulkActionBar';
 
 interface Subject { id: string; name: string; color: string; }
 interface Note { 
@@ -92,6 +94,11 @@ export default function ManageNotes() {
   const [keepExistingFile, setKeepExistingFile] = useState(true);
   const [folderPickerOpen, setFolderPickerOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'notes' | 'settings'>('notes');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+  const [showBulkSubjectDialog, setShowBulkSubjectDialog] = useState(false);
+  const [bulkSubjectId, setBulkSubjectId] = useState<string>('');
   const handleToggleDownloads = () => {
     updateSetting.mutate({ key: 'downloads_enabled', value: !downloadsEnabled });
   };
@@ -306,6 +313,67 @@ export default function ManageNotes() {
 
   const handleDefaultStorageChange = (value: StorageType) => {
     updateSetting.mutate({ key: 'default_storage_type', value });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === notes.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(notes.map(n => n.id)));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    const newSet = new Set(selectedIds);
+    if (newSet.has(id)) newSet.delete(id);
+    else newSet.add(id);
+    setSelectedIds(newSet);
+  };
+
+  const handleBulkDelete = async () => {
+    setIsBulkDeleting(true);
+    try {
+      const ids = Array.from(selectedIds);
+      const { error } = await supabase.from('notes').delete().in('id', ids);
+      if (error) throw error;
+      toast({ title: `${ids.length} notes deleted` });
+      setSelectedIds(new Set());
+      setShowBulkDeleteConfirm(false);
+      fetchData();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
+  const handleBulkChangeSubject = async () => {
+    try {
+      const ids = Array.from(selectedIds);
+      const { error } = await supabase.from('notes').update({ subject_id: bulkSubjectId || null }).in('id', ids);
+      if (error) throw error;
+      toast({ title: `${ids.length} notes updated` });
+      setSelectedIds(new Set());
+      setShowBulkSubjectDialog(false);
+      fetchData();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  };
+
+  const handleBulkToggleDownload = async () => {
+    try {
+      const ids = Array.from(selectedIds);
+      const selectedNotes = notes.filter(n => selectedIds.has(n.id));
+      const newValue = !(selectedNotes.filter(n => n.is_downloadable).length > selectedNotes.length / 2);
+      const { error } = await supabase.from('notes').update({ is_downloadable: newValue }).in('id', ids);
+      if (error) throw error;
+      toast({ title: `Downloads ${newValue ? 'enabled' : 'disabled'} for ${ids.length} notes` });
+      setSelectedIds(new Set());
+      fetchData();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
   };
 
   return (
@@ -536,6 +604,13 @@ export default function ManageNotes() {
                     <table className="w-full">
                       <thead className="bg-muted/50">
                         <tr className="text-left">
+                          <th className="p-4 w-10">
+                            <Checkbox
+                              checked={notes.length > 0 && selectedIds.size === notes.length}
+                              onCheckedChange={toggleSelectAll}
+                              aria-label="Select all"
+                            />
+                          </th>
                           <th className="p-4 font-medium">Title</th>
                           <th className="p-4 font-medium hidden md:table-cell">Subject</th>
                           <th className="p-4 font-medium hidden lg:table-cell">Storage</th>
@@ -552,8 +627,15 @@ export default function ManageNotes() {
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: index * 0.03 }}
-                            className="hover:bg-muted/30 transition-colors"
+                            className={`hover:bg-muted/30 transition-colors ${selectedIds.has(note.id) ? 'bg-primary/5' : ''}`}
                           >
+                            <td className="p-4">
+                              <Checkbox
+                                checked={selectedIds.has(note.id)}
+                                onCheckedChange={() => toggleSelect(note.id)}
+                                aria-label={`Select ${note.title}`}
+                              />
+                            </td>
                             <td className="p-4">
                               <div className="flex items-center gap-2">
                                 <FileText className="w-4 h-4 text-accent flex-shrink-0" />
@@ -614,7 +696,7 @@ export default function ManageNotes() {
                         ))}
                         {notes.length === 0 && (
                           <tr>
-                            <td colSpan={7} className="p-12 text-center text-muted-foreground">
+                            <td colSpan={8} className="p-12 text-center text-muted-foreground">
                               <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
                               <p>No notes yet. Click "Add Note" to create one.</p>
                             </td>
@@ -683,6 +765,65 @@ export default function ManageNotes() {
           currentFolderId={formData.custom_folder_id}
           currentFolderName={formData.custom_folder_name}
         />
+
+        {/* Bulk Action Bar */}
+        <BulkActionBar
+          selectedCount={selectedIds.size}
+          onClearSelection={() => setSelectedIds(new Set())}
+          onDelete={() => setShowBulkDeleteConfirm(true)}
+          onChangeSubject={() => setShowBulkSubjectDialog(true)}
+          onToggleDownloadable={handleBulkToggleDownload}
+          isDeleting={isBulkDeleting}
+        />
+
+        {/* Bulk Delete Confirm Dialog */}
+        <AlertDialog open={showBulkDeleteConfirm} onOpenChange={setShowBulkDeleteConfirm}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete {selectedIds.size} notes?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete the selected notes. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleBulkDelete}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                disabled={isBulkDeleting}
+              >
+                {isBulkDeleting ? 'Deleting...' : 'Delete'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Bulk Change Subject Dialog */}
+        <Dialog open={showBulkSubjectDialog} onOpenChange={setShowBulkSubjectDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Change Subject for {selectedIds.size} notes</DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              <Label>Select Subject</Label>
+              <Select value={bulkSubjectId} onValueChange={setBulkSubjectId}>
+                <SelectTrigger className="mt-2">
+                  <SelectValue placeholder="Select subject" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">No Subject</SelectItem>
+                  {subjects.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowBulkSubjectDialog(false)}>Cancel</Button>
+              <Button onClick={handleBulkChangeSubject}>Apply</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </motion.div>
     </AdminLayout>
   );

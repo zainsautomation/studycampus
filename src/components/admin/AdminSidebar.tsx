@@ -19,7 +19,8 @@ import {
   Settings,
   ChevronDown,
   Download,
-  EyeOff
+  EyeOff,
+  Shield
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -59,6 +60,7 @@ const adminNavGroups = [
     label: 'Management',
     items: [
       { href: '/admin/users', label: 'Users', icon: Users },
+      { href: '/admin/moderation', label: 'Moderation', icon: Shield },
     ]
   },
 ];
