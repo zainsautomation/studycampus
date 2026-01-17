@@ -355,7 +355,7 @@ export default function AdminDashboard() {
                   <Clock className="w-5 h-5 text-primary" />
                   Recent Activity
                 </CardTitle>
-                <Link to="/admin/analytics">
+                <Link to="/admin/activity">
                   <Button variant="ghost" size="sm" className="gap-1 text-xs">
                     View All
                     <ArrowRight className="w-3 h-3" />
