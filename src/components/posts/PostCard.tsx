@@ -10,6 +10,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { CategoryBadge } from "./CategoryBadge";
+import { RichTextDisplay } from "@/components/ui/rich-text-display";
 
 interface PostCardProps {
   post: {
@@ -19,6 +21,7 @@ interface PostCardProps {
     likes_count: number;
     is_pinned: boolean;
     is_anonymous?: boolean;
+    category?: string | null;
     created_at: string;
     user_id: string;
     profiles?: { full_name: string | null; avatar_url: string | null; username?: string | null } | null;
@@ -43,7 +46,6 @@ export function PostCard({
   const canDelete = isAdmin || currentUserId === post.user_id;
   const isAnonymous = post.is_anonymous;
   
-  // Display name logic: anonymous > @username > full_name > 'User'
   const displayName = isAnonymous 
     ? 'Anonymous' 
     : post.profiles?.username 
@@ -77,9 +79,12 @@ export function PostCard({
                   </p>
                   {post.is_pinned && <Pin className="h-4 w-4 text-primary" />}
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
-                </p>
+                <div className="flex items-center gap-2">
+                  <p className="text-xs text-muted-foreground">
+                    {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
+                  </p>
+                  <CategoryBadge category={post.category} />
+                </div>
               </div>
             </div>
             {canDelete && (
@@ -106,7 +111,7 @@ export function PostCard({
           </div>
         </CardHeader>
         <CardContent>
-          <p className="whitespace-pre-wrap mb-3">{post.content}</p>
+          <RichTextDisplay content={post.content} className="mb-3" />
           {post.image_url && (
             <img 
               src={post.image_url} 
