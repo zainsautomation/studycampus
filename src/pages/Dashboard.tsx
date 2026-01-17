@@ -17,6 +17,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
 import { RecentlyViewedNotes } from '@/components/dashboard/RecentlyViewedNotes';
+import { LeaderboardCard } from '@/components/gamification/LeaderboardCard';
+import { PointsDisplay } from '@/components/gamification/PointsDisplay';
+import { useUserPoints } from '@/hooks/useUserPoints';
 
 interface Announcement {
   id: string;
