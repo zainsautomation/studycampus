@@ -1,9 +1,11 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ThumbsUp, CheckCircle2, Trash2, EyeOff } from "lucide-react";
+import { ThumbsUp, CheckCircle2, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { motion } from "framer-motion";
+import { CommentSection } from "./CommentSection";
+import { RichTextDisplay } from "@/components/ui/rich-text-display";
 
 interface AnswerCardProps {
   answer: {
@@ -35,7 +37,6 @@ export function AnswerCard({
   onAccept,
   onDelete,
 }: AnswerCardProps) {
-  // Display name logic
   const displayName = answer.profiles?.username 
     ? `@${answer.profiles.username}` 
     : answer.profiles?.full_name || 'User';
@@ -64,10 +65,10 @@ export function AnswerCard({
               {answer.is_accepted && (
                 <Badge className="mb-2 bg-green-600">
                   <CheckCircle2 className="h-3 w-3 mr-1" />
-                  Accepted Answer
+                  Best Answer
                 </Badge>
               )}
-              <p className="text-sm whitespace-pre-wrap">{answer.content}</p>
+              <RichTextDisplay content={answer.content} className="text-sm" />
               <div className="flex items-center justify-between mt-3 text-xs text-muted-foreground">
                 <span>
                   <span className="font-medium">{displayName}</span> • {formatDistanceToNow(new Date(answer.created_at), { addSuffix: true })}
@@ -79,13 +80,14 @@ export function AnswerCard({
                       Accept
                     </Button>
                   )}
-                  {(isAdmin || currentUserId === answer.user_id) && isAdmin && (
+                  {isAdmin && (
                     <Button variant="ghost" size="sm" onClick={onDelete}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   )}
                 </div>
               </div>
+              <CommentSection answerId={answer.id} />
             </div>
           </div>
         </CardContent>

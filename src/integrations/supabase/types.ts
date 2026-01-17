@@ -141,6 +141,54 @@ export type Database = {
         }
         Relationships: []
       }
+      comments: {
+        Row: {
+          answer_id: string | null
+          content: string
+          created_at: string | null
+          id: string
+          is_edited: boolean | null
+          parent_comment_id: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          answer_id?: string | null
+          content: string
+          created_at?: string | null
+          id?: string
+          is_edited?: boolean | null
+          parent_comment_id?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          answer_id?: string | null
+          content?: string
+          created_at?: string | null
+          id?: string
+          is_edited?: boolean | null
+          parent_comment_id?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comments_answer_id_fkey"
+            columns: ["answer_id"]
+            isOneToOne: false
+            referencedRelation: "answers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comments_parent_comment_id_fkey"
+            columns: ["parent_comment_id"]
+            isOneToOne: false
+            referencedRelation: "comments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invite_codes: {
         Row: {
           code: string
@@ -176,6 +224,148 @@ export type Database = {
           max_uses?: number | null
         }
         Relationships: []
+      }
+      mentions: {
+        Row: {
+          content_id: string
+          content_type: string
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          mentioned_by_user_id: string
+          mentioned_user_id: string
+        }
+        Insert: {
+          content_id: string
+          content_type: string
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          mentioned_by_user_id: string
+          mentioned_user_id: string
+        }
+        Update: {
+          content_id?: string
+          content_type?: string
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          mentioned_by_user_id?: string
+          mentioned_user_id?: string
+        }
+        Relationships: []
+      }
+      note_tags: {
+        Row: {
+          created_at: string | null
+          id: string
+          note_id: string | null
+          tag_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          note_id?: string | null
+          tag_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          note_id?: string | null
+          tag_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "note_tags_note_id_fkey"
+            columns: ["note_id"]
+            isOneToOne: false
+            referencedRelation: "notes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "note_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      note_versions: {
+        Row: {
+          changes_description: string | null
+          created_at: string | null
+          file_name: string | null
+          file_size: number | null
+          file_type: string | null
+          file_url: string | null
+          id: string
+          note_id: string | null
+          uploaded_by: string | null
+          version_number: number
+        }
+        Insert: {
+          changes_description?: string | null
+          created_at?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string | null
+          id?: string
+          note_id?: string | null
+          uploaded_by?: string | null
+          version_number: number
+        }
+        Update: {
+          changes_description?: string | null
+          created_at?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string | null
+          id?: string
+          note_id?: string | null
+          uploaded_by?: string | null
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "note_versions_note_id_fkey"
+            columns: ["note_id"]
+            isOneToOne: false
+            referencedRelation: "notes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      note_views: {
+        Row: {
+          id: string
+          note_id: string | null
+          user_id: string
+          viewed_at: string | null
+        }
+        Insert: {
+          id?: string
+          note_id?: string | null
+          user_id: string
+          viewed_at?: string | null
+        }
+        Update: {
+          id?: string
+          note_id?: string | null
+          user_id?: string
+          viewed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "note_views_note_id_fkey"
+            columns: ["note_id"]
+            isOneToOne: false
+            referencedRelation: "notes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notes: {
         Row: {
@@ -273,6 +463,7 @@ export type Database = {
       }
       posts: {
         Row: {
+          category: string | null
           content: string
           created_at: string
           id: string
@@ -284,6 +475,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          category?: string | null
           content: string
           created_at?: string
           id?: string
@@ -295,6 +487,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          category?: string | null
           content?: string
           created_at?: string
           id?: string
@@ -520,6 +713,27 @@ export type Database = {
           id?: string
           name?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      tags: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          name?: string
         }
         Relationships: []
       }
