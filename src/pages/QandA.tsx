@@ -93,9 +93,9 @@ export default function QandA() {
 
   return (
     <MainLayout>
-      <div className="space-y-6">
+      <div className="container px-4 py-6 md:py-8 space-y-6">
         <motion.div 
-          className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+          className="flex flex-wrap items-start sm:items-center justify-between gap-3"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
         >
@@ -130,8 +130,8 @@ export default function QandA() {
             />
           </div>
           <Select value={subjectFilter} onValueChange={setSubjectFilter}>
-            <SelectTrigger className="w-full sm:w-[180px]">
-              <SelectValue placeholder="All Subjects" />
+            <SelectTrigger className="w-[140px] shrink-0">
+              <SelectValue placeholder="Subject" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Subjects</SelectItem>
@@ -143,11 +143,11 @@ export default function QandA() {
             </SelectContent>
           </Select>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-full sm:w-[140px]">
-              <SelectValue placeholder="All Status" />
+            <SelectTrigger className="w-[120px] shrink-0">
+              <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="all">All</SelectItem>
               <SelectItem value="open">Open</SelectItem>
               <SelectItem value="resolved">Resolved</SelectItem>
             </SelectContent>

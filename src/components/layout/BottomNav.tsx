@@ -30,8 +30,8 @@ export function BottomNav() {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-background/95 backdrop-blur-lg border-t border-border safe-area-bottom">
-      <div className="flex items-center justify-around h-16 px-2">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-background/95 backdrop-blur-xl border-t border-border/50 safe-area-bottom">
+      <div className="flex items-center justify-around h-[60px] px-1">
         {navItems.map((item) => {
           const active = isActive(item.href);
           return (
@@ -41,24 +41,24 @@ export function BottomNav() {
               className="relative flex flex-col items-center justify-center flex-1 h-full tap-highlight-transparent"
             >
               <motion.div
-                className="relative flex flex-col items-center gap-0.5"
-                whileTap={{ scale: 0.9 }}
-                transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+                className="relative flex flex-col items-center gap-1 py-1.5 px-3"
+                whileTap={{ scale: 0.92 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 20 }}
               >
                 {active && (
                   <motion.div
                     layoutId="bottomNavIndicator"
-                    className="absolute -top-1 w-8 h-1 bg-primary rounded-full"
+                    className="absolute -top-0.5 w-6 h-1 bg-primary rounded-full"
                     transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                   />
                 )}
                 <item.icon 
-                  className={`w-5 h-5 transition-colors duration-200 ${
+                  className={`w-[22px] h-[22px] transition-colors duration-200 ${
                     active ? 'text-primary' : 'text-muted-foreground'
                   }`} 
                 />
                 <span 
-                  className={`text-[10px] font-medium transition-colors duration-200 ${
+                  className={`text-[11px] font-medium transition-colors duration-200 ${
                     active ? 'text-primary' : 'text-muted-foreground'
                   }`}
                 >

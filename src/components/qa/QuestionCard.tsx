@@ -4,6 +4,13 @@ import { MessageSquare, CheckCircle2, Pin, EyeOff } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { motion } from "framer-motion";
 
+// Strip HTML tags for preview text
+const stripHtml = (html: string) => {
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  return tmp.textContent || tmp.innerText || '';
+};
+
 interface QuestionCardProps {
   question: {
     id: string;
@@ -78,7 +85,7 @@ export function QuestionCard({ question, onClick, index = 0 }: QuestionCardProps
         </CardHeader>
         <CardContent className="pt-0">
           <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-            {question.content}
+            {stripHtml(question.content)}
           </p>
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-muted/50">

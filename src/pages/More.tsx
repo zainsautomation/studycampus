@@ -28,7 +28,7 @@ export default function More() {
 
   return (
     <MainLayout>
-      <div className="container py-6 max-w-lg mx-auto">
+      <div className="container px-4 py-6 md:py-8 max-w-lg mx-auto">
         <h1 className="text-2xl font-bold mb-6">More</h1>
         
         <div className="space-y-2">
