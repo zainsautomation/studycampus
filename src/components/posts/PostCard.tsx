@@ -58,15 +58,16 @@ export function PostCard({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
+      transition={{ duration: 0.25 }}
+      className="tap-highlight-transparent"
     >
-      <Card className={post.is_pinned ? "border-primary" : ""}>
+      <Card variant={post.is_pinned ? "elevated" : "default"} className={post.is_pinned ? "ring-1 ring-primary/20" : ""}>
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Avatar className="h-10 w-10">
+              <Avatar className="h-9 w-9">
                 {!isAnonymous && <AvatarImage src={post.profiles?.avatar_url || undefined} />}
                 <AvatarFallback className={isAnonymous ? "bg-muted" : ""}>
                   {isAnonymous ? <EyeOff className="h-4 w-4" /> : initials}
@@ -77,7 +78,7 @@ export function PostCard({
                   <p className={`font-medium text-sm ${isAnonymous ? 'text-muted-foreground italic' : ''}`}>
                     {displayName}
                   </p>
-                  {post.is_pinned && <Pin className="h-4 w-4 text-primary" />}
+                  {post.is_pinned && <Pin className="h-3.5 w-3.5 text-primary" />}
                 </div>
                 <div className="flex items-center gap-2">
                   <p className="text-xs text-muted-foreground">
@@ -90,9 +91,12 @@ export function PostCard({
             {canDelete && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <motion.button 
+                    whileTap={{ scale: 0.9 }}
+                    className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
+                  >
                     <MoreVertical className="h-4 w-4" />
-                  </Button>
+                  </motion.button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   {isAdmin && onPin && (
@@ -116,20 +120,27 @@ export function PostCard({
             <img 
               src={post.image_url} 
               alt="Post image" 
-              className="rounded-lg max-h-96 w-full object-cover mb-3"
+              className="rounded-xl max-h-96 w-full object-cover mb-3"
+              loading="lazy"
             />
           )}
-          <div className="flex items-center gap-2">
-            <Button
-              variant={hasLiked ? "default" : "ghost"}
-              size="sm"
-              onClick={onLike}
-              className="gap-2"
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={onLike}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              hasLiked 
+                ? 'bg-primary/10 text-primary' 
+                : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+            }`}
+          >
+            <motion.div
+              animate={hasLiked ? { scale: [1, 1.3, 1] } : { scale: 1 }}
+              transition={{ duration: 0.2 }}
             >
               <Heart className={`h-4 w-4 ${hasLiked ? 'fill-current' : ''}`} />
-              {post.likes_count}
-            </Button>
-          </div>
+            </motion.div>
+            {post.likes_count}
+          </motion.button>
         </CardContent>
       </Card>
     </motion.div>

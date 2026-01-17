@@ -36,79 +36,62 @@ export function QuestionCard({ question, onClick, index = 0 }: QuestionCardProps
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ 
-        duration: 0.3, 
-        delay: index * 0.05,
+        duration: 0.25, 
+        delay: index * 0.03,
         ease: [0.25, 0.46, 0.45, 0.94]
       }}
-      whileHover={{ 
-        scale: 1.01, 
-        y: -2,
-        transition: { duration: 0.2 }
-      }}
+      whileTap={{ scale: 0.98 }}
+      className="tap-highlight-transparent"
     >
       <Card 
-        className="cursor-pointer hover:shadow-lg transition-all duration-300 border-l-4 border-l-transparent hover:border-l-primary group overflow-hidden"
+        variant="interactive"
+        className="overflow-hidden"
         onClick={onClick}
       >
-        <CardHeader className="pb-2">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap mb-1">
-                {question.is_pinned && (
-                  <motion.div
-                    initial={{ rotate: -20 }}
-                    animate={{ rotate: 0 }}
-                    transition={{ type: "spring", stiffness: 200 }}
-                  >
-                    <Pin className="h-4 w-4 text-primary" />
-                  </motion.div>
-                )}
-                {question.is_resolved && (
-                  <Badge variant="secondary" className="bg-success/10 text-success dark:bg-success/20 dark:text-success">
-                    <CheckCircle2 className="h-3 w-3 mr-1" />
-                    Resolved
-                  </Badge>
-                )}
-                {question.subjects && (
-                  <Badge 
-                    variant="outline"
-                    className="transition-colors"
-                    style={{ borderColor: question.subjects.color, color: question.subjects.color }}
-                  >
-                    {question.subjects.name}
-                  </Badge>
-                )}
-              </div>
-              <CardTitle className="text-lg line-clamp-2 group-hover:text-primary transition-colors">
-                {question.title}
-              </CardTitle>
-            </div>
+        <CardHeader className="pb-2 space-y-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {question.is_pinned && (
+              <Pin className="h-3.5 w-3.5 text-primary" />
+            )}
+            {question.is_resolved && (
+              <Badge variant="secondary" className="bg-success/10 text-success text-xs px-2 py-0.5">
+                <CheckCircle2 className="h-3 w-3 mr-1" />
+                Resolved
+              </Badge>
+            )}
+            {question.subjects && (
+              <Badge 
+                variant="outline"
+                className="text-xs px-2 py-0.5"
+                style={{ borderColor: question.subjects.color, color: question.subjects.color }}
+              >
+                {question.subjects.name}
+              </Badge>
+            )}
           </div>
+          <CardTitle className="text-base line-clamp-2 group-hover:text-primary transition-colors">
+            {question.title}
+          </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-0">
           <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
             {question.content}
           </p>
           <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <div className="flex items-center gap-4">
-              <motion.span 
-                className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-muted/50"
-                whileHover={{ scale: 1.05 }}
-              >
-                <MessageSquare className="h-3.5 w-3.5" />
-                <span className="font-medium">{answerCount}</span>
-                <span className="hidden sm:inline">{answerCount === 1 ? 'answer' : 'answers'}</span>
-              </motion.span>
-            </div>
+            <span className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-muted/50">
+              <MessageSquare className="h-3.5 w-3.5" />
+              <span className="font-medium">{answerCount}</span>
+              <span className="hidden sm:inline">{answerCount === 1 ? 'answer' : 'answers'}</span>
+            </span>
             <div className="flex items-center gap-2">
               {isAnonymous && <EyeOff className="h-3 w-3" />}
-              <span className={`font-medium ${isAnonymous ? 'italic text-muted-foreground' : ''}`}>
+              <span className={`font-medium ${isAnonymous ? 'italic' : ''}`}>
                 {displayName}
               </span>
-              <span className="text-muted-foreground/50">•</span>
+              <span className="opacity-50">•</span>
               <span>{formatDistanceToNow(new Date(question.created_at), { addSuffix: true })}</span>
             </div>
           </div>

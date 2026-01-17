@@ -32,6 +32,7 @@ import ManageRequests from "./pages/admin/ManageRequests";
 import Moderation from "./pages/admin/Moderation";
 import Profile from "./pages/Profile";
 import Leaderboard from "./pages/Leaderboard";
+import More from "./pages/More";
 
 const queryClient = new QueryClient();
 
@@ -58,6 +59,7 @@ const App = () => (
                 <Route path="/posts" element={<ProtectedRoute><Posts /></ProtectedRoute>} />
                 <Route path="/requests" element={<ProtectedRoute><Requests /></ProtectedRoute>} />
                 <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
+                <Route path="/more" element={<ProtectedRoute><More /></ProtectedRoute>} />
                 <Route path="/admin" element={<ProtectedRoute requireAdmin><AdminDashboard /></ProtectedRoute>} />
                 <Route path="/admin/notes" element={<ProtectedRoute requireAdmin><ManageNotes /></ProtectedRoute>} />
                 <Route path="/admin/announcements" element={<ProtectedRoute requireAdmin><ManageAnnouncements /></ProtectedRoute>} />
