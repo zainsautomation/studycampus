@@ -72,3 +72,183 @@ export function NoteCardSkeleton() {
     </div>
   );
 }
+
+// Card skeleton for notes, posts, etc.
+export function CardSkeleton() {
+  return (
+    <div className="rounded-xl border bg-card p-4 space-y-3">
+      <div className="flex items-start gap-3">
+        <ShimmerSkeleton className="h-10 w-10 rounded-full" />
+        <div className="flex-1 space-y-2">
+          <ShimmerSkeleton className="h-4 w-3/4" variant="text" />
+          <ShimmerSkeleton className="h-3 w-1/2" variant="text" />
+        </div>
+      </div>
+      <ShimmerSkeleton className="h-16 w-full" />
+      <div className="flex gap-2">
+        <ShimmerSkeleton className="h-8 w-20" variant="button" />
+        <ShimmerSkeleton className="h-8 w-20" variant="button" />
+      </div>
+    </div>
+  );
+}
+
+// Table row skeleton
+export function TableRowSkeleton({ columns = 4 }: { columns?: number }) {
+  return (
+    <div className="flex items-center gap-4 p-4 border-b">
+      {Array.from({ length: columns }).map((_, i) => (
+        <ShimmerSkeleton 
+          key={i} 
+          className={cn(
+            "h-4",
+            i === 0 ? "w-8" : i === 1 ? "flex-1" : "w-24"
+          )} 
+          variant="text"
+        />
+      ))}
+    </div>
+  );
+}
+
+// List skeleton for multiple items
+export function ListSkeleton({ count = 5 }: { count?: number }) {
+  return (
+    <div className="space-y-3">
+      {Array.from({ length: count }).map((_, i) => (
+        <CardSkeleton key={i} />
+      ))}
+    </div>
+  );
+}
+
+// Leaderboard skeleton
+export function LeaderboardSkeleton() {
+  return (
+    <div className="space-y-2">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-muted/30">
+          <ShimmerSkeleton className="h-6 w-6 rounded-full" />
+          <ShimmerSkeleton className="h-8 w-8 rounded-full" variant="avatar" />
+          <div className="flex-1 space-y-1">
+            <ShimmerSkeleton className="h-4 w-24" variant="text" />
+            <ShimmerSkeleton className="h-3 w-16" variant="text" />
+          </div>
+          <ShimmerSkeleton className="h-5 w-12" variant="text" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Achievement skeleton
+export function AchievementSkeleton() {
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+      {Array.from({ length: 8 }).map((_, i) => (
+        <div key={i} className="p-4 rounded-xl border bg-card space-y-3 text-center">
+          <ShimmerSkeleton className="h-12 w-12 rounded-full mx-auto" />
+          <ShimmerSkeleton className="h-4 w-20 mx-auto" variant="text" />
+          <ShimmerSkeleton className="h-3 w-full" variant="text" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Profile header skeleton
+export function ProfileHeaderSkeleton() {
+  return (
+    <div className="flex flex-col sm:flex-row items-center gap-4 p-6 rounded-xl bg-card border">
+      <ShimmerSkeleton className="h-20 w-20 rounded-full" />
+      <div className="flex-1 text-center sm:text-left space-y-2">
+        <ShimmerSkeleton className="h-6 w-40 mx-auto sm:mx-0" variant="text" />
+        <ShimmerSkeleton className="h-4 w-32 mx-auto sm:mx-0" variant="text" />
+        <ShimmerSkeleton className="h-4 w-48 mx-auto sm:mx-0" variant="text" />
+      </div>
+      <div className="flex gap-4">
+        <div className="text-center space-y-1">
+          <ShimmerSkeleton className="h-8 w-12 mx-auto" variant="text" />
+          <ShimmerSkeleton className="h-3 w-16" variant="text" />
+        </div>
+        <div className="text-center space-y-1">
+          <ShimmerSkeleton className="h-8 w-12 mx-auto" variant="text" />
+          <ShimmerSkeleton className="h-3 w-16" variant="text" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Stats card skeleton
+export function StatsCardSkeleton() {
+  return (
+    <div className="p-4 rounded-xl border bg-card space-y-2">
+      <div className="flex items-center justify-between">
+        <ShimmerSkeleton className="h-4 w-24" variant="text" />
+        <ShimmerSkeleton className="h-8 w-8 rounded-lg" />
+      </div>
+      <ShimmerSkeleton className="h-8 w-16" variant="text" />
+      <ShimmerSkeleton className="h-3 w-32" variant="text" />
+    </div>
+  );
+}
+
+// Grid of stats cards
+export function StatsGridSkeleton({ count = 4 }: { count?: number }) {
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {Array.from({ length: count }).map((_, i) => (
+        <StatsCardSkeleton key={i} />
+      ))}
+    </div>
+  );
+}
+
+// Question/Answer skeleton
+export function QASkeleton() {
+  return (
+    <div className="space-y-4">
+      {/* Question */}
+      <div className="p-4 rounded-xl border bg-card space-y-3">
+        <div className="flex items-start gap-3">
+          <ShimmerSkeleton className="h-10 w-10 rounded-full" variant="avatar" />
+          <div className="flex-1 space-y-2">
+            <ShimmerSkeleton className="h-5 w-3/4" variant="text" />
+            <ShimmerSkeleton className="h-3 w-24" variant="text" />
+          </div>
+        </div>
+        <ShimmerSkeleton className="h-20 w-full" />
+        <div className="flex gap-2">
+          <ShimmerSkeleton className="h-6 w-16 rounded-full" />
+          <ShimmerSkeleton className="h-6 w-16 rounded-full" />
+        </div>
+      </div>
+      
+      {/* Answers */}
+      {Array.from({ length: 2 }).map((_, i) => (
+        <div key={i} className="ml-8 p-4 rounded-xl border bg-card/50 space-y-3">
+          <div className="flex items-start gap-3">
+            <ShimmerSkeleton className="h-8 w-8 rounded-full" variant="avatar" />
+            <div className="flex-1 space-y-2">
+              <ShimmerSkeleton className="h-4 w-24" variant="text" />
+              <ShimmerSkeleton className="h-3 w-16" variant="text" />
+            </div>
+          </div>
+          <ShimmerSkeleton className="h-12 w-full" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Notes grid skeleton
+export function NotesGridSkeleton({ count = 6 }: { count?: number }) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {Array.from({ length: count }).map((_, i) => (
+        <NoteCardSkeleton key={i} />
+      ))}
+    </div>
+  );
+}
