@@ -64,7 +64,25 @@ export default function QandA() {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data;
+      
+      // Fetch profiles for non-anonymous questions
+      const userIds = data?.filter(q => !q.is_anonymous).map(q => q.user_id) || [];
+      const uniqueUserIds = [...new Set(userIds)];
+      
+      if (uniqueUserIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, full_name, username, avatar_url')
+          .in('id', uniqueUserIds);
+        
+        const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+        return data?.map(question => ({
+          ...question,
+          profiles: question.is_anonymous ? null : profileMap.get(question.user_id) || null
+        }));
+      }
+      
+      return data?.map(question => ({ ...question, profiles: null }));
     },
   });
 

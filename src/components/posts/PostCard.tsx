@@ -11,6 +11,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { CategoryBadge } from "./CategoryBadge";
 import { RichTextDisplay } from "@/components/ui/rich-text-display";
+import { ImageViewerDialog } from "@/components/ui/ImageViewerDialog";
+import { useState } from "react";
 
 interface PostCardProps {
   post: {
@@ -23,6 +25,11 @@ interface PostCardProps {
     category?: string | null;
     created_at: string;
     user_id: string;
+    profiles?: {
+      full_name: string | null;
+      username: string | null;
+      avatar_url: string | null;
+    } | null;
   };
   hasLiked: boolean;
   currentUserId: string | undefined;
@@ -41,11 +48,20 @@ export function PostCard({
   onPin,
   onDelete,
 }: PostCardProps) {
+  const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const canDelete = isAdmin || currentUserId === post.user_id;
   const isAnonymous = post.is_anonymous;
   
-  const displayName = isAnonymous ? 'Anonymous' : 'User';
-  const initials = isAnonymous ? '?' : 'U';
+  // Display actual username/name from profiles
+  const displayName = isAnonymous 
+    ? 'Anonymous' 
+    : post.profiles?.username 
+      ? `@${post.profiles.username}` 
+      : post.profiles?.full_name || 'User';
+  
+  const initials = isAnonymous 
+    ? '?' 
+    : post.profiles?.full_name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
 
   return (
     <motion.div
@@ -63,6 +79,9 @@ export function PostCard({
           <div className="flex items-start justify-between mb-3">
             <div className="flex items-center gap-3">
               <Avatar className="h-10 w-10 ring-2 ring-background">
+                {!isAnonymous && post.profiles?.avatar_url && (
+                  <AvatarImage src={post.profiles.avatar_url} alt={displayName} />
+                )}
                 <AvatarFallback className={`${isAnonymous ? "bg-muted" : "bg-primary/10 text-primary"}`}>
                   {isAnonymous ? <EyeOff className="h-4 w-4" /> : initials}
                 </AvatarFallback>
@@ -118,14 +137,26 @@ export function PostCard({
           
           {/* Image */}
           {post.image_url && (
-            <div className="relative rounded-xl overflow-hidden mb-3">
-              <img 
-                src={post.image_url} 
-                alt="Post image" 
-                className="max-h-96 w-full object-cover"
-                loading="lazy"
+            <>
+              <div 
+                className="relative rounded-xl overflow-hidden mb-3 cursor-pointer group"
+                onClick={() => setImageViewerOpen(true)}
+              >
+                <img 
+                  src={post.image_url} 
+                  alt="Post image" 
+                  className="max-h-96 w-full object-cover transition-transform duration-200 group-hover:scale-[1.02]"
+                  loading="lazy"
+                />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors" />
+              </div>
+              <ImageViewerDialog 
+                open={imageViewerOpen}
+                onOpenChange={setImageViewerOpen}
+                imageUrl={post.image_url}
+                alt="Post image"
               />
-            </div>
+            </>
           )}
 
           {/* Actions */}
