@@ -1,6 +1,7 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MessageSquare, CheckCircle2, Pin, EyeOff } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { MessageSquare, CheckCircle2, Pin, EyeOff, Clock } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { motion } from "framer-motion";
 
@@ -22,7 +23,6 @@ interface QuestionCardProps {
     created_at: string;
     user_id: string;
     subject_id: string | null;
-    profiles?: { full_name: string | null; username?: string | null } | null;
     subjects?: { name: string; color: string } | null;
     answers?: { count: number }[];
   };
@@ -34,12 +34,10 @@ export function QuestionCard({ question, onClick, index = 0 }: QuestionCardProps
   const answerCount = question.answers?.[0]?.count ?? 0;
   const isAnonymous = question.is_anonymous;
   
-  // Display name logic
-  const displayName = isAnonymous 
-    ? 'Anonymous' 
-    : question.profiles?.username 
-      ? `@${question.profiles.username}` 
-      : question.profiles?.full_name || 'User';
+  // Display name logic - show Anonymous for anonymous posts, otherwise show user or fallback
+  const displayName = isAnonymous ? 'Anonymous' : 'User';
+
+  const initials = isAnonymous ? '?' : 'U';
 
   return (
     <motion.div
@@ -55,51 +53,81 @@ export function QuestionCard({ question, onClick, index = 0 }: QuestionCardProps
     >
       <Card 
         variant="interactive"
-        className="overflow-hidden"
+        className={`overflow-hidden relative ${question.is_pinned ? 'ring-1 ring-primary/30' : ''}`}
         onClick={onClick}
       >
-        <CardHeader className="pb-2 space-y-2">
-          <div className="flex items-center gap-2 flex-wrap">
+        {/* Subject color accent bar */}
+        {question.subjects && (
+          <div 
+            className="absolute left-0 top-0 bottom-0 w-1 rounded-l-lg"
+            style={{ backgroundColor: question.subjects.color }}
+          />
+        )}
+        
+        <CardContent className="p-4 pl-5">
+          {/* Header with badges */}
+          <div className="flex items-center gap-2 flex-wrap mb-3">
             {question.is_pinned && (
-              <Pin className="h-3.5 w-3.5 text-primary" />
+              <Badge variant="secondary" className="bg-primary/10 text-primary text-xs px-2 py-0.5 gap-1">
+                <Pin className="h-3 w-3" />
+                Pinned
+              </Badge>
             )}
             {question.is_resolved && (
-              <Badge variant="secondary" className="bg-success/10 text-success text-xs px-2 py-0.5">
-                <CheckCircle2 className="h-3 w-3 mr-1" />
+              <Badge variant="secondary" className="bg-success/10 text-success text-xs px-2 py-0.5 gap-1">
+                <CheckCircle2 className="h-3 w-3" />
                 Resolved
               </Badge>
             )}
             {question.subjects && (
               <Badge 
                 variant="outline"
-                className="text-xs px-2 py-0.5"
+                className="text-xs px-2 py-0.5 border-opacity-50"
                 style={{ borderColor: question.subjects.color, color: question.subjects.color }}
               >
                 {question.subjects.name}
               </Badge>
             )}
           </div>
-          <CardTitle className="text-base line-clamp-2 group-hover:text-primary transition-colors">
+
+          {/* Title */}
+          <h3 className="text-base font-semibold line-clamp-2 mb-2 group-hover:text-primary transition-colors">
             {question.title}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+          </h3>
+
+          {/* Content preview */}
+          <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
             {stripHtml(question.content)}
           </p>
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-muted/50">
+
+          {/* Footer with avatar and meta */}
+          <div className="flex items-center justify-between">
+            {/* User info with avatar */}
+            <div className="flex items-center gap-2.5">
+              <Avatar className="h-7 w-7">
+                <AvatarFallback className={`text-xs ${isAnonymous ? 'bg-muted' : 'bg-primary/10 text-primary'}`}>
+                  {isAnonymous ? <EyeOff className="h-3 w-3" /> : initials}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <span className={`font-medium ${isAnonymous ? 'italic' : ''}`}>
+                  {displayName}
+                </span>
+                <span className="opacity-40">•</span>
+                <Clock className="h-3 w-3 opacity-60" />
+                <span>{formatDistanceToNow(new Date(question.created_at), { addSuffix: true })}</span>
+              </div>
+            </div>
+
+            {/* Answer count badge */}
+            <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
+              answerCount > 0 
+                ? 'bg-primary/10 text-primary' 
+                : 'bg-muted/50 text-muted-foreground'
+            }`}>
               <MessageSquare className="h-3.5 w-3.5" />
-              <span className="font-medium">{answerCount}</span>
+              <span>{answerCount}</span>
               <span className="hidden sm:inline">{answerCount === 1 ? 'answer' : 'answers'}</span>
-            </span>
-            <div className="flex items-center gap-2">
-              {isAnonymous && <EyeOff className="h-3 w-3" />}
-              <span className={`font-medium ${isAnonymous ? 'italic' : ''}`}>
-                {displayName}
-              </span>
-              <span className="opacity-50">•</span>
-              <span>{formatDistanceToNow(new Date(question.created_at), { addSuffix: true })}</span>
             </div>
           </div>
         </CardContent>
