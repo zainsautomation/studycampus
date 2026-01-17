@@ -116,7 +116,7 @@ export default function Posts() {
   if (!postsEnabled) {
     return (
       <MainLayout>
-        <div className="space-y-6">
+        <div className="container px-4 py-6 md:py-8 space-y-6">
           <motion.div 
             className="flex items-center gap-3"
             initial={{ opacity: 0, y: -20 }}
@@ -138,7 +138,7 @@ export default function Posts() {
 
   return (
     <MainLayout>
-      <div className="space-y-6">
+      <div className="container px-4 py-6 md:py-8 space-y-6">
         <motion.div 
           className="flex items-center gap-3"
           initial={{ opacity: 0, y: -20 }}

@@ -94,9 +94,9 @@ export default function Requests() {
 
   return (
     <MainLayout>
-      <div className="space-y-6">
+      <div className="container px-4 py-6 md:py-8 space-y-6">
         <motion.div 
-          className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+          className="flex flex-wrap items-start sm:items-center justify-between gap-3"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
         >

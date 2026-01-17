@@ -97,7 +97,7 @@ export default function Leaderboard() {
 
   return (
     <MainLayout>
-      <div className="container py-6 md:py-8 max-w-4xl">
+      <div className="container px-4 py-6 md:py-8 max-w-4xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

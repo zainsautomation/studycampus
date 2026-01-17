@@ -11,9 +11,9 @@ export function MainLayout({ children }: MainLayoutProps) {
   const { user } = useAuth();
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-background">
       <Header />
-      <main className="flex-1 pb-16 md:pb-0">
+      <main className="flex-1 pb-20 md:pb-6">
         {children}
       </main>
       {user && <BottomNav />}
