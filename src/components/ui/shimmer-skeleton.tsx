@@ -23,17 +23,59 @@ export function ShimmerSkeleton({ className, variant = 'default' }: ShimmerSkele
 
 export function QuestionCardSkeleton() {
   return (
-    <div className="rounded-lg border bg-card p-4 space-y-3">
-      <div className="flex items-center gap-2">
+    <div className="rounded-lg border bg-card p-4 space-y-3 relative overflow-hidden">
+      {/* Accent bar */}
+      <div className="absolute left-0 top-0 bottom-0 w-1 bg-muted rounded-l-lg" />
+      
+      {/* Header badges */}
+      <div className="flex items-center gap-2 pl-1">
         <ShimmerSkeleton className="h-5 w-16 rounded-full" />
         <ShimmerSkeleton className="h-5 w-20 rounded-full" />
       </div>
-      <ShimmerSkeleton className="h-6 w-3/4" variant="text" />
-      <ShimmerSkeleton className="h-4 w-full" variant="text" />
-      <ShimmerSkeleton className="h-4 w-2/3" variant="text" />
-      <div className="flex items-center justify-between pt-2">
-        <ShimmerSkeleton className="h-4 w-24" variant="text" />
-        <ShimmerSkeleton className="h-4 w-32" variant="text" />
+      
+      {/* Title */}
+      <ShimmerSkeleton className="h-5 w-3/4 pl-1" variant="text" />
+      
+      {/* Content preview */}
+      <div className="space-y-1.5 pl-1">
+        <ShimmerSkeleton className="h-4 w-full" variant="text" />
+        <ShimmerSkeleton className="h-4 w-2/3" variant="text" />
+      </div>
+      
+      {/* Footer with avatar */}
+      <div className="flex items-center justify-between pt-2 pl-1">
+        <div className="flex items-center gap-2.5">
+          <ShimmerSkeleton className="h-7 w-7 rounded-full" />
+          <ShimmerSkeleton className="h-4 w-32" variant="text" />
+        </div>
+        <ShimmerSkeleton className="h-6 w-20 rounded-full" />
+      </div>
+    </div>
+  );
+}
+
+export function PostCardSkeleton() {
+  return (
+    <div className="rounded-xl border bg-card p-4 space-y-3">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <ShimmerSkeleton className="h-10 w-10 rounded-full" />
+        <div className="space-y-1.5 flex-1">
+          <ShimmerSkeleton className="h-4 w-28" variant="text" />
+          <ShimmerSkeleton className="h-3 w-40" variant="text" />
+        </div>
+      </div>
+      
+      {/* Content */}
+      <div className="space-y-2">
+        <ShimmerSkeleton className="h-4 w-full" variant="text" />
+        <ShimmerSkeleton className="h-4 w-4/5" variant="text" />
+        <ShimmerSkeleton className="h-4 w-1/2" variant="text" />
+      </div>
+      
+      {/* Actions */}
+      <div className="pt-1">
+        <ShimmerSkeleton className="h-9 w-20 rounded-full" />
       </div>
     </div>
   );

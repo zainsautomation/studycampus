@@ -6,7 +6,8 @@ import { PostCard } from "@/components/posts/PostCard";
 import { PostForm } from "@/components/posts/PostForm";
 import { PostsDisabledBanner } from "@/components/posts/PostsDisabledBanner";
 import { CategoryFilter, PostCategory } from "@/components/posts/CategoryFilter";
-import { MessageSquare } from "lucide-react";
+import { CardSkeleton } from "@/components/ui/shimmer-skeleton";
+import { MessageSquare, Sparkles } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useAppSettings } from "@/hooks/useAppSettings";
@@ -122,12 +123,12 @@ export default function Posts() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            <div className="p-2 rounded-lg bg-primary/10">
+            <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5">
               <MessageSquare className="h-6 w-6 text-primary" />
             </div>
             <div>
               <h1 className="text-2xl font-bold">Posts</h1>
-              <p className="text-muted-foreground">Share updates with classmates</p>
+              <p className="text-sm text-muted-foreground">Share updates with classmates</p>
             </div>
           </motion.div>
           <PostsDisabledBanner />
@@ -138,44 +139,69 @@ export default function Posts() {
 
   return (
     <MainLayout>
-      <div className="container px-4 py-6 md:py-8 space-y-6">
+      <div className="container px-4 py-6 md:py-8 space-y-5">
+        {/* Header */}
         <motion.div 
           className="flex items-center gap-3"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <div className="p-2 rounded-lg bg-primary/10">
+          <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5">
             <MessageSquare className="h-6 w-6 text-primary" />
           </div>
           <div>
             <h1 className="text-2xl font-bold">Posts</h1>
-            <p className="text-muted-foreground">Share updates with classmates</p>
+            <p className="text-sm text-muted-foreground">Share updates with classmates</p>
           </div>
         </motion.div>
 
-        <PostForm
-          onSubmit={(content, isAnonymous, category) => createPost.mutate({ content, isAnonymous, category })}
-          isSubmitting={createPost.isPending}
-          anonymousEnabled={anonymousPostsEnabled}
-        />
+        {/* Post Form */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+        >
+          <PostForm
+            onSubmit={(content, isAnonymous, category) => createPost.mutate({ content, isAnonymous, category })}
+            isSubmitting={createPost.isPending}
+            anonymousEnabled={anonymousPostsEnabled}
+          />
+        </motion.div>
 
-        <CategoryFilter 
-          selectedCategory={selectedCategory} 
-          onSelectCategory={setSelectedCategory} 
-        />
+        {/* Category Filter */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.15 }}
+        >
+          <CategoryFilter 
+            selectedCategory={selectedCategory} 
+            onSelectCategory={setSelectedCategory} 
+          />
+        </motion.div>
 
+        {/* Posts List */}
         {isLoading ? (
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-40 bg-muted animate-pulse rounded-lg" />
+              <CardSkeleton key={i} />
             ))}
           </div>
         ) : posts?.length === 0 ? (
-          <div className="text-center py-12">
-            <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium mb-2">No posts yet</h3>
-            <p className="text-muted-foreground">Be the first to share something!</p>
-          </div>
+          <motion.div 
+            className="text-center py-16 px-4"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.2 }}
+          >
+            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+              <Sparkles className="h-8 w-8 text-primary" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2">No posts yet</h3>
+            <p className="text-muted-foreground max-w-sm mx-auto">
+              Be the first to share something with your classmates!
+            </p>
+          </motion.div>
         ) : (
           <div className="space-y-4">
             {posts?.map((post) => (
