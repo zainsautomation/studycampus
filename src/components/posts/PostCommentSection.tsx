@@ -14,7 +14,7 @@ interface PostCommentSectionProps {
   commentCount?: number;
 }
 
-interface Comment {
+interface CommentWithProfile {
   id: string;
   content: string;
   user_id: string;
@@ -23,6 +23,14 @@ interface Comment {
   is_edited: boolean;
   created_at: string;
   updated_at: string;
+  likes_count: number;
+  profile: {
+    id: string;
+    full_name: string | null;
+    username: string | null;
+    avatar_url: string | null;
+    is_public: boolean;
+  } | null;
 }
 
 export function PostCommentSection({ postId, commentCount = 0 }: PostCommentSectionProps) {
@@ -31,6 +39,7 @@ export function PostCommentSection({ postId, commentCount = 0 }: PostCommentSect
   const queryClient = useQueryClient();
   const [isExpanded, setIsExpanded] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
 
   const { data: comments, isLoading } = useQuery({
     queryKey: ['post-comments', postId],
@@ -41,17 +50,33 @@ export function PostCommentSection({ postId, commentCount = 0 }: PostCommentSect
         .eq('post_id', postId)
         .order('created_at', { ascending: true });
       if (error) throw error;
-      return data as Comment[];
+
+      if (!data || data.length === 0) return [];
+
+      // Fetch profiles for all comment authors
+      const userIds = [...new Set(data.map(c => c.user_id))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name, username, avatar_url, is_public')
+        .in('id', userIds);
+
+      // Map profiles to comments
+      return data.map(comment => ({
+        ...comment,
+        likes_count: comment.likes_count || 0,
+        profile: profiles?.find(p => p.id === comment.user_id) || null
+      })) as CommentWithProfile[];
     },
     enabled: isExpanded,
   });
 
   const createComment = useMutation({
-    mutationFn: async (content: string) => {
+    mutationFn: async ({ content, parentId }: { content: string; parentId?: string }) => {
       const { error } = await supabase.from('comments').insert({
         post_id: postId,
         user_id: user?.id,
         content,
+        parent_comment_id: parentId || null,
       });
       if (error) throw error;
     },
@@ -59,6 +84,7 @@ export function PostCommentSection({ postId, commentCount = 0 }: PostCommentSect
       queryClient.invalidateQueries({ queryKey: ['post-comments', postId] });
       queryClient.invalidateQueries({ queryKey: ['posts'] });
       setShowForm(false);
+      setReplyingTo(null);
       toast({ title: "Comment added" });
     },
     onError: (error: any) => {
@@ -92,6 +118,13 @@ export function PostCommentSection({ postId, commentCount = 0 }: PostCommentSect
     },
   });
 
+  // Organize comments into threads
+  const topLevelComments = comments?.filter(c => !c.parent_comment_id) || [];
+  const replies = comments?.filter(c => c.parent_comment_id) || [];
+  
+  const getReplies = (parentId: string) => 
+    replies.filter(r => r.parent_comment_id === parentId);
+
   const displayCount = comments?.length ?? commentCount;
 
   return (
@@ -118,28 +151,62 @@ export function PostCommentSection({ postId, commentCount = 0 }: PostCommentSect
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="mt-3 space-y-3 pt-3 border-t border-border">
+            <div className="mt-3 space-y-4 pt-3 border-t border-border">
               {isLoading ? (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {[1, 2].map((i) => (
-                    <div key={i} className="h-14 bg-muted animate-pulse rounded-lg" />
+                    <div key={i} className="flex gap-3">
+                      <div className="h-8 w-8 bg-muted animate-pulse rounded-full" />
+                      <div className="flex-1 h-16 bg-muted animate-pulse rounded-lg" />
+                    </div>
                   ))}
                 </div>
               ) : (
                 <>
-                  {comments && comments.length > 0 ? (
-                    comments.map((comment) => (
-                      <CommentCard
-                        key={comment.id}
-                        comment={comment}
-                        currentUserId={user?.id}
-                        isAdmin={isAdmin}
-                        onEdit={(content) => updateComment.mutate({ id: comment.id, content })}
-                        onDelete={() => deleteComment.mutate(comment.id)}
-                      />
-                    ))
+                  {topLevelComments.length > 0 ? (
+                    <div className="space-y-4">
+                      {topLevelComments.map((comment) => (
+                        <div key={comment.id} className="space-y-3">
+                          <CommentCard
+                            comment={comment}
+                            currentUserId={user?.id}
+                            isAdmin={isAdmin}
+                            onEdit={(content) => updateComment.mutate({ id: comment.id, content })}
+                            onDelete={() => deleteComment.mutate(comment.id)}
+                            onReply={() => setReplyingTo(comment.id)}
+                            showReplyButton={true}
+                          />
+                          
+                          {/* Replies */}
+                          {getReplies(comment.id).map((reply) => (
+                            <CommentCard
+                              key={reply.id}
+                              comment={reply}
+                              currentUserId={user?.id}
+                              isAdmin={isAdmin}
+                              onEdit={(content) => updateComment.mutate({ id: reply.id, content })}
+                              onDelete={() => deleteComment.mutate(reply.id)}
+                              isReply={true}
+                              showReplyButton={false}
+                            />
+                          ))}
+
+                          {/* Reply form */}
+                          {replyingTo === comment.id && user && (
+                            <div className="ml-8 pl-4 border-l-2 border-border">
+                              <CommentForm
+                                onSubmit={(content) => createComment.mutate({ content, parentId: comment.id })}
+                                onCancel={() => setReplyingTo(null)}
+                                isSubmitting={createComment.isPending}
+                                placeholder="Write a reply..."
+                              />
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground text-center py-2">
+                    <p className="text-sm text-muted-foreground text-center py-4">
                       No comments yet. Be the first to comment!
                     </p>
                   )}
@@ -147,7 +214,7 @@ export function PostCommentSection({ postId, commentCount = 0 }: PostCommentSect
                   {user && (
                     showForm ? (
                       <CommentForm
-                        onSubmit={(content) => createComment.mutate(content)}
+                        onSubmit={(content) => createComment.mutate({ content })}
                         onCancel={() => setShowForm(false)}
                         isSubmitting={createComment.isPending}
                       />
