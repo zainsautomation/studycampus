@@ -100,6 +100,8 @@ export default function ManageNotes() {
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const [showBulkSubjectDialog, setShowBulkSubjectDialog] = useState(false);
   const [bulkSubjectId, setBulkSubjectId] = useState<string>('');
+  const [noteToDelete, setNoteToDelete] = useState<Note | null>(null);
+  const [deleteFromStorage, setDeleteFromStorage] = useState(true);
   const handleToggleDownloads = () => {
     updateSetting.mutate({ key: 'downloads_enabled', value: !downloadsEnabled });
   };
@@ -275,15 +277,37 @@ export default function ManageNotes() {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (note: Note, deleteFile: boolean) => {
     try {
-      const { error } = await supabase.from('notes').delete().eq('id', id);
+      // Delete file from storage if requested
+      if (deleteFile && note.file_url) {
+        if (note.storage_type === 'supabase' && note.file_url.includes('/notes/')) {
+          try {
+            const urlParts = note.file_url.split('/notes/');
+            if (urlParts[1]) {
+              const filePath = decodeURIComponent(urlParts[1].split('?')[0]);
+              await supabase.storage.from('notes').remove([filePath]);
+            }
+          } catch (storageError) {
+            console.error('Failed to delete file from storage:', storageError);
+          }
+        }
+        // Note: Google Drive files would need separate API handling
+      }
+      
+      const { error } = await supabase.from('notes').delete().eq('id', note.id);
       if (error) throw error;
       toast({ title: 'Note deleted successfully' });
+      setNoteToDelete(null);
       fetchData();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
+  };
+
+  const openDeleteDialog = (note: Note) => {
+    setNoteToDelete(note);
+    setDeleteFromStorage(true);
   };
 
   const handleToggleNoteDownloadable = async (noteId: string, isDownloadable: boolean) => {
@@ -634,23 +658,14 @@ export default function ManageNotes() {
                                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenDialog(note)}>
                                   <Pencil className="w-4 h-4" />
                                 </Button>
-                                <AlertDialog>
-                                  <AlertDialogTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
-                                      <Trash2 className="w-4 h-4" />
-                                    </Button>
-                                  </AlertDialogTrigger>
-                                  <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                      <AlertDialogTitle>Delete Note?</AlertDialogTitle>
-                                      <AlertDialogDescription>This will permanently delete "{note.title}".</AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                      <AlertDialogAction onClick={() => handleDelete(note.id)} className="bg-destructive text-destructive-foreground">Delete</AlertDialogAction>
-                                    </AlertDialogFooter>
-                                  </AlertDialogContent>
-                                </AlertDialog>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="h-8 w-8 text-destructive"
+                                  onClick={() => openDeleteDialog(note)}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
                               </div>
                             </div>
                             <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -767,21 +782,14 @@ export default function ManageNotes() {
                             <td className="p-4 text-right">
                               <div className="flex justify-end gap-1">
                                 <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(note)} className="hover:bg-primary/10"><Pencil className="w-4 h-4" /></Button>
-                                <AlertDialog>
-                                  <AlertDialogTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/10"><Trash2 className="w-4 h-4" /></Button>
-                                  </AlertDialogTrigger>
-                                  <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                      <AlertDialogTitle>Delete Note?</AlertDialogTitle>
-                                      <AlertDialogDescription>This will permanently delete "{note.title}".</AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                      <AlertDialogAction onClick={() => handleDelete(note.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
-                                    </AlertDialogFooter>
-                                  </AlertDialogContent>
-                                </AlertDialog>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  onClick={() => openDeleteDialog(note)}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
                               </div>
                             </td>
                           </motion.tr>
@@ -916,6 +924,39 @@ export default function ManageNotes() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Delete Note Confirmation Dialog */}
+        <AlertDialog open={!!noteToDelete} onOpenChange={(open) => !open && setNoteToDelete(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Note?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete "{noteToDelete?.title}".
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            {noteToDelete?.file_url && (
+              <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-muted/30">
+                <Checkbox
+                  id="delete-note-from-storage"
+                  checked={deleteFromStorage}
+                  onCheckedChange={(checked) => setDeleteFromStorage(!!checked)}
+                />
+                <Label htmlFor="delete-note-from-storage" className="cursor-pointer text-sm">
+                  Also delete file from storage
+                </Label>
+              </div>
+            )}
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={() => noteToDelete && handleDelete(noteToDelete, deleteFromStorage)}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </motion.div>
     </AdminLayout>
   );

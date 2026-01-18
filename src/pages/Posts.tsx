@@ -22,8 +22,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
 
 export default function Posts() {
   const { user, isAdmin } = useAuth();
@@ -33,7 +31,6 @@ export default function Posts() {
   const [selectedCategory, setSelectedCategory] = useState<PostCategory>('all');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [postToDelete, setPostToDelete] = useState<{ id: string; imageUrl: string | null } | null>(null);
-  const [deleteFromStorage, setDeleteFromStorage] = useState(true);
 
   const { data: posts, isLoading } = useQuery({
     queryKey: ['posts', selectedCategory],
@@ -138,13 +135,12 @@ export default function Posts() {
   });
 
   const deletePost = useMutation({
-    mutationFn: async ({ postId, imageUrl, deleteImage }: { postId: string; imageUrl: string | null; deleteImage: boolean }) => {
-      // Delete image from storage if it exists and user wants to delete it
-      if (imageUrl && deleteImage) {
+    mutationFn: async ({ postId, imageUrl }: { postId: string; imageUrl: string | null }) => {
+      // Always delete image from storage if it exists
+      if (imageUrl) {
         // Check if it's a Supabase storage URL
         if (imageUrl.includes('supabase') && imageUrl.includes('/post-images/')) {
           try {
-            // Extract file path from URL
             const urlParts = imageUrl.split('/post-images/');
             if (urlParts[1]) {
               const filePath = decodeURIComponent(urlParts[1].split('?')[0]);
@@ -154,7 +150,6 @@ export default function Posts() {
             console.error('Failed to delete image from storage:', storageError);
           }
         }
-        // Note: Google Drive images would need separate API handling
       }
       
       const { error } = await supabase.from('posts').delete().eq('id', postId);
@@ -170,7 +165,6 @@ export default function Posts() {
 
   const handleDeleteClick = (postId: string, imageUrl: string | null) => {
     setPostToDelete({ id: postId, imageUrl });
-    setDeleteFromStorage(true);
     setDeleteDialogOpen(true);
   };
 
@@ -179,7 +173,6 @@ export default function Posts() {
       deletePost.mutate({
         postId: postToDelete.id,
         imageUrl: postToDelete.imageUrl,
-        deleteImage: deleteFromStorage,
       });
     }
   };
@@ -295,21 +288,9 @@ export default function Posts() {
             <AlertDialogHeader>
               <AlertDialogTitle>Delete Post?</AlertDialogTitle>
               <AlertDialogDescription>
-                This action cannot be undone. This will permanently delete this post.
+                This action cannot be undone. This will permanently delete this post{postToDelete?.imageUrl ? " and its image" : ""}.
               </AlertDialogDescription>
             </AlertDialogHeader>
-            {postToDelete?.imageUrl && (
-              <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-muted/30">
-                <Checkbox
-                  id="delete-from-storage"
-                  checked={deleteFromStorage}
-                  onCheckedChange={(checked) => setDeleteFromStorage(!!checked)}
-                />
-                <Label htmlFor="delete-from-storage" className="cursor-pointer text-sm">
-                  Also delete image from storage
-                </Label>
-              </div>
-            )}
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction 
