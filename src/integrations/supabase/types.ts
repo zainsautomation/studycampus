@@ -210,6 +210,35 @@ export type Database = {
         }
         Relationships: []
       }
+      comment_likes: {
+        Row: {
+          comment_id: string
+          created_at: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          comment_id: string
+          created_at?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          comment_id?: string
+          created_at?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comment_likes_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "comments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       comments: {
         Row: {
           answer_id: string | null
@@ -217,6 +246,7 @@ export type Database = {
           created_at: string | null
           id: string
           is_edited: boolean | null
+          likes_count: number | null
           parent_comment_id: string | null
           post_id: string | null
           updated_at: string | null
@@ -228,6 +258,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_edited?: boolean | null
+          likes_count?: number | null
           parent_comment_id?: string | null
           post_id?: string | null
           updated_at?: string | null
@@ -239,6 +270,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_edited?: boolean | null
+          likes_count?: number | null
           parent_comment_id?: string | null
           post_id?: string | null
           updated_at?: string | null
@@ -660,6 +692,7 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          is_public: boolean | null
           social_links: Json | null
           updated_at: string
           username: string | null
@@ -672,6 +705,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id: string
+          is_public?: boolean | null
           social_links?: Json | null
           updated_at?: string
           username?: string | null
@@ -684,6 +718,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          is_public?: boolean | null
           social_links?: Json | null
           updated_at?: string
           username?: string | null

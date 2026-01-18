@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useToast } from "@/hooks/use-toast";
+import { useGoogleDriveContext } from "@/contexts/GoogleDriveContext";
 
 interface PostFormProps {
   onSubmit: (content: string, isAnonymous: boolean, category?: string, imageUrl?: string) => void;
@@ -26,7 +27,8 @@ const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/web
 export function PostForm({ onSubmit, isSubmitting, anonymousEnabled = false }: PostFormProps) {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { settings } = useAppSettings();
+  const { postImagesStorageType, postImagesGoogleDriveFolderId } = useAppSettings();
+  const { isSignedIn, uploadFile, signIn } = useGoogleDriveContext();
   const [content, setContent] = useState("");
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [category, setCategory] = useState("discussion");
@@ -92,11 +94,43 @@ export function PostForm({ onSubmit, isSubmitting, anonymousEnabled = false }: P
 
   const uploadImage = async (file: File): Promise<string | null> => {
     if (!user?.id) return null;
+
+    // Check if Google Drive is configured and use it
+    if (postImagesStorageType === 'google_drive') {
+      if (!isSignedIn) {
+        toast({
+          title: "Google Drive not connected",
+          description: "Please ask an admin to connect Google Drive in settings.",
+          variant: "destructive",
+        });
+        return null;
+      }
+
+      try {
+        const result = await uploadFile({
+          file,
+          folderId: postImagesGoogleDriveFolderId || undefined,
+        });
+        
+        if (result?.webViewLink) {
+          // Convert view link to direct image link
+          const fileId = result.webViewLink.match(/\/d\/(.+?)\//)?.[1];
+          if (fileId) {
+            return `https://drive.google.com/uc?export=view&id=${fileId}`;
+          }
+          return result.webViewLink;
+        }
+        return null;
+      } catch (error) {
+        console.error('Google Drive upload error:', error);
+        throw error;
+      }
+    }
     
+    // Default: Upload to Supabase storage
     const fileExt = file.name.split('.').pop();
     const fileName = `${user.id}/${Date.now()}.${fileExt}`;
 
-    // Upload to Supabase storage (default behavior)
     const { data, error } = await supabase.storage
       .from('post-images')
       .upload(fileName, file, {

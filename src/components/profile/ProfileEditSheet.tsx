@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Loader2, Github, Twitter, Linkedin, Globe } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Loader2, Github, Twitter, Linkedin, Globe, Eye, EyeOff } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -22,6 +23,7 @@ interface ProfileEditSheetProps {
     full_name: string | null;
     username: string | null;
     bio: string | null;
+    is_public?: boolean;
     social_links?: {
       github?: string;
       twitter?: string;
@@ -33,6 +35,7 @@ interface ProfileEditSheetProps {
     full_name: string;
     username: string;
     bio: string;
+    is_public: boolean;
     social_links: {
       github?: string;
       twitter?: string;
@@ -46,7 +49,6 @@ export function ProfileEditSheet({
   open,
   onOpenChange,
   profile,
-  onSave,
 }: ProfileEditSheetProps) {
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
@@ -54,11 +56,26 @@ export function ProfileEditSheet({
     full_name: profile.full_name || "",
     username: profile.username || "",
     bio: profile.bio || "",
+    is_public: profile.is_public !== false,
     github: profile.social_links?.github || "",
     twitter: profile.social_links?.twitter || "",
     linkedin: profile.social_links?.linkedin || "",
     website: profile.social_links?.website || "",
   });
+
+  // Update form data when profile changes
+  useEffect(() => {
+    setFormData({
+      full_name: profile.full_name || "",
+      username: profile.username || "",
+      bio: profile.bio || "",
+      is_public: profile.is_public !== false,
+      github: profile.social_links?.github || "",
+      twitter: profile.social_links?.twitter || "",
+      linkedin: profile.social_links?.linkedin || "",
+      website: profile.social_links?.website || "",
+    });
+  }, [profile]);
 
   const validateUsername = (username: string) => {
     if (!username) return true;
@@ -98,6 +115,7 @@ export function ProfileEditSheet({
           full_name: formData.full_name,
           username: formData.username || null,
           bio: formData.bio || null,
+          is_public: formData.is_public,
           social_links: socialLinks,
         })
         .eq("id", profile.id);
@@ -108,13 +126,6 @@ export function ProfileEditSheet({
         }
         throw error;
       }
-
-      onSave({
-        full_name: formData.full_name,
-        username: formData.username,
-        bio: formData.bio,
-        social_links: socialLinks,
-      });
 
       toast({ title: "Profile updated successfully" });
       onOpenChange(false);
@@ -140,6 +151,36 @@ export function ProfileEditSheet({
         </SheetHeader>
 
         <div className="mt-6 space-y-6 overflow-y-auto max-h-[calc(85vh-180px)] pr-2">
+          {/* Profile Visibility */}
+          <div className="p-4 rounded-lg border bg-muted/30 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {formData.is_public ? (
+                  <Eye className="h-5 w-5 text-primary" />
+                ) : (
+                  <EyeOff className="h-5 w-5 text-muted-foreground" />
+                )}
+                <div>
+                  <Label htmlFor="is_public" className="text-sm font-medium cursor-pointer">
+                    Public Profile
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    {formData.is_public 
+                      ? "Others can view your profile" 
+                      : "Your profile is private"}
+                  </p>
+                </div>
+              </div>
+              <Switch
+                id="is_public"
+                checked={formData.is_public}
+                onCheckedChange={(checked) =>
+                  setFormData({ ...formData, is_public: checked })
+                }
+              />
+            </div>
+          </div>
+
           {/* Basic Info */}
           <div className="space-y-4">
             <div className="space-y-2">

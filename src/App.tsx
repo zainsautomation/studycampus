@@ -32,6 +32,7 @@ import ManagePosts from "./pages/admin/ManagePosts";
 import ManageRequests from "./pages/admin/ManageRequests";
 import Moderation from "./pages/admin/Moderation";
 import Profile from "./pages/Profile";
+import PublicProfile from "./pages/PublicProfile";
 import Leaderboard from "./pages/Leaderboard";
 import More from "./pages/More";
 

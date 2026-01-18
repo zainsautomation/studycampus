@@ -20,10 +20,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Pin, Trash2, Heart, Settings2, FolderOpen, HardDrive } from "lucide-react";
+import { Pin, Trash2, Heart, Settings2, FolderOpen, HardDrive, Loader2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useAppSettings } from "@/hooks/useAppSettings";
+import { useGoogleDriveContext } from "@/contexts/GoogleDriveContext";
+import { FolderPicker } from "@/components/admin/FolderPicker";
+import { useState } from "react";
 
 // Utility to strip HTML tags from content
 const stripHtml = (html: string) => {
@@ -37,9 +40,14 @@ export default function ManagePosts() {
   const queryClient = useQueryClient();
   const { 
     postsEnabled, 
-    postImagesStorageType, 
+    postImagesStorageType,
+    postImagesGoogleDriveFolderId,
     updateSetting 
   } = useAppSettings();
+  
+  const { isSignedIn, isInitialized, signIn, openFolderPicker } = useGoogleDriveContext();
+  const [selectedFolderName, setSelectedFolderName] = useState<string | null>(null);
+  const [isSelectingFolder, setIsSelectingFolder] = useState(false);
 
   const { data: posts, isLoading } = useQuery({
     queryKey: ['admin-posts'],
@@ -106,54 +114,110 @@ export default function ManagePosts() {
     );
   };
 
+  const handleSelectFolder = async () => {
+    if (!isSignedIn) {
+      await signIn();
+      return;
+    }
+
+    setIsSelectingFolder(true);
+    try {
+      const folder = await openFolderPicker();
+      if (folder) {
+        await updateSetting.mutateAsync({ 
+          key: 'post_images_google_drive_folder_id', 
+          value: folder.id 
+        });
+        setSelectedFolderName(folder.name);
+        toast({ title: `Folder set to "${folder.name}"` });
+      }
+    } catch (error) {
+      console.error('Error selecting folder:', error);
+    } finally {
+      setIsSelectingFolder(false);
+    }
+  };
+
   return (
     <AdminLayout title="Manage Posts" description="Moderate posts and toggle the feature">
       <div className="space-y-6">
         {/* Controls */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex flex-col gap-4">
           {/* Image Storage Settings */}
-          <Card className="w-full sm:w-auto">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <Settings2 className="h-5 w-5 text-muted-foreground" />
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                  <Label className="text-sm whitespace-nowrap">Image Storage:</Label>
-                  <Select
-                    value={postImagesStorageType}
-                    onValueChange={handleStorageTypeChange}
-                  >
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="supabase">
-                        <div className="flex items-center gap-2">
-                          <HardDrive className="h-4 w-4" />
-                          Supabase Storage
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="google_drive">
-                        <div className="flex items-center gap-2">
-                          <FolderOpen className="h-4 w-4" />
-                          Google Drive
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Settings2 className="h-5 w-5" />
+                Image Storage Settings
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                <Label className="text-sm whitespace-nowrap min-w-[100px]">Storage:</Label>
+                <Select
+                  value={postImagesStorageType}
+                  onValueChange={handleStorageTypeChange}
+                >
+                  <SelectTrigger className="w-full sm:w-[200px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="supabase">
+                      <div className="flex items-center gap-2">
+                        <HardDrive className="h-4 w-4" />
+                        Supabase Storage
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="google_drive">
+                      <div className="flex items-center gap-2">
+                        <FolderOpen className="h-4 w-4" />
+                        Google Drive
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
+
+              {/* Google Drive Folder Picker */}
+              {postImagesStorageType === 'google_drive' && (
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-2 border-t">
+                  <Label className="text-sm whitespace-nowrap min-w-[100px]">Folder:</Label>
+                  <div className="flex items-center gap-2 flex-1">
+                    <div className="flex-1 px-3 py-2 rounded-md border bg-muted/50 text-sm truncate">
+                      {selectedFolderName || (postImagesGoogleDriveFolderId ? 'Folder selected' : 'No folder selected')}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleSelectFolder}
+                      disabled={!isInitialized || isSelectingFolder}
+                    >
+                      {isSelectingFolder ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <>
+                          <FolderOpen className="h-4 w-4 mr-2" />
+                          {isSignedIn ? 'Change' : 'Connect'}
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
-          <div className="flex items-center space-x-2 p-3 rounded-lg bg-muted/50 border">
-            <Switch
-              id="posts-enabled"
-              checked={postsEnabled}
-              onCheckedChange={togglePostsEnabled}
-            />
-            <Label htmlFor="posts-enabled" className="text-sm">
-              Posts {postsEnabled ? 'Enabled' : 'Disabled'}
-            </Label>
+          <div className="flex items-center justify-end">
+            <div className="flex items-center space-x-2 p-3 rounded-lg bg-muted/50 border">
+              <Switch
+                id="posts-enabled"
+                checked={postsEnabled}
+                onCheckedChange={togglePostsEnabled}
+              />
+              <Label htmlFor="posts-enabled" className="text-sm">
+                Posts {postsEnabled ? 'Enabled' : 'Disabled'}
+              </Label>
+            </div>
           </div>
         </div>
 
