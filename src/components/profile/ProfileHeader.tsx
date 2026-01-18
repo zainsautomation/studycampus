@@ -165,6 +165,31 @@ export function ProfileHeader({
     }
   };
 
+  const handleRemoveCover = async () => {
+    if (!profile.cover_url) return;
+
+    try {
+      const oldPath = profile.cover_url.split("/").slice(-2).join("/");
+      await supabase.storage.from("avatars").remove([oldPath]);
+
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .update({ cover_url: null })
+        .eq("id", profile.id);
+
+      if (updateError) throw updateError;
+
+      onProfileUpdate({ cover_url: null });
+      toast({ title: "Cover photo removed" });
+    } catch (error: any) {
+      toast({
+        title: "Failed to remove cover photo",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -262,19 +287,37 @@ export function ProfileHeader({
               className="hidden"
               onChange={handleCoverUpload}
             />
-            <Button
-              size="icon"
-              variant="secondary"
-              className="absolute top-4 right-4 rounded-full bg-background/50 backdrop-blur-sm hover:bg-background/70"
-              onClick={() => coverInputRef.current?.click()}
-              disabled={isUploadingCover}
-            >
-              {isUploadingCover ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Camera className="h-4 w-4" />
-              )}
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  size="icon"
+                  variant="secondary"
+                  className="absolute top-4 right-4 rounded-full bg-background/50 backdrop-blur-sm hover:bg-background/70"
+                  disabled={isUploadingCover}
+                >
+                  {isUploadingCover ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Camera className="h-4 w-4" />
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={() => coverInputRef.current?.click()}>
+                  <ImageIcon className="h-4 w-4 mr-2" />
+                  {profile.cover_url ? "Change Cover" : "Add Cover"}
+                </DropdownMenuItem>
+                {profile.cover_url && (
+                  <DropdownMenuItem
+                    onClick={handleRemoveCover}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Remove Cover
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </>
         )}
       </div>

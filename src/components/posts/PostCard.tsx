@@ -12,6 +12,7 @@ import {
 import { CategoryBadge } from "./CategoryBadge";
 import { RichTextDisplay } from "@/components/ui/rich-text-display";
 import { ImageViewerDialog } from "@/components/ui/ImageViewerDialog";
+import { PostCommentSection } from "./PostCommentSection";
 import { useState } from "react";
 
 interface PostCardProps {
@@ -25,6 +26,7 @@ interface PostCardProps {
     category?: string | null;
     created_at: string;
     user_id: string;
+    comment_count?: number;
     profiles?: {
       full_name: string | null;
       username: string | null;
@@ -160,7 +162,7 @@ export function PostCard({
           )}
 
           {/* Actions */}
-          <div className="flex items-center gap-3 pt-1">
+          <div className="flex items-center gap-2 pt-1">
             <motion.button
               whileTap={{ scale: 0.9 }}
               onClick={onLike}
@@ -179,6 +181,9 @@ export function PostCard({
               <span>{post.likes_count || 0}</span>
             </motion.button>
           </div>
+          
+          {/* Comment Section */}
+          <PostCommentSection postId={post.id} commentCount={post.comment_count} />
         </CardContent>
       </Card>
     </motion.div>

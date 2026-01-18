@@ -126,11 +126,21 @@ export default function AdminDashboard() {
         supabase.from('requests').select('id, title, status, created_at').order('created_at', { ascending: false }).limit(2),
       ]);
 
+      // Helper to strip HTML tags
+      const stripHtml = (html: string) => {
+        const tmp = document.createElement("div");
+        tmp.innerHTML = html;
+        return tmp.textContent || tmp.innerText || "";
+      };
+
       const activities: RecentActivity[] = [
         ...(recentNotes.data || []).map(n => ({ ...n, type: 'note' as const })),
         ...(recentAnnouncements.data || []).map(a => ({ ...a, type: 'announcement' as const })),
         ...(recentQuestions.data || []).map(q => ({ ...q, type: 'question' as const })),
-        ...(recentPosts.data || []).map(p => ({ id: p.id, title: p.content.slice(0, 50) + (p.content.length > 50 ? '...' : ''), created_at: p.created_at, type: 'post' as const })),
+        ...(recentPosts.data || []).map(p => {
+          const cleanContent = stripHtml(p.content);
+          return { id: p.id, title: cleanContent.slice(0, 50) + (cleanContent.length > 50 ? '...' : ''), created_at: p.created_at, type: 'post' as const };
+        }),
         ...(recentRequests.data || []).map(r => ({ ...r, type: 'request' as const })),
       ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 10);
 
