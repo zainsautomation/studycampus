@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Heart, Pin, Trash2, MoreVertical, EyeOff, Clock } from "lucide-react";
+import { Heart, Pin, Trash2, MoreVertical, EyeOff, Clock, ImageOff } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { motion } from "framer-motion";
 import {
@@ -14,6 +14,8 @@ import { RichTextDisplay } from "@/components/ui/rich-text-display";
 import { ImageViewerDialog } from "@/components/ui/ImageViewerDialog";
 import { PostCommentSection } from "./PostCommentSection";
 import { useState } from "react";
+import { useLongPress } from "@/hooks/useLongPress";
+import { useNavigate } from "react-router-dom";
 
 interface PostCardProps {
   post: {
@@ -50,7 +52,9 @@ export function PostCard({
   onPin,
   onDelete,
 }: PostCardProps) {
+  const navigate = useNavigate();
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
+  const [imageError, setImageError] = useState(false);
   const canDelete = isAdmin || currentUserId === post.user_id;
   const isAnonymous = post.is_anonymous;
   
@@ -64,6 +68,19 @@ export function PostCard({
   const initials = isAnonymous 
     ? '?' 
     : post.profiles?.full_name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
+
+  // Long press for image viewing (300ms)
+  const longPressHandlers = useLongPress({
+    delay: 300,
+    onLongPress: () => setImageViewerOpen(true),
+    onClick: () => {}, // No action on quick tap
+  });
+
+  const handleUserClick = () => {
+    if (!isAnonymous && post.user_id) {
+      navigate(`/user/${post.user_id}`);
+    }
+  };
 
   return (
     <motion.div
@@ -80,7 +97,10 @@ export function PostCard({
           {/* Header */}
           <div className="flex items-start justify-between mb-3">
             <div className="flex items-center gap-3">
-              <Avatar className="h-10 w-10 ring-2 ring-background">
+              <Avatar 
+                className={`h-10 w-10 ring-2 ring-background ${!isAnonymous ? 'cursor-pointer' : ''}`}
+                onClick={handleUserClick}
+              >
                 {!isAnonymous && post.profiles?.avatar_url && (
                   <AvatarImage src={post.profiles.avatar_url} alt={displayName} />
                 )}
@@ -90,7 +110,10 @@ export function PostCard({
               </Avatar>
               <div className="space-y-0.5">
                 <div className="flex items-center gap-2">
-                  <p className={`font-semibold text-sm ${isAnonymous ? 'text-muted-foreground italic' : ''}`}>
+                  <p 
+                    className={`font-semibold text-sm ${isAnonymous ? 'text-muted-foreground italic' : 'cursor-pointer hover:underline'}`}
+                    onClick={handleUserClick}
+                  >
                     {displayName}
                   </p>
                   {post.is_pinned && (
@@ -138,19 +161,21 @@ export function PostCard({
           <RichTextDisplay content={post.content} className="mb-3" />
           
           {/* Image */}
-          {post.image_url && (
+          {post.image_url && !imageError && (
             <>
               <div 
-                className="relative rounded-xl overflow-hidden mb-3 cursor-pointer group"
-                onClick={() => setImageViewerOpen(true)}
+                className="relative rounded-xl overflow-hidden mb-3 cursor-pointer group select-none"
+                {...longPressHandlers}
               >
                 <img 
                   src={post.image_url} 
                   alt="Post image" 
                   className="max-h-96 w-full object-cover transition-transform duration-200 group-hover:scale-[1.02]"
                   loading="lazy"
+                  onError={() => setImageError(true)}
+                  draggable={false}
                 />
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors" />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors pointer-events-none" />
               </div>
               <ImageViewerDialog 
                 open={imageViewerOpen}
@@ -159,6 +184,14 @@ export function PostCard({
                 alt="Post image"
               />
             </>
+          )}
+
+          {/* Image error fallback */}
+          {post.image_url && imageError && (
+            <div className="flex items-center justify-center gap-2 p-6 mb-3 rounded-xl bg-muted/50 text-muted-foreground">
+              <ImageOff className="h-5 w-5" />
+              <span className="text-sm">Image unavailable</span>
+            </div>
           )}
 
           {/* Actions */}

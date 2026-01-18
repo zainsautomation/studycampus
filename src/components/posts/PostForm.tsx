@@ -113,10 +113,10 @@ export function PostForm({ onSubmit, isSubmitting, anonymousEnabled = false }: P
         });
         
         if (result?.webViewLink) {
-          // Convert view link to direct image link
+          // Convert view link to thumbnail API for reliable display
           const fileId = result.webViewLink.match(/\/d\/(.+?)\//)?.[1];
           if (fileId) {
-            return `https://drive.google.com/uc?export=view&id=${fileId}`;
+            return `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`;
           }
           return result.webViewLink;
         }
