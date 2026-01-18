@@ -105,11 +105,11 @@ export function PostCard({
     ? '?' 
     : post.profiles?.full_name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
 
-  // Long press for image viewing (300ms)
+  // Long press or click for image viewing
   const longPressHandlers = useLongPress({
     delay: 300,
     onLongPress: () => setImageViewerOpen(true),
-    onClick: () => {}, // No action on quick tap
+    onClick: () => setImageViewerOpen(true), // Quick tap also opens viewer
   });
 
   const handleUserClick = () => {
