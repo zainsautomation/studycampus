@@ -13,7 +13,7 @@ import { CategoryBadge } from "./CategoryBadge";
 import { RichTextDisplay } from "@/components/ui/rich-text-display";
 import { ImageViewerDialog } from "@/components/ui/ImageViewerDialog";
 import { PostCommentSection } from "./PostCommentSection";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useLongPress } from "@/hooks/useLongPress";
 import { useNavigate } from "react-router-dom";
 
@@ -43,6 +43,39 @@ interface PostCardProps {
   onDelete: () => void;
 }
 
+// Helper to transform Google Drive URLs to thumbnail format for reliable display
+function getDisplayImageUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  
+  // Check if it's a Google Drive URL
+  if (url.includes('drive.google.com')) {
+    let fileId: string | null = null;
+    
+    // Format: https://drive.google.com/uc?export=view&id=FILE_ID
+    const ucMatch = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    if (ucMatch) {
+      fileId = ucMatch[1];
+    }
+    
+    // Format: https://drive.google.com/file/d/FILE_ID/view
+    const fileMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+    if (fileMatch) {
+      fileId = fileMatch[1];
+    }
+    
+    // Already thumbnail format - return as is
+    if (url.includes('/thumbnail?id=')) {
+      return url;
+    }
+    
+    if (fileId) {
+      return `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`;
+    }
+  }
+  
+  return url;
+}
+
 export function PostCard({
   post,
   hasLiked,
@@ -57,6 +90,9 @@ export function PostCard({
   const [imageError, setImageError] = useState(false);
   const canDelete = isAdmin || currentUserId === post.user_id;
   const isAnonymous = post.is_anonymous;
+  
+  // Transform Google Drive URLs to thumbnail format for display
+  const displayImageUrl = useMemo(() => getDisplayImageUrl(post.image_url), [post.image_url]);
   
   // Display actual username/name from profiles
   const displayName = isAnonymous 
@@ -161,14 +197,14 @@ export function PostCard({
           <RichTextDisplay content={post.content} className="mb-3" />
           
           {/* Image */}
-          {post.image_url && !imageError && (
+          {displayImageUrl && !imageError && (
             <>
               <div 
                 className="relative rounded-xl overflow-hidden mb-3 cursor-pointer group select-none"
                 {...longPressHandlers}
               >
                 <img 
-                  src={post.image_url} 
+                  src={displayImageUrl} 
                   alt="Post image" 
                   className="max-h-96 w-full object-cover transition-transform duration-200 group-hover:scale-[1.02]"
                   loading="lazy"
@@ -180,7 +216,7 @@ export function PostCard({
               <ImageViewerDialog 
                 open={imageViewerOpen}
                 onOpenChange={setImageViewerOpen}
-                imageUrl={post.image_url}
+                imageUrl={displayImageUrl}
                 alt="Post image"
               />
             </>
