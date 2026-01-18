@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef } from 'react';
 
 interface LongPressOptions {
   delay?: number;
@@ -23,6 +23,7 @@ export function useLongPress({
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const longPressTriggeredRef = useRef(false);
   const startPosRef = useRef<{ x: number; y: number } | null>(null);
+  const isCancelledRef = useRef(false);
 
   const clear = useCallback(() => {
     if (timerRef.current) {
@@ -36,9 +37,12 @@ export function useLongPress({
       const touch = e.touches[0];
       startPosRef.current = { x: touch.clientX, y: touch.clientY };
       longPressTriggeredRef.current = false;
+      isCancelledRef.current = false;
       timerRef.current = setTimeout(() => {
-        longPressTriggeredRef.current = true;
-        onLongPress();
+        if (!isCancelledRef.current) {
+          longPressTriggeredRef.current = true;
+          onLongPress();
+        }
       }, delay);
     },
     
@@ -46,40 +50,47 @@ export function useLongPress({
       clear();
       if (longPressTriggeredRef.current) {
         e.preventDefault();
-      } else if (onClick) {
+      } else if (onClick && !isCancelledRef.current) {
+        // Only trigger click if we didn't scroll/cancel
         onClick();
       }
       startPosRef.current = null;
     },
     
     onTouchMove: (e: React.TouchEvent) => {
-      if (startPosRef.current) {
+      if (startPosRef.current && !isCancelledRef.current) {
         const touch = e.touches[0];
         const dx = Math.abs(touch.clientX - startPosRef.current.x);
         const dy = Math.abs(touch.clientY - startPosRef.current.y);
-        if (dx > 10 || dy > 10) {
+        // Cancel if moved more than 5px (reduced from 10px for better scroll detection)
+        if (dx > 5 || dy > 5) {
           clear();
+          isCancelledRef.current = true;
         }
       }
     },
     
     onMouseDown: (e: React.MouseEvent) => {
       longPressTriggeredRef.current = false;
+      isCancelledRef.current = false;
       timerRef.current = setTimeout(() => {
-        longPressTriggeredRef.current = true;
-        onLongPress();
+        if (!isCancelledRef.current) {
+          longPressTriggeredRef.current = true;
+          onLongPress();
+        }
       }, delay);
     },
     
     onMouseUp: (e: React.MouseEvent) => {
       clear();
-      if (!longPressTriggeredRef.current && onClick) {
+      if (!longPressTriggeredRef.current && onClick && !isCancelledRef.current) {
         onClick();
       }
     },
     
     onMouseLeave: () => {
       clear();
+      isCancelledRef.current = true;
     },
   };
 
