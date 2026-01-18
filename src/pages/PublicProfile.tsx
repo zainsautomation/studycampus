@@ -45,7 +45,7 @@ export default function PublicProfile() {
   const [isLoading, setIsLoading] = useState(true);
   const [isPrivate, setIsPrivate] = useState(false);
 
-  const { points, level, rankTitle, achievements } = useUserPoints(profile?.id);
+  const { points, achievements, userAchievements, getLevelProgress, getPointsToNextLevel } = useUserPoints(profile?.id);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -103,7 +103,7 @@ export default function PublicProfile() {
           bio: data.bio,
           avatar_url: data.avatar_url,
           cover_url: data.cover_url,
-          is_public: data.is_public !== false,
+          is_public: data.is_public ?? true,
           created_at: data.created_at,
           social_links: data.social_links as ProfileData['social_links'],
         });
@@ -278,11 +278,15 @@ export default function PublicProfile() {
         <ProfileStats stats={stats} />
 
         {/* Gamification */}
-        {points !== undefined && (
+        {points && (
           <PointsDisplay
-            totalPoints={points}
-            level={level}
-            rankTitle={rankTitle}
+            totalPoints={points.total_points || 0}
+            weeklyPoints={points.weekly_points || 0}
+            level={points.level || 1}
+            rankTitle={points.rank_title || 'Freshman'}
+            streakDays={points.streak_days || 0}
+            levelProgress={getLevelProgress()}
+            pointsToNextLevel={getPointsToNextLevel()}
           />
         )}
 
@@ -291,7 +295,7 @@ export default function PublicProfile() {
           <Card>
             <CardContent className="pt-6">
               <h3 className="text-lg font-semibold mb-4">Achievements</h3>
-              <AchievementGrid achievements={achievements} />
+              <AchievementGrid achievements={achievements} userAchievements={userAchievements} />
             </CardContent>
           </Card>
         )}

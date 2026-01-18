@@ -7,9 +7,10 @@ interface CommentFormProps {
   onSubmit: (content: string) => void;
   onCancel: () => void;
   isSubmitting: boolean;
+  placeholder?: string;
 }
 
-export function CommentForm({ onSubmit, onCancel, isSubmitting }: CommentFormProps) {
+export function CommentForm({ onSubmit, onCancel, isSubmitting, placeholder = "Write a comment..." }: CommentFormProps) {
   const [content, setContent] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -22,7 +23,7 @@ export function CommentForm({ onSubmit, onCancel, isSubmitting }: CommentFormPro
   return (
     <form onSubmit={handleSubmit} className="space-y-2">
       <Textarea
-        placeholder="Write a comment..."
+        placeholder={placeholder}
         value={content}
         onChange={(e) => setContent(e.target.value)}
         rows={2}
