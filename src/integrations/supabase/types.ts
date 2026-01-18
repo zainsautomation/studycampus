@@ -218,6 +218,7 @@ export type Database = {
           id: string
           is_edited: boolean | null
           parent_comment_id: string | null
+          post_id: string | null
           updated_at: string | null
           user_id: string
         }
@@ -228,6 +229,7 @@ export type Database = {
           id?: string
           is_edited?: boolean | null
           parent_comment_id?: string | null
+          post_id?: string | null
           updated_at?: string | null
           user_id: string
         }
@@ -238,6 +240,7 @@ export type Database = {
           id?: string
           is_edited?: boolean | null
           parent_comment_id?: string | null
+          post_id?: string | null
           updated_at?: string | null
           user_id?: string
         }
@@ -254,6 +257,13 @@ export type Database = {
             columns: ["parent_comment_id"]
             isOneToOne: false
             referencedRelation: "comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
             referencedColumns: ["id"]
           },
         ]

@@ -13,15 +13,33 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Pin, Trash2, Heart } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Pin, Trash2, Heart, Settings2, FolderOpen, HardDrive } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useAppSettings } from "@/hooks/useAppSettings";
 
+// Utility to strip HTML tags from content
+const stripHtml = (html: string) => {
+  const tmp = document.createElement("div");
+  tmp.innerHTML = html;
+  return tmp.textContent || tmp.innerText || "";
+};
+
 export default function ManagePosts() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { postsEnabled, updateSetting } = useAppSettings();
+  const { 
+    postsEnabled, 
+    postImagesStorageType, 
+    updateSetting 
+  } = useAppSettings();
 
   const { data: posts, isLoading } = useQuery({
     queryKey: ['admin-posts'],
@@ -77,11 +95,56 @@ export default function ManagePosts() {
     totalLikes: posts?.reduce((acc, p) => acc + (p.likes_count || 0), 0) || 0,
   };
 
+  const handleStorageTypeChange = (value: 'supabase' | 'google_drive') => {
+    updateSetting.mutate(
+      { key: 'post_images_storage_type', value },
+      {
+        onSuccess: () => {
+          toast({ title: `Post images will be stored in ${value === 'supabase' ? 'Supabase' : 'Google Drive'}` });
+        },
+      }
+    );
+  };
+
   return (
     <AdminLayout title="Manage Posts" description="Moderate posts and toggle the feature">
       <div className="space-y-6">
         {/* Controls */}
-        <div className="flex items-center justify-end">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          {/* Image Storage Settings */}
+          <Card className="w-full sm:w-auto">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <Settings2 className="h-5 w-5 text-muted-foreground" />
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                  <Label className="text-sm whitespace-nowrap">Image Storage:</Label>
+                  <Select
+                    value={postImagesStorageType}
+                    onValueChange={handleStorageTypeChange}
+                  >
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="supabase">
+                        <div className="flex items-center gap-2">
+                          <HardDrive className="h-4 w-4" />
+                          Supabase Storage
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="google_drive">
+                        <div className="flex items-center gap-2">
+                          <FolderOpen className="h-4 w-4" />
+                          Google Drive
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           <div className="flex items-center space-x-2 p-3 rounded-lg bg-muted/50 border">
             <Switch
               id="posts-enabled"
@@ -140,7 +203,7 @@ export default function ManagePosts() {
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex items-start gap-2 min-w-0 flex-1">
                             {post.is_pinned && <Pin className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />}
-                            <span className="line-clamp-2 text-sm">{post.content}</span>
+                            <span className="line-clamp-2 text-sm">{stripHtml(post.content)}</span>
                           </div>
                           <div className="flex items-center gap-1 flex-shrink-0">
                             <Button
@@ -191,7 +254,7 @@ export default function ManagePosts() {
                           <TableCell>
                             <div className="flex items-center gap-2">
                               {post.is_pinned && <Pin className="h-4 w-4 text-primary flex-shrink-0" />}
-                              <span className="line-clamp-2 max-w-xs">{post.content}</span>
+                              <span className="line-clamp-2 max-w-xs">{stripHtml(post.content)}</span>
                             </div>
                           </TableCell>
                           <TableCell>Anonymous</TableCell>
