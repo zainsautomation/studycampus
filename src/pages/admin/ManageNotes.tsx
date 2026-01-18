@@ -375,7 +375,8 @@ export default function ManageNotes() {
   const handleBulkChangeSubject = async () => {
     try {
       const ids = Array.from(selectedIds);
-      const { error } = await supabase.from('notes').update({ subject_id: bulkSubjectId || null }).in('id', ids);
+      const subjectValue = bulkSubjectId === 'none' ? null : bulkSubjectId;
+      const { error } = await supabase.from('notes').update({ subject_id: subjectValue || null }).in('id', ids);
       if (error) throw error;
       toast({ title: `${ids.length} notes updated` });
       setSelectedIds(new Set());
@@ -911,7 +912,7 @@ export default function ManageNotes() {
                   <SelectValue placeholder="Select subject" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No Subject</SelectItem>
+                  <SelectItem value="none">No Subject</SelectItem>
                   {subjects.map((s) => (
                     <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                   ))}
