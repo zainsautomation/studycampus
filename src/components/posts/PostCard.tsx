@@ -107,7 +107,7 @@ export function PostCard({
 
   // Long press (600ms) or click for image viewing
   const longPressHandlers = useLongPress({
-    delay: 900,
+    delay: 2000,
     onLongPress: () => setImageViewerOpen(true),
     onClick: () => setImageViewerOpen(true), // Quick tap also opens viewer
   });
