@@ -206,6 +206,46 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
     initializeGoogleApis();
   }, [clientId, apiKey, toast, getTokenFromStorage, saveTokenToStorage, applyTokenToGapi]);
 
+  // Attempt silent token refresh
+  const attemptSilentRefresh = useCallback((): Promise<boolean> => {
+    return new Promise((resolve) => {
+      if (!tokenClient) {
+        resolve(false);
+        return;
+      }
+      
+      console.log('[GoogleDrive] Attempting silent token refresh...');
+      
+      // Create a temporary callback override for silent refresh
+      const originalCallback = tokenClient.callback;
+      
+      tokenClient.callback = (tokenResponse: any) => {
+        // Restore original callback
+        tokenClient.callback = originalCallback;
+        
+        if (tokenResponse?.error) {
+          console.log('[GoogleDrive] Silent refresh failed:', tokenResponse.error);
+          resolve(false);
+          return;
+        }
+        
+        if (tokenResponse.access_token) {
+          console.log('[GoogleDrive] Silent refresh successful');
+          setAccessToken(tokenResponse.access_token);
+          setIsSignedIn(true);
+          applyTokenToGapi(tokenResponse.access_token);
+          saveTokenToStorage(tokenResponse.access_token, tokenResponse.expires_in || 3600);
+          resolve(true);
+        } else {
+          resolve(false);
+        }
+      };
+      
+      // Try to get token without user interaction
+      tokenClient.requestAccessToken({ prompt: '' });
+    });
+  }, [tokenClient, applyTokenToGapi, saveTokenToStorage]);
+
   // Sign in to Google
   const signIn = useCallback(() => {
     if (!tokenClient) {
@@ -223,6 +263,37 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
     console.log('[GoogleDrive] Requesting new access token with consent');
     tokenClient.requestAccessToken({ prompt: 'consent' });
   }, [tokenClient, accessToken, applyTokenToGapi]);
+
+  // Periodic token check and refresh
+  useEffect(() => {
+    if (!isInitialized || !tokenClient) return;
+    
+    const checkAndRefreshToken = async () => {
+      const expiry = localStorage.getItem(TOKEN_EXPIRY_KEY);
+      if (!expiry) return;
+      
+      const expiryTime = parseInt(expiry);
+      const now = Date.now();
+      const timeUntilExpiry = expiryTime - now;
+      
+      // If token expires in less than 10 minutes, try to refresh
+      if (timeUntilExpiry < 600000 && timeUntilExpiry > 0) {
+        console.log('[GoogleDrive] Token expiring soon, attempting refresh...');
+        const success = await attemptSilentRefresh();
+        if (!success) {
+          console.log('[GoogleDrive] Silent refresh failed, user may need to re-authenticate');
+        }
+      }
+    };
+    
+    // Check immediately on mount
+    checkAndRefreshToken();
+    
+    // Check every 5 minutes
+    const interval = setInterval(checkAndRefreshToken, 300000);
+    
+    return () => clearInterval(interval);
+  }, [isInitialized, tokenClient, attemptSilentRefresh]);
 
   // Sign out from Google
   const signOut = useCallback(() => {

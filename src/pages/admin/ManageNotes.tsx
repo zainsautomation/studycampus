@@ -100,6 +100,7 @@ export default function ManageNotes() {
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const [showBulkSubjectDialog, setShowBulkSubjectDialog] = useState(false);
   const [bulkSubjectId, setBulkSubjectId] = useState<string>('');
+  const [bulkDeleteFromStorage, setBulkDeleteFromStorage] = useState(true);
   const [noteToDelete, setNoteToDelete] = useState<Note | null>(null);
   const [deleteFromStorage, setDeleteFromStorage] = useState(true);
   const handleToggleDownloads = () => {
@@ -359,11 +360,32 @@ export default function ManageNotes() {
     setIsBulkDeleting(true);
     try {
       const ids = Array.from(selectedIds);
+      const notesToDelete = notes.filter(n => selectedIds.has(n.id));
+      
+      // Delete files from storage if option is checked
+      if (bulkDeleteFromStorage) {
+        for (const note of notesToDelete) {
+          if (note.file_url && note.storage_type === 'supabase' && note.file_url.includes('/notes/')) {
+            try {
+              const urlParts = note.file_url.split('/notes/');
+              if (urlParts[1]) {
+                const filePath = decodeURIComponent(urlParts[1].split('?')[0]);
+                await supabase.storage.from('notes').remove([filePath]);
+              }
+            } catch (storageError) {
+              console.error('Failed to delete file from storage:', storageError);
+            }
+          }
+          // Note: Google Drive files would need separate API handling
+        }
+      }
+      
       const { error } = await supabase.from('notes').delete().in('id', ids);
       if (error) throw error;
       toast({ title: `${ids.length} notes deleted` });
       setSelectedIds(new Set());
       setShowBulkDeleteConfirm(false);
+      setBulkDeleteFromStorage(true); // Reset for next time
       fetchData();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -886,6 +908,16 @@ export default function ManageNotes() {
                 This will permanently delete the selected notes. This action cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
+            <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-muted/30">
+              <Checkbox
+                id="bulk-delete-from-storage"
+                checked={bulkDeleteFromStorage}
+                onCheckedChange={(checked) => setBulkDeleteFromStorage(!!checked)}
+              />
+              <Label htmlFor="bulk-delete-from-storage" className="cursor-pointer text-sm">
+                Also delete files from storage (Supabase only)
+              </Label>
+            </div>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction
