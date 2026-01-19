@@ -11,6 +11,7 @@ import { MessageSquare, Sparkles } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useAppSettings } from "@/hooks/useAppSettings";
+import { useGoogleDriveContext } from "@/contexts/GoogleDriveContext";
 import { motion } from "framer-motion";
 import {
   AlertDialog,
@@ -23,11 +24,31 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+// Helper function to extract Google Drive file ID from URL
+const extractGoogleDriveFileId = (url: string): string | null => {
+  if (!url) return null;
+  
+  // Handle various Google Drive URL formats
+  const patterns = [
+    /\/d\/([a-zA-Z0-9_-]+)/,           // /d/FILE_ID format
+    /id=([a-zA-Z0-9_-]+)/,              // id=FILE_ID format
+    /\/file\/d\/([a-zA-Z0-9_-]+)/,     // /file/d/FILE_ID format
+  ];
+  
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) return match[1];
+  }
+  
+  return null;
+};
+
 export default function Posts() {
   const { user, isAdmin } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { postsEnabled, anonymousPostsEnabled } = useAppSettings();
+  const googleDrive = useGoogleDriveContext();
   const [selectedCategory, setSelectedCategory] = useState<PostCategory>('all');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [postToDelete, setPostToDelete] = useState<{ id: string; imageUrl: string | null } | null>(null);
@@ -148,6 +169,24 @@ export default function Posts() {
             }
           } catch (storageError) {
             console.error('Failed to delete image from storage:', storageError);
+          }
+        }
+        // Check if it's a Google Drive URL
+        else if (imageUrl.includes('drive.google.com') || imageUrl.includes('googleapis.com')) {
+          const fileId = extractGoogleDriveFileId(imageUrl);
+          if (fileId && googleDrive.isSignedIn) {
+            try {
+              // Use the Google Drive API to delete the file
+              await window.gapi.client.drive.files.delete({
+                fileId: fileId,
+              });
+              console.log('[GoogleDrive] Successfully deleted file:', fileId);
+            } catch (driveError) {
+              console.error('Failed to delete image from Google Drive:', driveError);
+              // Don't throw error, continue with post deletion
+            }
+          } else if (fileId && !googleDrive.isSignedIn) {
+            console.warn('[GoogleDrive] Cannot delete file - not signed in to Google Drive');
           }
         }
       }

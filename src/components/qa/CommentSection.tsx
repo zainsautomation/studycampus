@@ -21,6 +21,14 @@ interface Comment {
   is_edited: boolean;
   created_at: string;
   updated_at: string;
+  likes_count?: number;
+  profile?: {
+    id: string;
+    full_name: string | null;
+    username: string | null;
+    avatar_url: string | null;
+    is_public?: boolean;
+  } | null;
 }
 
 export function CommentSection({ answerId }: CommentSectionProps) {
@@ -39,7 +47,22 @@ export function CommentSection({ answerId }: CommentSectionProps) {
         .eq('answer_id', answerId)
         .order('created_at', { ascending: true });
       if (error) throw error;
-      return data as Comment[];
+      
+      if (!data || data.length === 0) return [] as Comment[];
+      
+      // Fetch profiles for comment authors
+      const userIds = [...new Set(data.map(c => c.user_id))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name, username, avatar_url, is_public')
+        .in('id', userIds);
+      
+      const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+      
+      return data.map(comment => ({
+        ...comment,
+        profile: profileMap.get(comment.user_id) || null,
+      })) as Comment[];
     },
     enabled: isExpanded,
   });
