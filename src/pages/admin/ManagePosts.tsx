@@ -27,12 +27,37 @@ import { useAppSettings } from "@/hooks/useAppSettings";
 import { useGoogleDriveContext } from "@/contexts/GoogleDriveContext";
 import { FolderPicker } from "@/components/admin/FolderPicker";
 import { useState } from "react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // Utility to strip HTML tags from content
 const stripHtml = (html: string) => {
   const tmp = document.createElement("div");
   tmp.innerHTML = html;
   return tmp.textContent || tmp.innerText || "";
+};
+
+// Helper to extract Google Drive file ID from various URL formats
+const extractGoogleDriveFileId = (url: string): string | null => {
+  const patterns = [
+    /\/file\/d\/([a-zA-Z0-9_-]+)/,
+    /id=([a-zA-Z0-9_-]+)/,
+    /\/d\/([a-zA-Z0-9_-]+)/,
+    /thumbnail\?id=([a-zA-Z0-9_-]+)/,
+  ];
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) return match[1];
+  }
+  return null;
 };
 
 export default function ManagePosts() {
@@ -48,6 +73,7 @@ export default function ManagePosts() {
   const { isSignedIn, isInitialized, signIn, openFolderPicker } = useGoogleDriveContext();
   const [selectedFolderName, setSelectedFolderName] = useState<string | null>(null);
   const [isSelectingFolder, setIsSelectingFolder] = useState(false);
+  const [postToDelete, setPostToDelete] = useState<{ id: string; image_url: string | null } | null>(null);
 
   const { data: posts, isLoading } = useQuery({
     queryKey: ['admin-posts'],
@@ -76,15 +102,54 @@ export default function ManagePosts() {
   });
 
   const deletePost = useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async ({ id, image_url }: { id: string; image_url: string | null }) => {
+      // Delete image from storage if exists
+      if (image_url) {
+        // Handle Supabase storage
+        if (image_url.includes('supabase') && image_url.includes('/post-images/')) {
+          try {
+            const urlParts = image_url.split('/post-images/');
+            if (urlParts[1]) {
+              const filePath = decodeURIComponent(urlParts[1].split('?')[0]);
+              await supabase.storage.from('post-images').remove([filePath]);
+            }
+          } catch (storageError) {
+            console.error('Failed to delete image from Supabase storage:', storageError);
+          }
+        }
+        // Handle Google Drive
+        else if (image_url.includes('drive.google.com') || image_url.includes('googleapis.com')) {
+          const fileId = extractGoogleDriveFileId(image_url);
+          if (fileId && isSignedIn && window.gapi?.client?.drive) {
+            try {
+              await window.gapi.client.drive.files.delete({ fileId });
+            } catch (driveError) {
+              console.error('Failed to delete image from Google Drive:', driveError);
+            }
+          }
+        }
+      }
+      
       const { error } = await supabase.from('posts').delete().eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-posts'] });
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
       toast({ title: "Post deleted" });
+      setPostToDelete(null);
     },
   });
+
+  const handleDeleteClick = (post: { id: string; image_url: string | null }) => {
+    setPostToDelete(post);
+  };
+
+  const confirmDelete = () => {
+    if (postToDelete) {
+      deletePost.mutate(postToDelete);
+    }
+  };
 
   const togglePostsEnabled = () => {
     updateSetting.mutate(
@@ -282,7 +347,7 @@ export default function ManagePosts() {
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8 text-destructive"
-                              onClick={() => deletePost.mutate(post.id)}
+                              onClick={() => handleDeleteClick({ id: post.id, image_url: post.image_url })}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -344,7 +409,7 @@ export default function ManagePosts() {
                                 variant="ghost"
                                 size="icon"
                                 className="text-destructive"
-                                onClick={() => deletePost.mutate(post.id)}
+                                onClick={() => handleDeleteClick({ id: post.id, image_url: post.image_url })}
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -359,6 +424,28 @@ export default function ManagePosts() {
             )}
           </CardContent>
         </Card>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={!!postToDelete} onOpenChange={(open) => !open && setPostToDelete(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Post?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete this post{postToDelete?.image_url ? ' and its associated image from storage' : ''}. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={confirmDelete}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                disabled={deletePost.isPending}
+              >
+                {deletePost.isPending ? 'Deleting...' : 'Delete'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </AdminLayout>
   );

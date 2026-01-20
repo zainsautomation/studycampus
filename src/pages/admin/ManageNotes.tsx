@@ -278,6 +278,21 @@ export default function ManageNotes() {
     }
   };
 
+  // Helper to extract Google Drive file ID from various URL formats
+  const extractGoogleDriveFileId = (url: string): string | null => {
+    const patterns = [
+      /\/file\/d\/([a-zA-Z0-9_-]+)/,
+      /id=([a-zA-Z0-9_-]+)/,
+      /\/d\/([a-zA-Z0-9_-]+)/,
+      /thumbnail\?id=([a-zA-Z0-9_-]+)/,
+    ];
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match) return match[1];
+    }
+    return null;
+  };
+
   const handleDelete = async (note: Note, deleteFile: boolean) => {
     try {
       // Delete file from storage if requested
@@ -290,10 +305,32 @@ export default function ManageNotes() {
               await supabase.storage.from('notes').remove([filePath]);
             }
           } catch (storageError) {
-            console.error('Failed to delete file from storage:', storageError);
+            console.error('Failed to delete file from Supabase storage:', storageError);
+          }
+        } else if (note.storage_type === 'google_drive') {
+          // Handle Google Drive deletion
+          const fileId = extractGoogleDriveFileId(note.file_url);
+          if (fileId) {
+            if (googleDrive.isSignedIn && window.gapi?.client?.drive) {
+              try {
+                await window.gapi.client.drive.files.delete({ fileId });
+              } catch (driveError) {
+                console.error('Failed to delete file from Google Drive:', driveError);
+                toast({
+                  title: 'Warning',
+                  description: 'Could not delete file from Google Drive. It may need to be removed manually.',
+                  variant: 'destructive'
+                });
+              }
+            } else {
+              toast({
+                title: 'Warning',
+                description: 'Not signed in to Google Drive. File not deleted from Drive.',
+                variant: 'destructive'
+              });
+            }
           }
         }
-        // Note: Google Drive files would need separate API handling
       }
       
       const { error } = await supabase.from('notes').delete().eq('id', note.id);
@@ -358,6 +395,8 @@ export default function ManageNotes() {
 
   const handleBulkDelete = async () => {
     setIsBulkDeleting(true);
+    let driveDeleteWarning = false;
+    
     try {
       const ids = Array.from(selectedIds);
       const notesToDelete = notes.filter(n => selectedIds.has(n.id));
@@ -365,24 +404,50 @@ export default function ManageNotes() {
       // Delete files from storage if option is checked
       if (bulkDeleteFromStorage) {
         for (const note of notesToDelete) {
-          if (note.file_url && note.storage_type === 'supabase' && note.file_url.includes('/notes/')) {
-            try {
-              const urlParts = note.file_url.split('/notes/');
-              if (urlParts[1]) {
-                const filePath = decodeURIComponent(urlParts[1].split('?')[0]);
-                await supabase.storage.from('notes').remove([filePath]);
+          if (note.file_url) {
+            if (note.storage_type === 'supabase' && note.file_url.includes('/notes/')) {
+              try {
+                const urlParts = note.file_url.split('/notes/');
+                if (urlParts[1]) {
+                  const filePath = decodeURIComponent(urlParts[1].split('?')[0]);
+                  await supabase.storage.from('notes').remove([filePath]);
+                }
+              } catch (storageError) {
+                console.error('Failed to delete file from Supabase storage:', storageError);
               }
-            } catch (storageError) {
-              console.error('Failed to delete file from storage:', storageError);
+            } else if (note.storage_type === 'google_drive') {
+              // Handle Google Drive deletion
+              const fileId = extractGoogleDriveFileId(note.file_url);
+              if (fileId) {
+                if (googleDrive.isSignedIn && window.gapi?.client?.drive) {
+                  try {
+                    await window.gapi.client.drive.files.delete({ fileId });
+                  } catch (driveError) {
+                    console.error('Failed to delete file from Google Drive:', driveError);
+                    driveDeleteWarning = true;
+                  }
+                } else {
+                  driveDeleteWarning = true;
+                }
+              }
             }
           }
-          // Note: Google Drive files would need separate API handling
         }
       }
       
       const { error } = await supabase.from('notes').delete().in('id', ids);
       if (error) throw error;
-      toast({ title: `${ids.length} notes deleted` });
+      
+      if (driveDeleteWarning) {
+        toast({ 
+          title: `${ids.length} notes deleted`, 
+          description: 'Some Google Drive files may not have been deleted. Please check manually.',
+          variant: 'destructive'
+        });
+      } else {
+        toast({ title: `${ids.length} notes deleted` });
+      }
+      
       setSelectedIds(new Set());
       setShowBulkDeleteConfirm(false);
       setBulkDeleteFromStorage(true); // Reset for next time
@@ -915,7 +980,7 @@ export default function ManageNotes() {
                 onCheckedChange={(checked) => setBulkDeleteFromStorage(!!checked)}
               />
               <Label htmlFor="bulk-delete-from-storage" className="cursor-pointer text-sm">
-                Also delete files from storage (Supabase only)
+                Also delete files from storage (Supabase and Google Drive)
               </Label>
             </div>
             <AlertDialogFooter>
