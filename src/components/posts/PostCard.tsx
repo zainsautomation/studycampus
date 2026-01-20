@@ -1,22 +1,23 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Heart, Pin, Trash2, MoreVertical, EyeOff, Clock, ImageOff } from "lucide-react";
+import { Heart, Pin, Trash2, MoreVertical, EyeOff, Clock, ImageOff, Flag } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { motion } from "framer-motion";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { CategoryBadge } from "./CategoryBadge";
 import { RichTextDisplay } from "@/components/ui/rich-text-display";
 import { ImageViewerDialog } from "@/components/ui/ImageViewerDialog";
 import { PostCommentSection } from "./PostCommentSection";
+import { ReportButton } from "@/components/ui/ReportButton";
 import { useState, useMemo } from "react";
 import { useLongPress } from "@/hooks/useLongPress";
 import { useNavigate } from "react-router-dom";
-
 interface PostCardProps {
   post: {
     id: string;
@@ -163,30 +164,45 @@ export function PostCard({ post, hasLiked, currentUserId, isAdmin, onLike, onPin
                 </div>
               </div>
             </div>
-            {canDelete && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <motion.button
-                    whileTap={{ scale: 0.9 }}
-                    className="p-2 -mr-2 -mt-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
-                  >
-                    <MoreVertical className="h-4 w-4" />
-                  </motion.button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  {isAdmin && onPin && (
-                    <DropdownMenuItem onClick={onPin}>
-                      <Pin className="h-4 w-4 mr-2" />
-                      {post.is_pinned ? "Unpin" : "Pin"}
-                    </DropdownMenuItem>
-                  )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <motion.button
+                  whileTap={{ scale: 0.9 }}
+                  className="p-2 -mr-2 -mt-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
+                >
+                  <MoreVertical className="h-4 w-4" />
+                </motion.button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {isAdmin && onPin && (
+                  <DropdownMenuItem onClick={onPin}>
+                    <Pin className="h-4 w-4 mr-2" />
+                    {post.is_pinned ? "Unpin" : "Pin"}
+                  </DropdownMenuItem>
+                )}
+                {canDelete && (
                   <DropdownMenuItem onClick={onDelete} className="text-destructive">
                     <Trash2 className="h-4 w-4 mr-2" />
                     Delete
                   </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
+                )}
+                {currentUserId !== post.user_id && (
+                  <>
+                    {canDelete && <DropdownMenuSeparator />}
+                    <DropdownMenuItem asChild>
+                      <ReportButton 
+                        contentType="post" 
+                        contentId={post.id} 
+                        size="default" 
+                        variant="ghost"
+                        showLabel
+                        className="w-full justify-start cursor-pointer"
+                      />
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           {/* Content */}

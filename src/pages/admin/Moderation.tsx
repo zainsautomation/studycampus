@@ -10,13 +10,16 @@ import {
   FileText,
   Eye,
   Trash2,
-  Clock
+  Clock,
+  Flag,
+  Ban
 } from 'lucide-react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Dialog,
   DialogContent,
@@ -63,8 +66,17 @@ interface ModerationItem {
   details: string | null;
   status: string;
   created_at: string;
-  reporter?: { full_name: string | null; username: string | null } | null;
+  reporter?: { full_name: string | null; username: string | null; avatar_url: string | null } | null;
   content?: any;
+  author?: { full_name: string | null; username: string | null; avatar_url: string | null } | null;
+  reportCount?: number;
+}
+
+interface ModerationStats {
+  pending: number;
+  resolvedToday: number;
+  removed: number;
+  dismissed: number;
 }
 
 const contentTypeIcons: Record<string, React.ElementType> = {
@@ -94,6 +106,7 @@ export default function Moderation() {
   const { toast } = useToast();
   const { isSignedIn } = useGoogleDriveContext();
   const [items, setItems] = useState<ModerationItem[]>([]);
+  const [stats, setStats] = useState<ModerationStats>({ pending: 0, resolvedToday: 0, removed: 0, dismissed: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<'pending' | 'all'>('pending');
   const [selectedItem, setSelectedItem] = useState<ModerationItem | null>(null);
@@ -103,7 +116,27 @@ export default function Moderation() {
 
   useEffect(() => {
     fetchModerationQueue();
+    fetchStats();
   }, [filter]);
+
+  const fetchStats = async () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const [pendingRes, resolvedRes, removedRes, dismissedRes] = await Promise.all([
+      supabase.from('moderation_queue').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+      supabase.from('moderation_queue').select('id', { count: 'exact', head: true }).gte('reviewed_at', today.toISOString()).neq('status', 'pending'),
+      supabase.from('moderation_queue').select('id', { count: 'exact', head: true }).eq('status', 'removed'),
+      supabase.from('moderation_queue').select('id', { count: 'exact', head: true }).eq('status', 'approved'),
+    ]);
+
+    setStats({
+      pending: pendingRes.count || 0,
+      resolvedToday: resolvedRes.count || 0,
+      removed: removedRes.count || 0,
+      dismissed: dismissedRes.count || 0,
+    });
+  };
 
   const fetchModerationQueue = async () => {
     setIsLoading(true);
@@ -122,32 +155,56 @@ export default function Moderation() {
     if (error) {
       console.error('Error fetching moderation queue:', error);
     } else {
-      // Fetch reporter profiles and content for each item
+      // Fetch reporter profiles, content, author, and report count for each item
       const itemsWithDetails = await Promise.all(
         (data || []).map(async (item) => {
           // Get reporter info
           const { data: reporter } = await supabase
             .from('profiles')
-            .select('full_name, username')
+            .select('full_name, username, avatar_url')
             .eq('id', item.reported_by)
             .single();
 
-          // Get reported content
+          // Get report count for this content
+          const { count: reportCount } = await supabase
+            .from('moderation_queue')
+            .select('id', { count: 'exact', head: true })
+            .eq('content_id', item.content_id);
+
+          // Get reported content and author
           let content = null;
+          let author = null;
+          
           if (item.content_type === 'post') {
             const { data: post } = await supabase
               .from('posts')
-              .select('content, user_id')
+              .select('content, user_id, is_anonymous, image_url')
               .eq('id', item.content_id)
               .single();
             content = post;
+            if (post && !post.is_anonymous) {
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('full_name, username, avatar_url')
+                .eq('id', post.user_id)
+                .single();
+              author = profile;
+            }
           } else if (item.content_type === 'question') {
             const { data: question } = await supabase
               .from('questions')
-              .select('title, content, user_id')
+              .select('title, content, user_id, is_anonymous')
               .eq('id', item.content_id)
               .single();
             content = question;
+            if (question && !question.is_anonymous) {
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('full_name, username, avatar_url')
+                .eq('id', question.user_id)
+                .single();
+              author = profile;
+            }
           } else if (item.content_type === 'answer') {
             const { data: answer } = await supabase
               .from('answers')
@@ -155,6 +212,14 @@ export default function Moderation() {
               .eq('id', item.content_id)
               .single();
             content = answer;
+            if (answer) {
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('full_name, username, avatar_url')
+                .eq('id', answer.user_id)
+                .single();
+              author = profile;
+            }
           } else if (item.content_type === 'comment') {
             const { data: comment } = await supabase
               .from('comments')
@@ -162,15 +227,107 @@ export default function Moderation() {
               .eq('id', item.content_id)
               .single();
             content = comment;
+            if (comment) {
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('full_name, username, avatar_url')
+                .eq('id', comment.user_id)
+                .single();
+              author = profile;
+            }
           }
 
-          return { ...item, reporter, content };
+          return { ...item, reporter, content, author, reportCount: reportCount || 1 };
         })
       );
 
       setItems(itemsWithDetails);
     }
     setIsLoading(false);
+  };
+
+  const handleQuickAction = async (item: ModerationItem, action: 'approved' | 'removed') => {
+    if (!user) return;
+    
+    setIsProcessing(true);
+    try {
+      // Update moderation queue
+      await supabase
+        .from('moderation_queue')
+        .update({
+          status: action,
+          reviewed_by: user.id,
+          reviewed_at: new Date().toISOString(),
+          action_taken: action,
+        })
+        .eq('id', item.id);
+
+      // If removing content, delete it
+      if (action === 'removed' && item.content) {
+        await deleteContent(item);
+      }
+
+      // Log admin action
+      await supabase.from('admin_logs').insert({
+        admin_id: user.id,
+        action: `moderation_${action}`,
+        resource_type: item.content_type,
+        resource_id: item.content_id,
+        details: { reason: item.reason, action },
+      });
+
+      toast({ title: 'Action completed', description: `Report ${action === 'approved' ? 'dismissed' : 'content removed'}` });
+      fetchModerationQueue();
+      fetchStats();
+    } catch (error: any) {
+      toast({ title: 'Action failed', description: error.message, variant: 'destructive' });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const deleteContent = async (item: ModerationItem) => {
+    const table = item.content_type === 'post' ? 'posts' 
+      : item.content_type === 'question' ? 'questions'
+      : item.content_type === 'answer' ? 'answers'
+      : 'comments';
+    
+    // If it's a post, also delete the associated image from storage
+    if (item.content_type === 'post') {
+      const { data: post } = await supabase
+        .from('posts')
+        .select('image_url')
+        .eq('id', item.content_id)
+        .single();
+      
+      if (post?.image_url) {
+        // Handle Supabase storage
+        if (post.image_url.includes('supabase') && post.image_url.includes('/post-images/')) {
+          try {
+            const urlParts = post.image_url.split('/post-images/');
+            if (urlParts[1]) {
+              const filePath = decodeURIComponent(urlParts[1].split('?')[0]);
+              await supabase.storage.from('post-images').remove([filePath]);
+            }
+          } catch (storageError) {
+            console.error('Failed to delete image from Supabase storage:', storageError);
+          }
+        }
+        // Handle Google Drive
+        else if (post.image_url.includes('drive.google.com') || post.image_url.includes('googleapis.com')) {
+          const fileId = extractGoogleDriveFileId(post.image_url);
+          if (fileId && isSignedIn && window.gapi?.client?.drive) {
+            try {
+              await window.gapi.client.drive.files.delete({ fileId });
+            } catch (driveError) {
+              console.error('Failed to delete image from Google Drive:', driveError);
+            }
+          }
+        }
+      }
+    }
+    
+    await supabase.from(table).delete().eq('id', item.content_id);
   };
 
   const handleAction = async () => {
@@ -191,47 +348,7 @@ export default function Moderation() {
 
       // If removing content, delete it
       if (selectedAction === 'removed' && selectedItem.content) {
-        const table = selectedItem.content_type === 'post' ? 'posts' 
-          : selectedItem.content_type === 'question' ? 'questions'
-          : selectedItem.content_type === 'answer' ? 'answers'
-          : 'comments';
-        
-        // If it's a post, also delete the associated image from storage
-        if (selectedItem.content_type === 'post') {
-          const { data: post } = await supabase
-            .from('posts')
-            .select('image_url')
-            .eq('id', selectedItem.content_id)
-            .single();
-          
-          if (post?.image_url) {
-            // Handle Supabase storage
-            if (post.image_url.includes('supabase') && post.image_url.includes('/post-images/')) {
-              try {
-                const urlParts = post.image_url.split('/post-images/');
-                if (urlParts[1]) {
-                  const filePath = decodeURIComponent(urlParts[1].split('?')[0]);
-                  await supabase.storage.from('post-images').remove([filePath]);
-                }
-              } catch (storageError) {
-                console.error('Failed to delete image from Supabase storage:', storageError);
-              }
-            }
-            // Handle Google Drive
-            else if (post.image_url.includes('drive.google.com') || post.image_url.includes('googleapis.com')) {
-              const fileId = extractGoogleDriveFileId(post.image_url);
-              if (fileId && isSignedIn && window.gapi?.client?.drive) {
-                try {
-                  await window.gapi.client.drive.files.delete({ fileId });
-                } catch (driveError) {
-                  console.error('Failed to delete image from Google Drive:', driveError);
-                }
-              }
-            }
-          }
-        }
-        
-        await supabase.from(table).delete().eq('id', selectedItem.content_id);
+        await deleteContent(selectedItem);
       }
 
       // Log admin action
@@ -248,6 +365,7 @@ export default function Moderation() {
       setSelectedItem(null);
       setSelectedAction('');
       fetchModerationQueue();
+      fetchStats();
     } catch (error: any) {
       toast({ title: 'Action failed', description: error.message, variant: 'destructive' });
     } finally {
@@ -261,14 +379,61 @@ export default function Moderation() {
   return (
     <AdminLayout title="Content Moderation" description="Review reported content">
       <div className="space-y-6">
-        {/* Pending Badge */}
-        {pendingCount > 0 && (
-          <div className="flex justify-end">
-            <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20">
-              {pendingCount} pending
-            </Badge>
-          </div>
-        )}
+        {/* Stats Dashboard */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-warning/10">
+                  <Clock className="h-5 w-5 text-warning" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{stats.pending}</p>
+                  <p className="text-xs text-muted-foreground">Pending</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                  <CheckCircle className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{stats.resolvedToday}</p>
+                  <p className="text-xs text-muted-foreground">Resolved Today</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-destructive/10">
+                  <Ban className="h-5 w-5 text-destructive" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{stats.removed}</p>
+                  <p className="text-xs text-muted-foreground">Removed</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-success/10">
+                  <Shield className="h-5 w-5 text-success" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{stats.dismissed}</p>
+                  <p className="text-xs text-muted-foreground">Dismissed</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Tabs */}
         <Tabs value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
@@ -276,6 +441,11 @@ export default function Moderation() {
             <TabsTrigger value="pending" className="gap-2">
               <Clock className="h-4 w-4" />
               Pending
+              {stats.pending > 0 && (
+                <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                  {stats.pending}
+                </Badge>
+              )}
             </TabsTrigger>
             <TabsTrigger value="all" className="gap-2">
               <Eye className="h-4 w-4" />
@@ -333,6 +503,12 @@ export default function Moderation() {
                             <Badge variant="outline" className={statusColors[item.status]}>
                               {item.status}
                             </Badge>
+                            {item.reportCount && item.reportCount > 1 && (
+                              <Badge variant="destructive" className="gap-1">
+                                <Flag className="h-3 w-3" />
+                                {item.reportCount} reports
+                              </Badge>
+                            )}
                             <span className="text-sm text-muted-foreground">
                               {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}
                             </span>
@@ -358,14 +534,61 @@ export default function Moderation() {
                             </div>
                           )}
 
-                          <p className="text-xs text-muted-foreground">
-                            Reported by: {item.reporter?.username || item.reporter?.full_name || 'Unknown'}
-                          </p>
+                          {/* Author and Reporter info */}
+                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                            {item.author ? (
+                              <div className="flex items-center gap-1.5">
+                                <span>Author:</span>
+                                <Avatar className="h-5 w-5">
+                                  <AvatarImage src={item.author.avatar_url || undefined} />
+                                  <AvatarFallback className="text-[10px]">
+                                    {(item.author.full_name || 'U')[0].toUpperCase()}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span className="font-medium">{item.author.username || item.author.full_name}</span>
+                              </div>
+                            ) : item.content?.is_anonymous ? (
+                              <span>Author: Anonymous</span>
+                            ) : (
+                              <span>Author: Unknown</span>
+                            )}
+                            <span className="opacity-40">•</span>
+                            <div className="flex items-center gap-1.5">
+                              <span>Reported by:</span>
+                              <Avatar className="h-5 w-5">
+                                <AvatarImage src={item.reporter?.avatar_url || undefined} />
+                                <AvatarFallback className="text-[10px]">
+                                  {(item.reporter?.full_name || 'U')[0].toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span>{item.reporter?.username || item.reporter?.full_name || 'Unknown'}</span>
+                            </div>
+                          </div>
                         </div>
 
                         {/* Actions */}
                         {item.status === 'pending' && (
-                          <div className="flex gap-2">
+                          <div className="flex flex-col gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-success hover:text-success hover:bg-success/10"
+                              onClick={() => handleQuickAction(item, 'approved')}
+                              disabled={isProcessing}
+                            >
+                              <CheckCircle className="h-4 w-4 mr-1" />
+                              Dismiss
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={() => handleQuickAction(item, 'removed')}
+                              disabled={isProcessing}
+                            >
+                              <Trash2 className="h-4 w-4 mr-1" />
+                              Remove
+                            </Button>
                             <Button
                               size="sm"
                               variant="outline"
@@ -374,6 +597,7 @@ export default function Moderation() {
                                 setIsActionDialogOpen(true);
                               }}
                             >
+                              <Eye className="h-4 w-4 mr-1" />
                               Review
                             </Button>
                           </div>

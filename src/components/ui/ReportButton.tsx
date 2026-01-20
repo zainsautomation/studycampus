@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Flag, AlertTriangle } from 'lucide-react';
+import { Flag, AlertTriangle, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -22,6 +22,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { useQuery } from '@tanstack/react-query';
 
 interface ReportButtonProps {
   contentType: 'post' | 'question' | 'answer' | 'comment';
@@ -29,6 +30,7 @@ interface ReportButtonProps {
   size?: 'sm' | 'default' | 'icon';
   variant?: 'ghost' | 'outline';
   className?: string;
+  showLabel?: boolean;
 }
 
 const reportReasons = [
@@ -45,6 +47,7 @@ export function ReportButton({
   size = 'icon',
   variant = 'ghost',
   className,
+  showLabel = false,
 }: ReportButtonProps) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -52,6 +55,22 @@ export function ReportButton({
   const [reason, setReason] = useState('');
   const [details, setDetails] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Check if user has already reported this content
+  const { data: existingReport, isLoading: checkingReport } = useQuery({
+    queryKey: ['user-report', contentType, contentId, user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data } = await supabase
+        .from('moderation_queue')
+        .select('id')
+        .eq('content_id', contentId)
+        .eq('reported_by', user.id)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!user,
+  });
 
   const handleSubmit = async () => {
     if (!user || !reason) return;
@@ -86,17 +105,40 @@ export function ReportButton({
     }
   };
 
+  // Don't show button if user is not logged in
+  if (!user) return null;
+
+  // Show "Reported" state if already reported
+  if (existingReport) {
+    return (
+      <Button
+        variant={variant}
+        size={size}
+        disabled
+        className={cn('text-muted-foreground cursor-not-allowed', className)}
+        title="Already reported"
+      >
+        <Check className="h-4 w-4" />
+        {(size !== 'icon' || showLabel) && <span className="ml-2">Reported</span>}
+      </Button>
+    );
+  }
+
   return (
     <>
       <Button
         variant={variant}
         size={size}
-        onClick={() => setIsOpen(true)}
+        onClick={(e) => {
+          e.stopPropagation();
+          setIsOpen(true);
+        }}
         className={cn('text-muted-foreground hover:text-destructive', className)}
         title="Report content"
+        disabled={checkingReport}
       >
         <Flag className="h-4 w-4" />
-        {size !== 'icon' && <span className="ml-2">Report</span>}
+        {(size !== 'icon' || showLabel) && <span className="ml-2">Report</span>}
       </Button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>

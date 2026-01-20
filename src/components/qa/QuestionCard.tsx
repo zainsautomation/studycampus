@@ -4,6 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MessageSquare, CheckCircle2, Pin, EyeOff, Clock } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { motion } from "framer-motion";
+import { ReportButton } from "@/components/ui/ReportButton";
 
 // Strip HTML tags for preview text
 const stripHtml = (html: string) => {
@@ -64,7 +65,7 @@ export function QuestionCard({ question, onClick, index = 0 }: QuestionCardProps
     >
       <Card 
         variant="interactive"
-        className={`overflow-hidden relative ${question.is_pinned ? 'ring-1 ring-primary/30' : ''}`}
+        className={`overflow-hidden relative group ${question.is_pinned ? 'ring-1 ring-primary/30' : ''}`}
         onClick={onClick}
       >
         {/* Subject color accent bar */}
@@ -133,15 +134,29 @@ export function QuestionCard({ question, onClick, index = 0 }: QuestionCardProps
               </div>
             </div>
 
-            {/* Answer count badge */}
-            <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
-              answerCount > 0 
-                ? 'bg-primary/10 text-primary' 
-                : 'bg-muted/50 text-muted-foreground'
-            }`}>
-              <MessageSquare className="h-3.5 w-3.5" />
-              <span>{answerCount}</span>
-              <span className="hidden sm:inline">{answerCount === 1 ? 'answer' : 'answers'}</span>
+            {/* Answer count badge and Report button */}
+            <div className="flex items-center gap-2">
+              <div 
+                className="opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <ReportButton 
+                  contentType="question" 
+                  contentId={question.id} 
+                  size="icon" 
+                  variant="ghost"
+                  className="h-7 w-7"
+                />
+              </div>
+              <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
+                answerCount > 0 
+                  ? 'bg-primary/10 text-primary' 
+                  : 'bg-muted/50 text-muted-foreground'
+              }`}>
+                <MessageSquare className="h-3.5 w-3.5" />
+                <span>{answerCount}</span>
+                <span className="hidden sm:inline">{answerCount === 1 ? 'answer' : 'answers'}</span>
+              </div>
             </div>
           </div>
         </CardContent>
