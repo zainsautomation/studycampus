@@ -37,6 +37,22 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
+import { useGoogleDriveContext } from '@/contexts/GoogleDriveContext';
+
+// Helper to extract Google Drive file ID from various URL formats
+const extractGoogleDriveFileId = (url: string): string | null => {
+  const patterns = [
+    /\/file\/d\/([a-zA-Z0-9_-]+)/,
+    /id=([a-zA-Z0-9_-]+)/,
+    /\/d\/([a-zA-Z0-9_-]+)/,
+    /thumbnail\?id=([a-zA-Z0-9_-]+)/,
+  ];
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) return match[1];
+  }
+  return null;
+};
 
 interface ModerationItem {
   id: string;
@@ -76,6 +92,7 @@ const statusColors: Record<string, string> = {
 export default function Moderation() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { isSignedIn } = useGoogleDriveContext();
   const [items, setItems] = useState<ModerationItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<'pending' | 'all'>('pending');
@@ -178,6 +195,41 @@ export default function Moderation() {
           : selectedItem.content_type === 'question' ? 'questions'
           : selectedItem.content_type === 'answer' ? 'answers'
           : 'comments';
+        
+        // If it's a post, also delete the associated image from storage
+        if (selectedItem.content_type === 'post') {
+          const { data: post } = await supabase
+            .from('posts')
+            .select('image_url')
+            .eq('id', selectedItem.content_id)
+            .single();
+          
+          if (post?.image_url) {
+            // Handle Supabase storage
+            if (post.image_url.includes('supabase') && post.image_url.includes('/post-images/')) {
+              try {
+                const urlParts = post.image_url.split('/post-images/');
+                if (urlParts[1]) {
+                  const filePath = decodeURIComponent(urlParts[1].split('?')[0]);
+                  await supabase.storage.from('post-images').remove([filePath]);
+                }
+              } catch (storageError) {
+                console.error('Failed to delete image from Supabase storage:', storageError);
+              }
+            }
+            // Handle Google Drive
+            else if (post.image_url.includes('drive.google.com') || post.image_url.includes('googleapis.com')) {
+              const fileId = extractGoogleDriveFileId(post.image_url);
+              if (fileId && isSignedIn && window.gapi?.client?.drive) {
+                try {
+                  await window.gapi.client.drive.files.delete({ fileId });
+                } catch (driveError) {
+                  console.error('Failed to delete image from Google Drive:', driveError);
+                }
+              }
+            }
+          }
+        }
         
         await supabase.from(table).delete().eq('id', selectedItem.content_id);
       }
