@@ -7,6 +7,7 @@ import { formatDistanceToNow } from "date-fns";
 import { motion } from "framer-motion";
 import { CommentSection } from "./CommentSection";
 import { RichTextDisplay } from "@/components/ui/rich-text-display";
+import { ReportButton } from "@/components/ui/ReportButton";
 
 interface AnswerCardProps {
   answer: {
@@ -119,6 +120,15 @@ export function AnswerCard({
                       <CheckCircle2 className="h-3.5 w-3.5" />
                       Accept
                     </Button>
+                  )}
+                  {currentUserId !== answer.user_id && (
+                    <ReportButton 
+                      contentType="answer" 
+                      contentId={answer.id} 
+                      size="icon" 
+                      variant="ghost"
+                      className="h-8 w-8"
+                    />
                   )}
                   {isAdmin && (
                     <Button 
