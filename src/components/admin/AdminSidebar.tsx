@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -29,11 +29,13 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { useTheme } from '@/hooks/useTheme';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { supabase } from '@/integrations/supabase/client';
 
 const adminNavGroups = [
   {
@@ -64,7 +66,7 @@ const adminNavGroups = [
     label: 'Management',
     items: [
       { href: '/admin/users', label: 'Users', icon: Users },
-      { href: '/admin/moderation', label: 'Moderation', icon: Shield },
+      { href: '/admin/moderation', label: 'Moderation', icon: Shield, showPendingBadge: true },
     ]
   },
 ];
@@ -90,6 +92,30 @@ export function AdminSidebar() {
   const { resolvedTheme, setTheme } = useTheme();
   const { settings, updateSetting } = useAppSettings();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [pendingReports, setPendingReports] = useState(0);
+
+  // Fetch pending reports count
+  useEffect(() => {
+    const fetchPendingReports = async () => {
+      const { count } = await supabase
+        .from('moderation_queue')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'pending');
+      setPendingReports(count || 0);
+    };
+    
+    fetchPendingReports();
+    
+    // Subscribe to real-time changes
+    const channel = supabase
+      .channel('moderation_updates')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'moderation_queue' }, fetchPendingReports)
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const toggleTheme = () => {
     setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
@@ -162,6 +188,7 @@ export function AdminSidebar() {
             <div className="space-y-1">
               {group.items.map((item) => {
                 const active = isActive(item.href);
+                const showBadge = 'showPendingBadge' in item && item.showPendingBadge && pendingReports > 0;
                 return (
                   <Link
                     key={item.href}
@@ -178,7 +205,15 @@ export function AdminSidebar() {
                       !active && "group-hover:text-primary"
                     )} />
                     {item.label}
-                    {active && (
+                    {showBadge && (
+                      <Badge 
+                        variant="destructive" 
+                        className="ml-auto h-5 min-w-[20px] px-1.5 text-xs flex items-center justify-center"
+                      >
+                        {pendingReports > 99 ? '99+' : pendingReports}
+                      </Badge>
+                    )}
+                    {active && !showBadge && (
                       <motion.div
                         layoutId="activeIndicator"
                         className="ml-auto w-1.5 h-1.5 rounded-full bg-primary-foreground"
@@ -291,6 +326,30 @@ export function AdminMobileNav() {
   const { resolvedTheme, setTheme } = useTheme();
   const { settings, updateSetting } = useAppSettings();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [pendingReports, setPendingReports] = useState(0);
+
+  // Fetch pending reports count
+  useEffect(() => {
+    const fetchPendingReports = async () => {
+      const { count } = await supabase
+        .from('moderation_queue')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'pending');
+      setPendingReports(count || 0);
+    };
+    
+    fetchPendingReports();
+    
+    // Subscribe to real-time changes
+    const channel = supabase
+      .channel('moderation_updates_mobile')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'moderation_queue' }, fetchPendingReports)
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const toggleTheme = () => {
     setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
@@ -338,6 +397,7 @@ export function AdminMobileNav() {
                       <div className="space-y-1">
                         {group.items.map((item) => {
                           const active = isActive(item.href);
+                          const showBadge = 'showPendingBadge' in item && item.showPendingBadge && pendingReports > 0;
                           return (
                             <Link
                               key={item.href}
@@ -352,6 +412,14 @@ export function AdminMobileNav() {
                             >
                               <item.icon className="w-5 h-5" />
                               {item.label}
+                              {showBadge && (
+                                <Badge 
+                                  variant="destructive" 
+                                  className="ml-auto h-5 min-w-[20px] px-1.5 text-xs"
+                                >
+                                  {pendingReports > 99 ? '99+' : pendingReports}
+                                </Badge>
+                              )}
                             </Link>
                           );
                         })}
