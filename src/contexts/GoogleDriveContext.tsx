@@ -36,6 +36,8 @@ interface GoogleDriveContextValue {
   isSignedIn: boolean;
   isLoading: boolean;
   isConfigured: boolean;
+  isTokenExpiringSoon: boolean;
+  lastRefreshFailed: boolean;
   signIn: () => void;
   signOut: () => void;
   listFolders: (parentId?: string) => Promise<GoogleDriveFolder[]>;
@@ -43,6 +45,7 @@ interface GoogleDriveContextValue {
   findOrCreateFolder: (name: string, parentId?: string) => Promise<string | null>;
   uploadFile: (options: UploadOptions) => Promise<{ fileId: string; webViewLink: string } | null>;
   openFolderPicker: () => Promise<GoogleDriveFolder | null>;
+  deleteFile: (fileId: string) => Promise<boolean>;
 }
 
 const GoogleDriveContext = createContext<GoogleDriveContextValue | null>(null);
@@ -54,6 +57,8 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
   const [tokenClient, setTokenClient] = useState<any>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [isTokenExpiringSoon, setIsTokenExpiringSoon] = useState(false);
+  const [lastRefreshFailed, setLastRefreshFailed] = useState(false);
 
   const clientId = GOOGLE_CLIENT_ID;
   const apiKey = GOOGLE_API_KEY;
@@ -270,11 +275,17 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
     
     const checkAndRefreshToken = async () => {
       const expiry = localStorage.getItem(TOKEN_EXPIRY_KEY);
-      if (!expiry) return;
+      if (!expiry) {
+        setIsTokenExpiringSoon(false);
+        return;
+      }
       
       const expiryTime = parseInt(expiry);
       const now = Date.now();
       const timeUntilExpiry = expiryTime - now;
+      
+      // Update expiring soon state (less than 10 minutes)
+      setIsTokenExpiringSoon(timeUntilExpiry < 600000 && timeUntilExpiry > 0);
       
       // If token expires in less than 10 minutes, try to refresh
       if (timeUntilExpiry < 600000 && timeUntilExpiry > 0) {
@@ -282,6 +293,10 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
         const success = await attemptSilentRefresh();
         if (!success) {
           console.log('[GoogleDrive] Silent refresh failed, user may need to re-authenticate');
+          setLastRefreshFailed(true);
+        } else {
+          setLastRefreshFailed(false);
+          setIsTokenExpiringSoon(false);
         }
       }
     };
@@ -289,8 +304,8 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
     // Check immediately on mount
     checkAndRefreshToken();
     
-    // Check every 5 minutes
-    const interval = setInterval(checkAndRefreshToken, 300000);
+    // Check every minute for more responsive status updates
+    const interval = setInterval(checkAndRefreshToken, 60000);
     
     return () => clearInterval(interval);
   }, [isInitialized, tokenClient, attemptSilentRefresh]);
@@ -518,11 +533,40 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
     });
   }, [isSignedIn, accessToken, apiKey]);
 
+  // Delete a file from Google Drive
+  const deleteFile = useCallback(async (fileId: string): Promise<boolean> => {
+    if (!isSignedIn || !accessToken) {
+      toast({
+        title: 'Not signed in',
+        description: 'Please sign in to Google Drive first',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
+    try {
+      await window.gapi.client.drive.files.delete({
+        fileId: fileId,
+      });
+      return true;
+    } catch (error) {
+      console.error('[GoogleDrive] Failed to delete file:', error);
+      toast({
+        title: 'Delete failed',
+        description: 'Failed to delete file from Google Drive',
+        variant: 'destructive',
+      });
+      return false;
+    }
+  }, [isSignedIn, accessToken, toast]);
+
   const value: GoogleDriveContextValue = {
     isInitialized,
     isSignedIn,
     isLoading,
     isConfigured,
+    isTokenExpiringSoon,
+    lastRefreshFailed,
     signIn,
     signOut,
     listFolders,
@@ -530,6 +574,7 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
     findOrCreateFolder,
     uploadFile,
     openFolderPicker,
+    deleteFile,
   };
 
   return (
