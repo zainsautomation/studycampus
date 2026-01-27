@@ -160,17 +160,15 @@ export function Header() {
 
           {/* Right side actions */}
           <div className="flex items-center gap-1">
-            {/* Search Button */}
-            {user && (
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setSearchOpen(true)}
-                className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
-                aria-label="Search (⌘K)"
-              >
-                <Search className="w-5 h-5" />
-              </motion.button>
-            )}
+            {/* Search Button - visible to all users */}
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setSearchOpen(true)}
+              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
+              aria-label="Search (⌘K)"
+            >
+              <Search className="w-5 h-5" />
+            </motion.button>
 
             {/* Theme Toggle */}
             <motion.button
@@ -190,6 +188,17 @@ export function Header() {
                 )}
               </motion.div>
             </motion.button>
+
+            {/* Sign In Button for guests */}
+            {!user && (
+              <Button 
+                onClick={() => navigate('/auth')} 
+                size="sm"
+                className="ml-2"
+              >
+                Sign In
+              </Button>
+            )}
 
             {/* User Menu */}
             {user && (

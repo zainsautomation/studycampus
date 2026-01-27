@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
   BookOpen, 
@@ -8,11 +8,14 @@ import {
   ChevronRight,
   Clock,
   AlertCircle,
-  FileText
+  FileText,
+  LogIn,
+  Sparkles
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
@@ -63,6 +66,7 @@ const itemVariants = {
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
   const [updates, setUpdates] = useState<Update[]>([]);
@@ -140,12 +144,37 @@ export default function Dashboard() {
           {/* Welcome Section */}
           <motion.div variants={itemVariants}>
             <h1 className="text-2xl md:text-3xl font-display font-bold">
-              Welcome back! 👋
+              {user ? 'Welcome back!' : 'Study Materials Portal'} 👋
             </h1>
             <p className="text-muted-foreground mt-1">
-              Stay updated with your class activities
+              {user ? 'Stay updated with your class activities' : 'Browse notes, announcements, and stay updated'}
             </p>
           </motion.div>
+
+          {/* Sign In CTA for guests */}
+          {!user && (
+            <motion.div variants={itemVariants}>
+              <Card className="overflow-hidden border-0 bg-gradient-to-r from-primary/10 via-accent/10 to-primary/5">
+                <CardContent className="p-6">
+                  <div className="flex flex-col sm:flex-row items-center gap-4">
+                    <div className="p-3 rounded-xl bg-primary/10">
+                      <Sparkles className="w-8 h-8 text-primary" />
+                    </div>
+                    <div className="flex-1 text-center sm:text-left">
+                      <h3 className="font-semibold text-lg">Sign in to unlock all features</h3>
+                      <p className="text-muted-foreground text-sm mt-1">
+                        Save notes, ask questions, join discussions, and track your progress
+                      </p>
+                    </div>
+                    <Button onClick={() => navigate('/auth')} className="gap-2">
+                      <LogIn className="w-4 h-4" />
+                      Sign In
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
 
           {/* Quick Stats */}
           <motion.div variants={itemVariants} className="grid grid-cols-2 md:grid-cols-4 gap-4">
