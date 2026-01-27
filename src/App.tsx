@@ -50,19 +50,19 @@ const App = () => (
               <Routes>
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
                 <Route path="/auth" element={<Auth />} />
-                <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-                <Route path="/notes" element={<ProtectedRoute><Notes /></ProtectedRoute>} />
+                <Route path="/notes" element={<Notes />} />
                 <Route path="/saved-notes" element={<ProtectedRoute><SavedNotes /></ProtectedRoute>} />
-                <Route path="/announcements" element={<ProtectedRoute><Announcements /></ProtectedRoute>} />
-                <Route path="/updates" element={<ProtectedRoute><Updates /></ProtectedRoute>} />
-                <Route path="/qa" element={<ProtectedRoute><QandA /></ProtectedRoute>} />
-                <Route path="/qa/:questionId" element={<ProtectedRoute><QuestionDetail /></ProtectedRoute>} />
-                <Route path="/posts" element={<ProtectedRoute><Posts /></ProtectedRoute>} />
-                <Route path="/requests" element={<ProtectedRoute><Requests /></ProtectedRoute>} />
-                <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
-                <Route path="/more" element={<ProtectedRoute><More /></ProtectedRoute>} />
-                <Route path="/user/:userId" element={<ProtectedRoute><PublicProfile /></ProtectedRoute>} />
+                <Route path="/announcements" element={<Announcements />} />
+                <Route path="/updates" element={<Updates />} />
+                <Route path="/qa" element={<QandA />} />
+                <Route path="/qa/:questionId" element={<QuestionDetail />} />
+                <Route path="/posts" element={<Posts />} />
+                <Route path="/requests" element={<Requests />} />
+                <Route path="/leaderboard" element={<Leaderboard />} />
+                <Route path="/more" element={<More />} />
+                <Route path="/user/:userId" element={<PublicProfile />} />
                 <Route path="/admin" element={<ProtectedRoute requireAdmin><AdminDashboard /></ProtectedRoute>} />
                 <Route path="/admin/notes" element={<ProtectedRoute requireAdmin><ManageNotes /></ProtectedRoute>} />
                 <Route path="/admin/announcements" element={<ProtectedRoute requireAdmin><ManageAnnouncements /></ProtectedRoute>} />
