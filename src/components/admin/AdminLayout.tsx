@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { AdminSidebar, AdminMobileNav } from './AdminSidebar';
 import { Toaster } from '@/components/ui/sonner';
 import { useGoogleDriveContext } from '@/contexts/GoogleDriveContext';
-import { AlertTriangle, Cloud, RefreshCw } from 'lucide-react';
+import { Cloud, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface AdminLayoutProps {
@@ -13,9 +13,10 @@ interface AdminLayoutProps {
 }
 
 export function AdminLayout({ children, title, description }: AdminLayoutProps) {
-  const { isConfigured, isSignedIn, isTokenExpiringSoon, lastRefreshFailed, signIn } = useGoogleDriveContext();
+  const { isConfigured, isSignedIn, isPermanentConnection, signIn } = useGoogleDriveContext();
 
-  const showDriveWarning = isConfigured && (!isSignedIn || isTokenExpiringSoon || lastRefreshFailed);
+  // Only show warning if Drive is configured but not connected
+  const showDriveWarning = isConfigured && !isSignedIn;
 
   return (
     <div className="min-h-screen flex w-full bg-background">
@@ -23,37 +24,27 @@ export function AdminLayout({ children, title, description }: AdminLayoutProps) 
       <div className="flex-1 flex flex-col min-h-screen min-w-0">
         <AdminMobileNav />
         
-        {/* Google Drive Status Banner */}
+        {/* Google Drive Status Banner - only show if not connected */}
         {showDriveWarning && (
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-warning/10 border-b border-warning/20 px-4 py-2.5"
+            className="bg-muted/50 border-b border-border px-4 py-2.5"
           >
             <div className="flex items-center justify-between gap-3 max-w-screen-xl mx-auto">
               <div className="flex items-center gap-2 text-sm">
-                {!isSignedIn ? (
-                  <>
-                    <Cloud className="w-4 h-4 text-warning" />
-                    <span className="text-warning font-medium">Google Drive disconnected</span>
-                    <span className="text-muted-foreground hidden sm:inline">— Reconnect to upload files</span>
-                  </>
-                ) : isTokenExpiringSoon || lastRefreshFailed ? (
-                  <>
-                    <AlertTriangle className="w-4 h-4 text-warning" />
-                    <span className="text-warning font-medium">Drive session expiring</span>
-                    <span className="text-muted-foreground hidden sm:inline">— Click to refresh</span>
-                  </>
-                ) : null}
+                <Cloud className="w-4 h-4 text-muted-foreground" />
+                <span className="font-medium">Google Drive not connected</span>
+                <span className="text-muted-foreground hidden sm:inline">— Connect once for permanent access</span>
               </div>
               <Button 
                 size="sm" 
-                variant="outline" 
+                variant="default" 
                 onClick={signIn}
-                className="gap-1.5 border-warning/30 text-warning hover:bg-warning/10 hover:text-warning"
+                className="gap-1.5"
               >
-                <RefreshCw className="w-3.5 h-3.5" />
-                Reconnect
+                <LogIn className="w-3.5 h-3.5" />
+                Connect
               </Button>
             </div>
           </motion.div>

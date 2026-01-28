@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react';
-import { Cloud, FolderOpen, Check, X, RefreshCw, LogIn, LogOut, Settings2, FolderTree } from 'lucide-react';
+import { Cloud, FolderOpen, Check, X, LogIn, LogOut, Settings2, FolderTree, CheckCircle2, Mail } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -8,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
+import { useState, useEffect } from 'react';
 
 interface GoogleDriveFolder {
   id: string;
@@ -20,8 +20,10 @@ export interface GoogleDriveClient {
   isSignedIn: boolean;
   isLoading: boolean;
   isConfigured: boolean;
+  isPermanentConnection: boolean;
+  connectionEmail: string | null;
   signIn: () => void;
-  signOut: () => void;
+  signOut: () => Promise<void>;
   openFolderPicker: () => Promise<GoogleDriveFolder | null>;
   createFolder: (name: string, parentId?: string) => Promise<string | null>;
 }
@@ -49,6 +51,7 @@ export function GoogleDriveSettings({
   const [localAutoOrganize, setLocalAutoOrganize] = useState(autoOrganize);
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
 
   const {
     isInitialized,
@@ -59,6 +62,8 @@ export function GoogleDriveSettings({
     openFolderPicker,
     createFolder,
     isConfigured,
+    isPermanentConnection,
+    connectionEmail,
   } = googleDrive;
 
   // Sync localAutoOrganize with prop changes
@@ -118,6 +123,15 @@ export function GoogleDriveSettings({
     });
   };
 
+  const handleDisconnect = async () => {
+    setIsDisconnecting(true);
+    try {
+      await signOut();
+    } finally {
+      setIsDisconnecting(false);
+    }
+  };
+
   if (!isConfigured) {
     return (
       <Card className="border-dashed border-2 border-muted-foreground/30">
@@ -151,9 +165,16 @@ export function GoogleDriveSettings({
               <CardDescription>Configure folder and organization preferences</CardDescription>
             </div>
           </div>
-          <Badge variant={isSignedIn ? 'default' : 'secondary'}>
-            {isSignedIn ? 'Connected' : 'Not Connected'}
-          </Badge>
+          {isPermanentConnection ? (
+            <Badge className="bg-green-500/10 text-green-600 border-green-500/20">
+              <CheckCircle2 className="w-3 h-3 mr-1" />
+              Permanently Connected
+            </Badge>
+          ) : (
+            <Badge variant={isSignedIn ? 'default' : 'secondary'}>
+              {isSignedIn ? 'Connected' : 'Not Connected'}
+            </Badge>
+          )}
         </div>
       </CardHeader>
 
@@ -171,29 +192,50 @@ export function GoogleDriveSettings({
               </div>
             )}
             <div>
-              <p className="text-sm font-medium">
-                {isSignedIn ? 'Signed in to Google Drive' : 'Sign in to manage folders'}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {isSignedIn ? 'You can now upload files and manage folders' : 'Authorization required for full functionality'}
-              </p>
+              {isSignedIn && connectionEmail ? (
+                <>
+                  <p className="text-sm font-medium flex items-center gap-1">
+                    <Mail className="w-3.5 h-3.5" />
+                    {connectionEmail}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {isPermanentConnection 
+                      ? 'Permanent connection - stays connected until you disconnect' 
+                      : 'Connected to Google Drive'}
+                  </p>
+                </>
+              ) : isSignedIn ? (
+                <>
+                  <p className="text-sm font-medium">Connected to Google Drive</p>
+                  <p className="text-xs text-muted-foreground">
+                    You can upload files and manage folders
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm font-medium">Connect Google Drive</p>
+                  <p className="text-xs text-muted-foreground">
+                    One-time setup for permanent access
+                  </p>
+                </>
+              )}
             </div>
           </div>
           <Button
             variant={isSignedIn ? 'outline' : 'default'}
             size="sm"
-            onClick={isSignedIn ? signOut : signIn}
-            disabled={!isInitialized}
+            onClick={isSignedIn ? handleDisconnect : signIn}
+            disabled={!isInitialized || isDisconnecting}
           >
             {isSignedIn ? (
               <>
                 <LogOut className="w-4 h-4 mr-2" />
-                Sign Out
+                {isDisconnecting ? 'Disconnecting...' : 'Disconnect'}
               </>
             ) : (
               <>
                 <LogIn className="w-4 h-4 mr-2" />
-                Sign In
+                Connect
               </>
             )}
           </Button>
@@ -252,7 +294,7 @@ export function GoogleDriveSettings({
                       onClick={handleCreateFolder}
                       disabled={!newFolderName.trim() || isCreatingFolder}
                     >
-                      {isCreatingFolder ? <RefreshCw className="w-4 h-4 animate-spin" /> : 'Create'}
+                      {isCreatingFolder ? 'Creating...' : 'Create'}
                     </Button>
                   </div>
                 </div>
