@@ -165,16 +165,21 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
         setIsInitialized(true);
         console.log('[GoogleDrive] GAPI initialized');
 
-        // Check for existing server-side connection
-        const status = await fetchTokenFromServer();
-        if (status.connected) {
-          console.log('[GoogleDrive] Found permanent connection:', status.email);
-          setIsSignedIn(true);
-          setIsPermanentConnection(true);
-          setConnectionEmail(status.email);
-          
-          // Get the access token and apply to GAPI
-          await getAccessToken();
+        // Only check for server-side connection if user is authenticated
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          const status = await fetchTokenFromServer();
+          if (status.connected) {
+            console.log('[GoogleDrive] Found permanent connection:', status.email);
+            setIsSignedIn(true);
+            setIsPermanentConnection(true);
+            setConnectionEmail(status.email);
+            
+            // Get the access token and apply to GAPI
+            await getAccessToken();
+          }
+        } else {
+          console.log('[GoogleDrive] User not authenticated, skipping token fetch');
         }
       } catch (error) {
         console.error('[GoogleDrive] Failed to initialize:', error);
