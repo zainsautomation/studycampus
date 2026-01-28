@@ -300,6 +300,50 @@ export type Database = {
           },
         ]
       }
+      google_drive_connections: {
+        Row: {
+          access_token: string
+          created_at: string | null
+          email: string | null
+          id: string
+          is_active: boolean | null
+          refresh_token: string
+          token_expires_at: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          refresh_token: string
+          token_expires_at: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          refresh_token?: string
+          token_expires_at?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "google_drive_connections_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invite_codes: {
         Row: {
           code: string

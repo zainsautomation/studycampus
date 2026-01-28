@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 declare global {
   interface Window {
@@ -10,8 +11,6 @@ declare global {
 
 const SCOPES = 'https://www.googleapis.com/auth/drive.file';
 const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
-const TOKEN_STORAGE_KEY = 'google_drive_access_token';
-const TOKEN_EXPIRY_KEY = 'google_drive_token_expiry';
 
 // Get Google credentials from environment
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || null;
@@ -31,21 +30,28 @@ interface UploadOptions {
   autoOrganize?: boolean;
 }
 
+interface ConnectionStatus {
+  connected: boolean;
+  email: string | null;
+  expiresAt: string | null;
+}
+
 interface GoogleDriveContextValue {
   isInitialized: boolean;
   isSignedIn: boolean;
   isLoading: boolean;
   isConfigured: boolean;
-  isTokenExpiringSoon: boolean;
-  lastRefreshFailed: boolean;
+  isPermanentConnection: boolean;
+  connectionEmail: string | null;
   signIn: () => void;
-  signOut: () => void;
+  signOut: () => Promise<void>;
   listFolders: (parentId?: string) => Promise<GoogleDriveFolder[]>;
   createFolder: (name: string, parentId?: string) => Promise<string | null>;
   findOrCreateFolder: (name: string, parentId?: string) => Promise<string | null>;
   uploadFile: (options: UploadOptions) => Promise<{ fileId: string; webViewLink: string } | null>;
   openFolderPicker: () => Promise<GoogleDriveFolder | null>;
   deleteFile: (fileId: string) => Promise<boolean>;
+  refreshConnection: () => Promise<void>;
 }
 
 const GoogleDriveContext = createContext<GoogleDriveContextValue | null>(null);
@@ -55,10 +61,9 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
   const [isInitialized, setIsInitialized] = useState(false);
   const [isSignedIn, setIsSignedIn] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [tokenClient, setTokenClient] = useState<any>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [isTokenExpiringSoon, setIsTokenExpiringSoon] = useState(false);
-  const [lastRefreshFailed, setLastRefreshFailed] = useState(false);
+  const [connectionEmail, setConnectionEmail] = useState<string | null>(null);
+  const [isPermanentConnection, setIsPermanentConnection] = useState(false);
 
   const clientId = GOOGLE_CLIENT_ID;
   const apiKey = GOOGLE_API_KEY;
@@ -73,47 +78,53 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Helper to save token to localStorage
-  const saveTokenToStorage = useCallback((token: string, expiresIn: number) => {
-    localStorage.setItem(TOKEN_STORAGE_KEY, token);
-    const expiryTime = Date.now() + expiresIn * 1000;
-    localStorage.setItem(TOKEN_EXPIRY_KEY, expiryTime.toString());
-    console.log('[GoogleDrive] Token saved to localStorage, expires in', expiresIn, 'seconds');
+  // Fetch token from edge function (server-side OAuth)
+  const fetchTokenFromServer = useCallback(async (): Promise<ConnectionStatus> => {
+    try {
+      const { data, error } = await supabase.functions.invoke('google-drive-token');
+      
+      if (error) {
+        console.log('[GoogleDrive] Token fetch error:', error.message);
+        return { connected: false, email: null, expiresAt: null };
+      }
+      
+      if (data?.error || !data?.connected) {
+        console.log('[GoogleDrive] No active connection');
+        return { connected: false, email: null, expiresAt: null };
+      }
+      
+      return {
+        connected: true,
+        email: data.email,
+        expiresAt: data.expires_at
+      };
+    } catch (err) {
+      console.error('[GoogleDrive] Failed to fetch token:', err);
+      return { connected: false, email: null, expiresAt: null };
+    }
   }, []);
 
-  // Helper to get token from localStorage
-  const getTokenFromStorage = useCallback((): string | null => {
-    const token = localStorage.getItem(TOKEN_STORAGE_KEY);
-    const expiry = localStorage.getItem(TOKEN_EXPIRY_KEY);
-
-    if (!token || !expiry) return null;
-
-    // Check if token is expired (with 5 min buffer)
-    if (Date.now() > parseInt(expiry) - 300000) {
-      console.log('[GoogleDrive] Stored token expired, clearing...');
-      localStorage.removeItem(TOKEN_STORAGE_KEY);
-      localStorage.removeItem(TOKEN_EXPIRY_KEY);
+  // Get a valid access token (refreshes if needed via edge function)
+  const getAccessToken = useCallback(async (): Promise<string | null> => {
+    try {
+      const { data, error } = await supabase.functions.invoke('google-drive-token');
+      
+      if (error || data?.error || !data?.access_token) {
+        console.error('[GoogleDrive] Failed to get access token');
+        setIsSignedIn(false);
+        setIsPermanentConnection(false);
+        return null;
+      }
+      
+      const token = data.access_token;
+      setAccessToken(token);
+      applyTokenToGapi(token);
+      return token;
+    } catch (err) {
+      console.error('[GoogleDrive] Error getting access token:', err);
       return null;
     }
-
-    return token;
-  }, []);
-
-  // Clear token from localStorage
-  const clearTokenFromStorage = useCallback(() => {
-    localStorage.removeItem(TOKEN_STORAGE_KEY);
-    localStorage.removeItem(TOKEN_EXPIRY_KEY);
-  }, []);
-
-  // Check for stored token immediately on mount (before async init)
-  useEffect(() => {
-    const storedToken = getTokenFromStorage();
-    if (storedToken) {
-      console.log('[GoogleDrive] Found stored token on mount, setting signed in state');
-      setAccessToken(storedToken);
-      setIsSignedIn(true);
-    }
-  }, [getTokenFromStorage]);
+  }, [applyTokenToGapi]);
 
   // Load Google API scripts
   useEffect(() => {
@@ -135,23 +146,10 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
       });
     };
 
-    const loadGisScript = () => {
-      return new Promise<void>((resolve) => {
-        if (window.google?.accounts) {
-          resolve();
-          return;
-        }
-        const script = document.createElement('script');
-        script.src = 'https://accounts.google.com/gsi/client';
-        script.onload = () => resolve();
-        document.body.appendChild(script);
-      });
-    };
-
     const initializeGoogleApis = async () => {
       try {
         console.log('[GoogleDrive] Starting initialization...');
-        await Promise.all([loadGapiScript(), loadGisScript()]);
+        await loadGapiScript();
 
         // Initialize GAPI client
         await new Promise<void>((resolve) => {
@@ -164,169 +162,104 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
           });
         });
 
-        // Apply stored token to GAPI if we have one
-        const storedToken = getTokenFromStorage();
-        if (storedToken) {
-          console.log('[GoogleDrive] Applying stored token to GAPI client');
-          applyTokenToGapi(storedToken);
-          setAccessToken(storedToken);
-          setIsSignedIn(true);
-        }
-
-        // Initialize GIS token client
-        const client = window.google.accounts.oauth2.initTokenClient({
-          client_id: clientId,
-          scope: SCOPES,
-          callback: (tokenResponse: any) => {
-            console.log('[GoogleDrive] Token callback received:', tokenResponse?.error || 'success');
-
-            if (tokenResponse?.error) {
-              console.log('[GoogleDrive] Token error:', tokenResponse.error);
-              return;
-            }
-
-            if (tokenResponse.access_token) {
-              console.log('[GoogleDrive] Got new access token, saving...');
-              setAccessToken(tokenResponse.access_token);
-              setIsSignedIn(true);
-              applyTokenToGapi(tokenResponse.access_token);
-              saveTokenToStorage(tokenResponse.access_token, tokenResponse.expires_in || 3600);
-            }
-          },
-        });
-
-        setTokenClient(client);
         setIsInitialized(true);
-        console.log('[GoogleDrive] Initialization complete, isSignedIn:', !!storedToken);
+        console.log('[GoogleDrive] GAPI initialized');
+
+        // Check for existing server-side connection
+        const status = await fetchTokenFromServer();
+        if (status.connected) {
+          console.log('[GoogleDrive] Found permanent connection:', status.email);
+          setIsSignedIn(true);
+          setIsPermanentConnection(true);
+          setConnectionEmail(status.email);
+          
+          // Get the access token and apply to GAPI
+          await getAccessToken();
+        }
       } catch (error) {
         console.error('[GoogleDrive] Failed to initialize:', error);
-        toast({
-          title: 'Google Drive Error',
-          description: 'Failed to initialize Google Drive integration',
-          variant: 'destructive',
-        });
+        setIsInitialized(true); // Still mark as initialized so UI can show connect option
       }
     };
 
     initializeGoogleApis();
-  }, [clientId, apiKey, toast, getTokenFromStorage, saveTokenToStorage, applyTokenToGapi]);
+  }, [clientId, apiKey, fetchTokenFromServer, getAccessToken]);
 
-  // Attempt silent token refresh
-  const attemptSilentRefresh = useCallback((): Promise<boolean> => {
-    return new Promise((resolve) => {
-      if (!tokenClient) {
-        resolve(false);
-        return;
-      }
-      
-      console.log('[GoogleDrive] Attempting silent token refresh...');
-      
-      // Create a temporary callback override for silent refresh
-      const originalCallback = tokenClient.callback;
-      
-      tokenClient.callback = (tokenResponse: any) => {
-        // Restore original callback
-        tokenClient.callback = originalCallback;
-        
-        if (tokenResponse?.error) {
-          console.log('[GoogleDrive] Silent refresh failed:', tokenResponse.error);
-          resolve(false);
-          return;
-        }
-        
-        if (tokenResponse.access_token) {
-          console.log('[GoogleDrive] Silent refresh successful');
-          setAccessToken(tokenResponse.access_token);
-          setIsSignedIn(true);
-          applyTokenToGapi(tokenResponse.access_token);
-          saveTokenToStorage(tokenResponse.access_token, tokenResponse.expires_in || 3600);
-          resolve(true);
-        } else {
-          resolve(false);
-        }
-      };
-      
-      // Try to get token without user interaction
-      tokenClient.requestAccessToken({ prompt: '' });
-    });
-  }, [tokenClient, applyTokenToGapi, saveTokenToStorage]);
-
-  // Sign in to Google
-  const signIn = useCallback(() => {
-    if (!tokenClient) {
-      console.log('[GoogleDrive] Cannot sign in: tokenClient not ready');
-      return;
-    }
-
-    if (accessToken) {
-      console.log('[GoogleDrive] Already have token, confirming signed in');
+  // Refresh connection status
+  const refreshConnection = useCallback(async () => {
+    const status = await fetchTokenFromServer();
+    if (status.connected) {
       setIsSignedIn(true);
-      applyTokenToGapi(accessToken);
+      setIsPermanentConnection(true);
+      setConnectionEmail(status.email);
+      await getAccessToken();
+    } else {
+      setIsSignedIn(false);
+      setIsPermanentConnection(false);
+      setConnectionEmail(null);
+      setAccessToken(null);
+      applyTokenToGapi(null);
+    }
+  }, [fetchTokenFromServer, getAccessToken, applyTokenToGapi]);
+
+  // Sign in - redirect to Google OAuth with offline access
+  const signIn = useCallback(() => {
+    if (!clientId) {
+      console.log('[GoogleDrive] Cannot sign in: clientId not configured');
       return;
     }
 
-    console.log('[GoogleDrive] Requesting new access token with consent');
-    tokenClient.requestAccessToken({ prompt: 'consent' });
-  }, [tokenClient, accessToken, applyTokenToGapi]);
+    console.log('[GoogleDrive] Starting server-side OAuth flow...');
+    
+    const params = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: `${window.location.origin}/auth/google-drive/callback`,
+      response_type: 'code',
+      scope: SCOPES,
+      access_type: 'offline', // Request refresh token
+      prompt: 'consent', // Force consent to ensure we get refresh token
+    });
+    
+    window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
+  }, [clientId]);
 
-  // Periodic token check and refresh
-  useEffect(() => {
-    if (!isInitialized || !tokenClient) return;
+  // Sign out - revoke connection via edge function
+  const signOut = useCallback(async () => {
+    console.log('[GoogleDrive] Disconnecting...');
+    setIsLoading(true);
     
-    const checkAndRefreshToken = async () => {
-      const expiry = localStorage.getItem(TOKEN_EXPIRY_KEY);
-      if (!expiry) {
-        setIsTokenExpiringSoon(false);
-        return;
+    try {
+      const { error } = await supabase.functions.invoke('google-drive-disconnect');
+      
+      if (error) {
+        console.error('[GoogleDrive] Disconnect error:', error);
+        toast({
+          title: 'Disconnect failed',
+          description: 'Failed to disconnect Google Drive',
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Disconnected',
+          description: 'Google Drive has been disconnected',
+        });
       }
-      
-      const expiryTime = parseInt(expiry);
-      const now = Date.now();
-      const timeUntilExpiry = expiryTime - now;
-      
-      // Update expiring soon state (less than 10 minutes)
-      setIsTokenExpiringSoon(timeUntilExpiry < 600000 && timeUntilExpiry > 0);
-      
-      // If token expires in less than 10 minutes, try to refresh
-      if (timeUntilExpiry < 600000 && timeUntilExpiry > 0) {
-        console.log('[GoogleDrive] Token expiring soon, attempting refresh...');
-        const success = await attemptSilentRefresh();
-        if (!success) {
-          console.log('[GoogleDrive] Silent refresh failed, user may need to re-authenticate');
-          setLastRefreshFailed(true);
-        } else {
-          setLastRefreshFailed(false);
-          setIsTokenExpiringSoon(false);
-        }
-      }
-    };
-    
-    // Check immediately on mount
-    checkAndRefreshToken();
-    
-    // Check every minute for more responsive status updates
-    const interval = setInterval(checkAndRefreshToken, 60000);
-    
-    return () => clearInterval(interval);
-  }, [isInitialized, tokenClient, attemptSilentRefresh]);
-
-  // Sign out from Google
-  const signOut = useCallback(() => {
-    if (accessToken) {
-      console.log('[GoogleDrive] Signing out...');
-      window.google.accounts.oauth2.revoke(accessToken, () => {
-        setAccessToken(null);
-        setIsSignedIn(false);
-        applyTokenToGapi(null);
-        clearTokenFromStorage();
-        console.log('[GoogleDrive] Signed out successfully');
-      });
+    } catch (err) {
+      console.error('[GoogleDrive] Error during disconnect:', err);
+    } finally {
+      setAccessToken(null);
+      setIsSignedIn(false);
+      setIsPermanentConnection(false);
+      setConnectionEmail(null);
+      applyTokenToGapi(null);
+      setIsLoading(false);
     }
-  }, [accessToken, clearTokenFromStorage, applyTokenToGapi]);
+  }, [toast, applyTokenToGapi]);
 
   // List folders in a directory
   const listFolders = useCallback(async (parentId: string = 'root'): Promise<GoogleDriveFolder[]> => {
-    if (!isSignedIn || !accessToken) return [];
+    const token = await getAccessToken();
+    if (!token) return [];
 
     try {
       const response = await window.gapi.client.drive.files.list({
@@ -344,11 +277,12 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
       console.error('[GoogleDrive] Failed to list folders:', error);
       return [];
     }
-  }, [isSignedIn, accessToken]);
+  }, [getAccessToken]);
 
   // Create a new folder
   const createFolder = useCallback(async (name: string, parentId: string = 'root'): Promise<string | null> => {
-    if (!isSignedIn || !accessToken) return null;
+    const token = await getAccessToken();
+    if (!token) return null;
 
     try {
       const response = await window.gapi.client.drive.files.create({
@@ -370,11 +304,12 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
       });
       return null;
     }
-  }, [isSignedIn, accessToken, toast]);
+  }, [getAccessToken, toast]);
 
   // Find or create a folder by name
   const findOrCreateFolder = useCallback(async (name: string, parentId: string = 'root'): Promise<string | null> => {
-    if (!isSignedIn || !accessToken) return null;
+    const token = await getAccessToken();
+    if (!token) return null;
 
     try {
       const response = await window.gapi.client.drive.files.list({
@@ -391,7 +326,7 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
       console.error('[GoogleDrive] Failed to find or create folder:', error);
       return null;
     }
-  }, [isSignedIn, accessToken, createFolder]);
+  }, [getAccessToken, createFolder]);
 
   // Upload a file to Google Drive
   const uploadFile = useCallback(async ({
@@ -400,10 +335,11 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
     subjectName,
     autoOrganize = false,
   }: UploadOptions): Promise<{ fileId: string; webViewLink: string } | null> => {
-    if (!isSignedIn || !accessToken) {
+    const token = await getAccessToken();
+    if (!token) {
       toast({
-        title: 'Not signed in',
-        description: 'Please sign in to Google Drive first',
+        title: 'Not connected',
+        description: 'Please connect Google Drive first',
         variant: 'destructive',
       });
       return null;
@@ -442,7 +378,7 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
         {
           method: 'POST',
           headers: {
-            Authorization: `Bearer ${accessToken}`,
+            Authorization: `Bearer ${token}`,
           },
           body: form,
         }
@@ -487,12 +423,13 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [isSignedIn, accessToken, findOrCreateFolder, toast]);
+  }, [getAccessToken, findOrCreateFolder, toast]);
 
   // Open Google Picker for folder selection
   const openFolderPicker = useCallback((): Promise<GoogleDriveFolder | null> => {
-    return new Promise((resolve) => {
-      if (!isSignedIn || !accessToken || !apiKey) {
+    return new Promise(async (resolve) => {
+      const token = await getAccessToken();
+      if (!token || !apiKey) {
         resolve(null);
         return;
       }
@@ -513,7 +450,7 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
             .setIncludeFolders(true)
             .setSelectFolderEnabled(true)
             .setMimeTypes('application/vnd.google-apps.folder'))
-          .setOAuthToken(accessToken)
+          .setOAuthToken(token)
           .setDeveloperKey(apiKey)
           .setCallback((data: any) => {
             if (data.action === 'picked' && data.docs && data.docs[0]) {
@@ -531,14 +468,15 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
         picker.setVisible(true);
       });
     });
-  }, [isSignedIn, accessToken, apiKey]);
+  }, [getAccessToken, apiKey]);
 
   // Delete a file from Google Drive
   const deleteFile = useCallback(async (fileId: string): Promise<boolean> => {
-    if (!isSignedIn || !accessToken) {
+    const token = await getAccessToken();
+    if (!token) {
       toast({
-        title: 'Not signed in',
-        description: 'Please sign in to Google Drive first',
+        title: 'Not connected',
+        description: 'Please connect Google Drive first',
         variant: 'destructive',
       });
       return false;
@@ -558,15 +496,15 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
       });
       return false;
     }
-  }, [isSignedIn, accessToken, toast]);
+  }, [getAccessToken, toast]);
 
   const value: GoogleDriveContextValue = {
     isInitialized,
     isSignedIn,
     isLoading,
     isConfigured,
-    isTokenExpiringSoon,
-    lastRefreshFailed,
+    isPermanentConnection,
+    connectionEmail,
     signIn,
     signOut,
     listFolders,
@@ -575,6 +513,7 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
     uploadFile,
     openFolderPicker,
     deleteFile,
+    refreshConnection,
   };
 
   return (

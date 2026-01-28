@@ -5,3 +5,12 @@ verify_jwt = false
 
 [functions.use-invite-code]
 verify_jwt = false
+
+[functions.google-drive-auth]
+verify_jwt = false
+
+[functions.google-drive-token]
+verify_jwt = false
+
+[functions.google-drive-disconnect]
+verify_jwt = false
