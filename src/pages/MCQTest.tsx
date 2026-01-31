@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Clock, FileQuestion, Trophy, Play, Lock, History, CheckCircle, XCircle } from 'lucide-react';
+import { ArrowLeft, Clock, FileQuestion, Trophy, Play, Lock, History, CheckCircle, XCircle, ChevronDown } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,6 +18,7 @@ export default function MCQTest() {
   const navigate = useNavigate();
   const { user, isLoading: authLoading } = useAuth();
   const [isStarting, setIsStarting] = useState(false);
+  const [showAttempts, setShowAttempts] = useState(false);
 
   const { data: test, isLoading: testLoading } = useMCQTest(testId || '');
   const { data: questions, isLoading: questionsLoading } = useMCQQuestions(testId || '');
@@ -175,57 +176,69 @@ export default function MCQTest() {
                     </div>
                   </div>
 
-                  {/* Recent Attempts History */}
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <History className="w-4 h-4" />
-                      <span>Recent Attempts</span>
-                    </div>
-                    <div className="space-y-2">
-                      {completedAttempts.slice(0, 3).map((attempt, index) => (
-                        <Link key={attempt.id} to={`/mcq/result/${attempt.id}`}>
-                          <motion.div
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: index * 0.1 }}
-                            className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border/50 hover:bg-muted/50 transition-colors cursor-pointer"
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className={cn(
-                                "w-8 h-8 rounded-full flex items-center justify-center",
-                                (attempt.score || 0) >= 80 
-                                  ? "bg-green-500/20 text-green-500" 
-                                  : (attempt.score || 0) >= 60 
-                                    ? "bg-yellow-500/20 text-yellow-500" 
-                                    : "bg-red-500/20 text-red-500"
-                              )}>
-                                {(attempt.score || 0) >= 60 ? (
-                                  <CheckCircle className="w-4 h-4" />
-                                ) : (
-                                  <XCircle className="w-4 h-4" />
-                                )}
+                  {/* Recent Attempts History - Collapsible */}
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => setShowAttempts(!showAttempts)}
+                      className="flex items-center justify-between w-full p-3 rounded-lg bg-muted/30 border border-border/50 hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <History className="w-4 h-4" />
+                        <span>Recent Attempts ({completedAttempts.length})</span>
+                      </div>
+                      <ChevronDown className={cn(
+                        "w-4 h-4 text-muted-foreground transition-transform duration-200",
+                        showAttempts && "rotate-180"
+                      )} />
+                    </button>
+                    
+                    {showAttempts && (
+                      <div className="space-y-2 pl-1">
+                        {completedAttempts.slice(0, 3).map((attempt, index) => (
+                          <Link key={attempt.id} to={`/mcq/result/${attempt.id}`}>
+                            <motion.div
+                              initial={{ opacity: 0, x: -10 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: index * 0.1 }}
+                              className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border/50 hover:bg-muted/50 transition-colors cursor-pointer"
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className={cn(
+                                  "w-8 h-8 rounded-full flex items-center justify-center",
+                                  (attempt.score || 0) >= 80 
+                                    ? "bg-green-500/20 text-green-500" 
+                                    : (attempt.score || 0) >= 60 
+                                      ? "bg-yellow-500/20 text-yellow-500" 
+                                      : "bg-red-500/20 text-red-500"
+                                )}>
+                                  {(attempt.score || 0) >= 60 ? (
+                                    <CheckCircle className="w-4 h-4" />
+                                  ) : (
+                                    <XCircle className="w-4 h-4" />
+                                  )}
+                                </div>
+                                <div>
+                                  <p className="font-medium text-sm">
+                                    {attempt.score?.toFixed(0)}% 
+                                    <span className="text-muted-foreground font-normal ml-2">
+                                      ({attempt.correct_answers}/{attempt.total_questions} correct)
+                                    </span>
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {format(new Date(attempt.completed_at!), 'MMM d, yyyy • h:mm a')}
+                                  </p>
+                                </div>
                               </div>
-                              <div>
-                                <p className="font-medium text-sm">
-                                  {attempt.score?.toFixed(0)}% 
-                                  <span className="text-muted-foreground font-normal ml-2">
-                                    ({attempt.correct_answers}/{attempt.total_questions} correct)
-                                  </span>
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  {format(new Date(attempt.completed_at!), 'MMM d, yyyy • h:mm a')}
-                                </p>
-                              </div>
-                            </div>
-                            {attempt.time_taken_secs && (
-                              <Badge variant="outline" className="text-xs">
-                                {Math.floor(attempt.time_taken_secs / 60)}m {attempt.time_taken_secs % 60}s
-                              </Badge>
-                            )}
-                          </motion.div>
-                        </Link>
-                      ))}
-                    </div>
+                              {attempt.time_taken_secs && (
+                                <Badge variant="outline" className="text-xs">
+                                  {Math.floor(attempt.time_taken_secs / 60)}m {attempt.time_taken_secs % 60}s
+                                </Badge>
+                              )}
+                            </motion.div>
+                          </Link>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </>
               )}
