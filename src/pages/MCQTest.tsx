@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Clock, FileQuestion, Trophy, Play, Lock } from 'lucide-react';
+import { ArrowLeft, Clock, FileQuestion, Trophy, Play, Lock, History, CheckCircle, XCircle } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,6 +11,7 @@ import { useMCQTest, useMCQQuestions, useUserAttempts, useStartAttempt } from '@
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 
 export default function MCQTest() {
   const { testId } = useParams<{ testId: string }>();
@@ -158,20 +159,75 @@ export default function MCQTest() {
 
               {/* User Stats */}
               {user && completedAttempts.length > 0 && (
-                <div className="flex items-center gap-4 p-4 rounded-lg bg-primary/5 border border-primary/10">
-                  <Trophy className={cn(
-                    "w-8 h-8",
-                    bestScore && bestScore >= 80 ? "text-yellow-500" : "text-primary"
-                  )} />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Your Best Score</p>
-                    <p className="text-2xl font-bold text-primary">{bestScore?.toFixed(0)}%</p>
+                <>
+                  <div className="flex items-center gap-4 p-4 rounded-lg bg-primary/5 border border-primary/10">
+                    <Trophy className={cn(
+                      "w-8 h-8",
+                      bestScore && bestScore >= 80 ? "text-yellow-500" : "text-primary"
+                    )} />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Your Best Score</p>
+                      <p className="text-2xl font-bold text-primary">{bestScore?.toFixed(0)}%</p>
+                    </div>
+                    <div className="ml-auto text-right">
+                      <p className="text-sm text-muted-foreground">Attempts</p>
+                      <p className="font-semibold">{completedAttempts.length}</p>
+                    </div>
                   </div>
-                  <div className="ml-auto text-right">
-                    <p className="text-sm text-muted-foreground">Attempts</p>
-                    <p className="font-semibold">{completedAttempts.length}</p>
+
+                  {/* Recent Attempts History */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <History className="w-4 h-4" />
+                      <span>Recent Attempts</span>
+                    </div>
+                    <div className="space-y-2">
+                      {completedAttempts.slice(0, 3).map((attempt, index) => (
+                        <Link key={attempt.id} to={`/mcq/result/${attempt.id}`}>
+                          <motion.div
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: index * 0.1 }}
+                            className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border/50 hover:bg-muted/50 transition-colors cursor-pointer"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className={cn(
+                                "w-8 h-8 rounded-full flex items-center justify-center",
+                                (attempt.score || 0) >= 80 
+                                  ? "bg-green-500/20 text-green-500" 
+                                  : (attempt.score || 0) >= 60 
+                                    ? "bg-yellow-500/20 text-yellow-500" 
+                                    : "bg-red-500/20 text-red-500"
+                              )}>
+                                {(attempt.score || 0) >= 60 ? (
+                                  <CheckCircle className="w-4 h-4" />
+                                ) : (
+                                  <XCircle className="w-4 h-4" />
+                                )}
+                              </div>
+                              <div>
+                                <p className="font-medium text-sm">
+                                  {attempt.score?.toFixed(0)}% 
+                                  <span className="text-muted-foreground font-normal ml-2">
+                                    ({attempt.correct_answers}/{attempt.total_questions} correct)
+                                  </span>
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {format(new Date(attempt.completed_at!), 'MMM d, yyyy • h:mm a')}
+                                </p>
+                              </div>
+                            </div>
+                            {attempt.time_taken_secs && (
+                              <Badge variant="outline" className="text-xs">
+                                {Math.floor(attempt.time_taken_secs / 60)}m {attempt.time_taken_secs % 60}s
+                              </Badge>
+                            )}
+                          </motion.div>
+                        </Link>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                </>
               )}
 
               {/* Start Button */}
