@@ -14,3 +14,9 @@ verify_jwt = false
 
 [functions.google-drive-disconnect]
 verify_jwt = false
+
+[functions.parse-mcq-text]
+verify_jwt = false
+
+[functions.parse-mcq-pdf]
+verify_jwt = false

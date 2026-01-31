@@ -380,6 +380,234 @@ export type Database = {
         }
         Relationships: []
       }
+      mcq_attempts: {
+        Row: {
+          completed_at: string | null
+          correct_answers: number
+          id: string
+          score: number | null
+          started_at: string
+          status: string
+          test_id: string
+          time_taken_secs: number | null
+          total_questions: number
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          correct_answers?: number
+          id?: string
+          score?: number | null
+          started_at?: string
+          status?: string
+          test_id: string
+          time_taken_secs?: number | null
+          total_questions?: number
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          correct_answers?: number
+          id?: string
+          score?: number | null
+          started_at?: string
+          status?: string
+          test_id?: string
+          time_taken_secs?: number | null
+          total_questions?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mcq_attempts_test_id_fkey"
+            columns: ["test_id"]
+            isOneToOne: false
+            referencedRelation: "mcq_tests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mcq_options: {
+        Row: {
+          id: string
+          is_correct: boolean
+          option_label: string
+          option_text: string
+          order_number: number
+          question_id: string
+        }
+        Insert: {
+          id?: string
+          is_correct?: boolean
+          option_label: string
+          option_text: string
+          order_number?: number
+          question_id: string
+        }
+        Update: {
+          id?: string
+          is_correct?: boolean
+          option_label?: string
+          option_text?: string
+          order_number?: number
+          question_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mcq_options_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "mcq_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mcq_questions: {
+        Row: {
+          created_at: string
+          explanation: string | null
+          id: string
+          order_number: number
+          question_text: string
+          test_id: string
+        }
+        Insert: {
+          created_at?: string
+          explanation?: string | null
+          id?: string
+          order_number?: number
+          question_text: string
+          test_id: string
+        }
+        Update: {
+          created_at?: string
+          explanation?: string | null
+          id?: string
+          order_number?: number
+          question_text?: string
+          test_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mcq_questions_test_id_fkey"
+            columns: ["test_id"]
+            isOneToOne: false
+            referencedRelation: "mcq_tests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mcq_responses: {
+        Row: {
+          answered_at: string | null
+          attempt_id: string
+          id: string
+          is_correct: boolean | null
+          question_id: string
+          selected_option_id: string | null
+        }
+        Insert: {
+          answered_at?: string | null
+          attempt_id: string
+          id?: string
+          is_correct?: boolean | null
+          question_id: string
+          selected_option_id?: string | null
+        }
+        Update: {
+          answered_at?: string | null
+          attempt_id?: string
+          id?: string
+          is_correct?: boolean | null
+          question_id?: string
+          selected_option_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mcq_responses_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "mcq_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mcq_responses_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "mcq_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mcq_responses_selected_option_id_fkey"
+            columns: ["selected_option_id"]
+            isOneToOne: false
+            referencedRelation: "mcq_options"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mcq_tests: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_published: boolean
+          result_visibility: string
+          retake_allowed: boolean
+          shuffle_options: boolean
+          shuffle_questions: boolean
+          subject_id: string | null
+          test_mode: string
+          time_limit_mins: number | null
+          title: string
+          topic_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_published?: boolean
+          result_visibility?: string
+          retake_allowed?: boolean
+          shuffle_options?: boolean
+          shuffle_questions?: boolean
+          subject_id?: string | null
+          test_mode?: string
+          time_limit_mins?: number | null
+          title: string
+          topic_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_published?: boolean
+          result_visibility?: string
+          retake_allowed?: boolean
+          shuffle_options?: boolean
+          shuffle_questions?: boolean
+          subject_id?: string | null
+          test_mode?: string
+          time_limit_mins?: number | null
+          title?: string
+          topic_name?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mcq_tests_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mentions: {
         Row: {
           content_id: string

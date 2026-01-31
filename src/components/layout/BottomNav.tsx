@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { 
   LayoutDashboard, 
   BookOpen, 
-  HelpCircle, 
+  FileQuestion, 
   MessageSquare,
   MoreHorizontal
 } from 'lucide-react';
@@ -11,7 +11,7 @@ import {
 const navItems = [
   { href: '/dashboard', label: 'Home', icon: LayoutDashboard },
   { href: '/notes', label: 'Notes', icon: BookOpen },
-  { href: '/qa', label: 'Q&A', icon: HelpCircle },
+  { href: '/mcq', label: 'MCQ', icon: FileQuestion },
   { href: '/posts', label: 'Posts', icon: MessageSquare },
   { href: '/more', label: 'More', icon: MoreHorizontal },
 ];
@@ -22,9 +22,12 @@ export function BottomNav() {
   // Check if current path matches or starts with the nav item path
   const isActive = (href: string) => {
     if (href === '/more') {
-      return ['/saved-notes', '/announcements', '/updates', '/requests', '/leaderboard', '/profile'].some(
+      return ['/saved-notes', '/announcements', '/updates', '/requests', '/leaderboard', '/profile', '/qa'].some(
         path => location.pathname.startsWith(path)
       );
+    }
+    if (href === '/mcq') {
+      return location.pathname.startsWith('/mcq');
     }
     return location.pathname === href || location.pathname.startsWith(href + '/');
   };

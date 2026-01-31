@@ -8,12 +8,14 @@ import {
   Trophy,
   User,
   Settings,
-  ChevronRight
+  ChevronRight,
+  HelpCircle
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useAuth } from '@/hooks/useAuth';
 
 const menuItems = [
+  { href: '/qa', label: 'Q&A', icon: HelpCircle, description: 'Ask and answer questions' },
   { href: '/saved-notes', label: 'Saved Notes', icon: Bookmark, description: 'Your bookmarked notes' },
   { href: '/announcements', label: 'Announcements', icon: Megaphone, description: 'Important updates' },
   { href: '/updates', label: 'Schedule', icon: Calendar, description: 'Upcoming events' },
