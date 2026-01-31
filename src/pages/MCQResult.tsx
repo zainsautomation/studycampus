@@ -14,6 +14,8 @@ import { useMCQAttempt, useMCQTest, useStartAttempt } from '@/hooks/useMCQAttemp
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 
+type TabValue = 'summary' | 'review';
+
 interface QuestionWithResponse {
   id: string;
   question_text: string;
@@ -78,6 +80,7 @@ export default function MCQResult() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [isRetaking, setIsRetaking] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabValue>('summary');
 
   const { data: attempt, isLoading: attemptLoading } = useMCQAttempt(attemptId || '');
   const { data: test } = useMCQTest(attempt?.test_id || '');
@@ -161,7 +164,7 @@ export default function MCQResult() {
         </motion.h1>
 
         {showReview ? (
-          <Tabs defaultValue="summary" className="space-y-6">
+          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TabValue)} className="space-y-6">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="summary">Summary</TabsTrigger>
               <TabsTrigger value="review">Review</TabsTrigger>
@@ -176,10 +179,7 @@ export default function MCQResult() {
                 onRetake={test?.retake_allowed ? handleRetake : undefined}
                 retakeAllowed={test?.retake_allowed}
                 showReview={showReview}
-                onViewReview={() => {
-                  const reviewTab = document.querySelector('[data-value="review"]') as HTMLButtonElement;
-                  reviewTab?.click();
-                }}
+                onViewReview={() => setActiveTab('review')}
               />
             </TabsContent>
 
