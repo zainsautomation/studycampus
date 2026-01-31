@@ -30,12 +30,18 @@ import Requests from "./pages/Requests";
 import ManageQandA from "./pages/admin/ManageQandA";
 import ManagePosts from "./pages/admin/ManagePosts";
 import ManageRequests from "./pages/admin/ManageRequests";
+import ManageMCQ from "./pages/admin/ManageMCQ";
 import Moderation from "./pages/admin/Moderation";
 import Profile from "./pages/Profile";
 import PublicProfile from "./pages/PublicProfile";
 import Leaderboard from "./pages/Leaderboard";
 import More from "./pages/More";
 import GoogleDriveCallback from "./pages/GoogleDriveCallback";
+import MCQ from "./pages/MCQ";
+import MCQSubject from "./pages/MCQSubject";
+import MCQTest from "./pages/MCQTest";
+import MCQAttempt from "./pages/MCQAttempt";
+import MCQResult from "./pages/MCQResult";
 
 const queryClient = new QueryClient();
 
@@ -64,9 +70,15 @@ const App = () => (
                 <Route path="/requests" element={<Requests />} />
                 <Route path="/leaderboard" element={<Leaderboard />} />
                 <Route path="/more" element={<More />} />
+                <Route path="/mcq" element={<MCQ />} />
+                <Route path="/mcq/subject/:subjectId" element={<MCQSubject />} />
+                <Route path="/mcq/test/:testId" element={<MCQTest />} />
+                <Route path="/mcq/attempt/:attemptId" element={<ProtectedRoute><MCQAttempt /></ProtectedRoute>} />
+                <Route path="/mcq/result/:attemptId" element={<ProtectedRoute><MCQResult /></ProtectedRoute>} />
                 <Route path="/user/:userId" element={<PublicProfile />} />
                 <Route path="/admin" element={<ProtectedRoute requireAdmin><AdminDashboard /></ProtectedRoute>} />
                 <Route path="/admin/notes" element={<ProtectedRoute requireAdmin><ManageNotes /></ProtectedRoute>} />
+                <Route path="/admin/mcq" element={<ProtectedRoute requireAdmin><ManageMCQ /></ProtectedRoute>} />
                 <Route path="/admin/announcements" element={<ProtectedRoute requireAdmin><ManageAnnouncements /></ProtectedRoute>} />
                 <Route path="/admin/updates" element={<ProtectedRoute requireAdmin><ManageUpdates /></ProtectedRoute>} />
                 <Route path="/admin/subjects" element={<ProtectedRoute requireAdmin><ManageSubjects /></ProtectedRoute>} />
