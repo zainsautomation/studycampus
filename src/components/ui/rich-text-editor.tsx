@@ -1,8 +1,8 @@
 import { useEditor, EditorContent } from '@tiptap/react';
+import { BubbleMenu } from '@tiptap/react/menus';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
-import { Button } from '@/components/ui/button';
 import { 
   Bold, 
   Italic, 
@@ -10,8 +10,7 @@ import {
   ListOrdered, 
   Code, 
   Link as LinkIcon,
-  Undo,
-  Redo
+  Strikethrough
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useEffect } from 'react';
@@ -21,13 +20,15 @@ interface RichTextEditorProps {
   onChange: (content: string) => void;
   placeholder?: string;
   className?: string;
+  minHeight?: string;
 }
 
 export function RichTextEditor({ 
   content, 
   onChange, 
   placeholder = "Write something...",
-  className 
+  className,
+  minHeight = "100px"
 }: RichTextEditorProps) {
   const editor = useEditor({
     extensions: [
@@ -46,7 +47,8 @@ export function RichTextEditor({
     content,
     editorProps: {
       attributes: {
-        class: 'prose prose-sm dark:prose-invert max-w-none min-h-[100px] p-3 focus:outline-none',
+        class: `prose prose-sm dark:prose-invert max-w-none p-3 focus:outline-none`,
+        style: `min-height: ${minHeight}`,
       },
     },
     onUpdate: ({ editor }) => {
@@ -65,91 +67,113 @@ export function RichTextEditor({
   }
 
   const addLink = () => {
-    const url = window.prompt('URL');
+    const url = window.prompt('Enter URL');
     if (url) {
       editor.chain().focus().setLink({ href: url }).run();
     }
   };
 
+  const removeLink = () => {
+    editor.chain().focus().unsetLink().run();
+  };
+
   return (
-    <div className={cn("border border-input rounded-md overflow-hidden bg-background", className)}>
-      <div className="flex items-center gap-1 p-2 border-b border-border bg-muted/50 flex-wrap">
-        <Button
+    <div className={cn("border border-input rounded-xl overflow-hidden bg-background", className)}>
+      {/* Floating Bubble Menu - appears on text selection */}
+      <BubbleMenu 
+        editor={editor} 
+        options={{ 
+          placement: 'top',
+          offset: 8,
+        }}
+        className="flex items-center gap-0.5 p-1 rounded-lg bg-popover border border-border shadow-lg"
+      >
+        <button
           type="button"
-          variant="ghost"
-          size="sm"
           onClick={() => editor.chain().focus().toggleBold().run()}
-          className={cn("h-8 w-8 p-0", editor.isActive('bold') && "bg-muted")}
+          className={cn(
+            "p-1.5 rounded-md transition-colors hover:bg-accent",
+            editor.isActive('bold') && "bg-accent text-accent-foreground"
+          )}
         >
           <Bold className="h-4 w-4" />
-        </Button>
-        <Button
+        </button>
+        <button
           type="button"
-          variant="ghost"
-          size="sm"
           onClick={() => editor.chain().focus().toggleItalic().run()}
-          className={cn("h-8 w-8 p-0", editor.isActive('italic') && "bg-muted")}
+          className={cn(
+            "p-1.5 rounded-md transition-colors hover:bg-accent",
+            editor.isActive('italic') && "bg-accent text-accent-foreground"
+          )}
         >
           <Italic className="h-4 w-4" />
-        </Button>
-        <Button
+        </button>
+        <button
           type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => editor.chain().focus().toggleBulletList().run()}
-          className={cn("h-8 w-8 p-0", editor.isActive('bulletList') && "bg-muted")}
+          onClick={() => editor.chain().focus().toggleStrike().run()}
+          className={cn(
+            "p-1.5 rounded-md transition-colors hover:bg-accent",
+            editor.isActive('strike') && "bg-accent text-accent-foreground"
+          )}
         >
-          <List className="h-4 w-4" />
-        </Button>
-        <Button
+          <Strikethrough className="h-4 w-4" />
+        </button>
+        <button
           type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => editor.chain().focus().toggleOrderedList().run()}
-          className={cn("h-8 w-8 p-0", editor.isActive('orderedList') && "bg-muted")}
-        >
-          <ListOrdered className="h-4 w-4" />
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => editor.chain().focus().toggleCodeBlock().run()}
-          className={cn("h-8 w-8 p-0", editor.isActive('codeBlock') && "bg-muted")}
+          onClick={() => editor.chain().focus().toggleCode().run()}
+          className={cn(
+            "p-1.5 rounded-md transition-colors hover:bg-accent",
+            editor.isActive('code') && "bg-accent text-accent-foreground"
+          )}
         >
           <Code className="h-4 w-4" />
-        </Button>
-        <Button
+        </button>
+        
+        <div className="w-px h-5 bg-border mx-0.5" />
+        
+        {editor.isActive('link') ? (
+          <button
+            type="button"
+            onClick={removeLink}
+            className="p-1.5 rounded-md transition-colors bg-destructive/10 text-destructive hover:bg-destructive/20"
+          >
+            <LinkIcon className="h-4 w-4" />
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={addLink}
+            className="p-1.5 rounded-md transition-colors hover:bg-accent"
+          >
+            <LinkIcon className="h-4 w-4" />
+          </button>
+        )}
+        
+        <div className="w-px h-5 bg-border mx-0.5" />
+        
+        <button
           type="button"
-          variant="ghost"
-          size="sm"
-          onClick={addLink}
-          className={cn("h-8 w-8 p-0", editor.isActive('link') && "bg-muted")}
+          onClick={() => editor.chain().focus().toggleBulletList().run()}
+          className={cn(
+            "p-1.5 rounded-md transition-colors hover:bg-accent",
+            editor.isActive('bulletList') && "bg-accent text-accent-foreground"
+          )}
         >
-          <LinkIcon className="h-4 w-4" />
-        </Button>
-        <div className="w-px h-6 bg-border mx-1" />
-        <Button
+          <List className="h-4 w-4" />
+        </button>
+        <button
           type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => editor.chain().focus().undo().run()}
-          disabled={!editor.can().undo()}
-          className="h-8 w-8 p-0"
+          onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          className={cn(
+            "p-1.5 rounded-md transition-colors hover:bg-accent",
+            editor.isActive('orderedList') && "bg-accent text-accent-foreground"
+          )}
         >
-          <Undo className="h-4 w-4" />
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => editor.chain().focus().redo().run()}
-          disabled={!editor.can().redo()}
-          className="h-8 w-8 p-0"
-        >
-          <Redo className="h-4 w-4" />
-        </Button>
-      </div>
+          <ListOrdered className="h-4 w-4" />
+        </button>
+      </BubbleMenu>
+
+      {/* Editor Content */}
       <EditorContent editor={editor} />
     </div>
   );
