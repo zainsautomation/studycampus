@@ -1,5 +1,4 @@
 import { useEditor, EditorContent } from '@tiptap/react';
-import { BubbleMenu } from '@tiptap/react/menus';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -10,10 +9,11 @@ import {
   ListOrdered, 
   Code, 
   Link as LinkIcon,
-  Strikethrough
+  Strikethrough,
+  Unlink
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 interface RichTextEditorProps {
   content: string;
@@ -30,6 +30,8 @@ export function RichTextEditor({
   className,
   minHeight = "100px"
 }: RichTextEditorProps) {
+  const [isFocused, setIsFocused] = useState(false);
+  
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -54,6 +56,11 @@ export function RichTextEditor({
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
     },
+    onFocus: () => setIsFocused(true),
+    onBlur: () => {
+      // Delay to allow toolbar button clicks to register
+      setTimeout(() => setIsFocused(false), 150);
+    },
   });
 
   useEffect(() => {
@@ -77,104 +84,104 @@ export function RichTextEditor({
     editor.chain().focus().unsetLink().run();
   };
 
+  const ToolbarButton = ({ 
+    onClick, 
+    isActive, 
+    children,
+    variant = 'default'
+  }: { 
+    onClick: () => void; 
+    isActive?: boolean; 
+    children: React.ReactNode;
+    variant?: 'default' | 'danger';
+  }) => (
+    <button
+      type="button"
+      onMouseDown={(e) => {
+        e.preventDefault(); // Prevent blur
+        onClick();
+      }}
+      className={cn(
+        "p-1.5 rounded-md transition-colors touch-manipulation",
+        variant === 'danger' 
+          ? "text-destructive hover:bg-destructive/10"
+          : isActive 
+            ? "bg-primary/15 text-primary" 
+            : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+      )}
+    >
+      {children}
+    </button>
+  );
+
   return (
     <div className={cn("border border-input rounded-xl overflow-hidden bg-background", className)}>
-      {/* Floating Bubble Menu - appears on text selection */}
-      <BubbleMenu 
-        editor={editor} 
-        options={{ 
-          placement: 'top',
-          offset: 8,
-        }}
-        className="flex items-center gap-0.5 p-1 rounded-lg bg-popover border border-border shadow-lg"
-      >
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleBold().run()}
-          className={cn(
-            "p-1.5 rounded-md transition-colors hover:bg-accent",
-            editor.isActive('bold') && "bg-accent text-accent-foreground"
-          )}
-        >
-          <Bold className="h-4 w-4" />
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleItalic().run()}
-          className={cn(
-            "p-1.5 rounded-md transition-colors hover:bg-accent",
-            editor.isActive('italic') && "bg-accent text-accent-foreground"
-          )}
-        >
-          <Italic className="h-4 w-4" />
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleStrike().run()}
-          className={cn(
-            "p-1.5 rounded-md transition-colors hover:bg-accent",
-            editor.isActive('strike') && "bg-accent text-accent-foreground"
-          )}
-        >
-          <Strikethrough className="h-4 w-4" />
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleCode().run()}
-          className={cn(
-            "p-1.5 rounded-md transition-colors hover:bg-accent",
-            editor.isActive('code') && "bg-accent text-accent-foreground"
-          )}
-        >
-          <Code className="h-4 w-4" />
-        </button>
-        
-        <div className="w-px h-5 bg-border mx-0.5" />
-        
-        {editor.isActive('link') ? (
-          <button
-            type="button"
-            onClick={removeLink}
-            className="p-1.5 rounded-md transition-colors bg-destructive/10 text-destructive hover:bg-destructive/20"
-          >
-            <LinkIcon className="h-4 w-4" />
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={addLink}
-            className="p-1.5 rounded-md transition-colors hover:bg-accent"
-          >
-            <LinkIcon className="h-4 w-4" />
-          </button>
-        )}
-        
-        <div className="w-px h-5 bg-border mx-0.5" />
-        
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleBulletList().run()}
-          className={cn(
-            "p-1.5 rounded-md transition-colors hover:bg-accent",
-            editor.isActive('bulletList') && "bg-accent text-accent-foreground"
-          )}
-        >
-          <List className="h-4 w-4" />
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleOrderedList().run()}
-          className={cn(
-            "p-1.5 rounded-md transition-colors hover:bg-accent",
-            editor.isActive('orderedList') && "bg-accent text-accent-foreground"
-          )}
-        >
-          <ListOrdered className="h-4 w-4" />
-        </button>
-      </BubbleMenu>
-
       {/* Editor Content */}
       <EditorContent editor={editor} />
+      
+      {/* Bottom Formatting Toolbar - Telegram Style */}
+      <div 
+        className={cn(
+          "flex items-center gap-0.5 px-2 py-1.5 border-t border-border/50 bg-muted/30 transition-all duration-200",
+          isFocused ? "opacity-100" : "opacity-50"
+        )}
+      >
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleBold().run()}
+          isActive={editor.isActive('bold')}
+        >
+          <Bold className="h-4 w-4" />
+        </ToolbarButton>
+        
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleItalic().run()}
+          isActive={editor.isActive('italic')}
+        >
+          <Italic className="h-4 w-4" />
+        </ToolbarButton>
+        
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleStrike().run()}
+          isActive={editor.isActive('strike')}
+        >
+          <Strikethrough className="h-4 w-4" />
+        </ToolbarButton>
+        
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleCode().run()}
+          isActive={editor.isActive('code')}
+        >
+          <Code className="h-4 w-4" />
+        </ToolbarButton>
+        
+        <div className="w-px h-4 bg-border mx-1" />
+        
+        {editor.isActive('link') ? (
+          <ToolbarButton onClick={removeLink} variant="danger">
+            <Unlink className="h-4 w-4" />
+          </ToolbarButton>
+        ) : (
+          <ToolbarButton onClick={addLink}>
+            <LinkIcon className="h-4 w-4" />
+          </ToolbarButton>
+        )}
+        
+        <div className="w-px h-4 bg-border mx-1" />
+        
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleBulletList().run()}
+          isActive={editor.isActive('bulletList')}
+        >
+          <List className="h-4 w-4" />
+        </ToolbarButton>
+        
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          isActive={editor.isActive('orderedList')}
+        >
+          <ListOrdered className="h-4 w-4" />
+        </ToolbarButton>
+      </div>
     </div>
   );
 }
