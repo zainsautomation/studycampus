@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Flag } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Flag, Clock } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { QuestionDisplay } from '@/components/mcq/QuestionDisplay';
 import { TestTimer } from '@/components/mcq/TestTimer';
@@ -37,8 +37,15 @@ export default function MCQAttempt() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
+  const [showTimeUpDialog, setShowTimeUpDialog] = useState(false);
+  const [timerPaused, setTimerPaused] = useState(false);
   const [startTime] = useState(Date.now());
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Ref to track current answers for stale closure fix
+  const answersRef = useRef<Record<string, string>>({});
+  const questionsRef = useRef<any[] | null>(null);
+  const startTimeRef = useRef(startTime);
 
   const { data: attempt, isLoading: attemptLoading } = useMCQAttempt(attemptId || '');
   const { data: test } = useMCQTest(attempt?.test_id || '');
@@ -54,6 +61,15 @@ export default function MCQAttempt() {
   const isLoading = attemptLoading || questionsLoading;
   const currentQuestion = questions?.[currentIndex];
   const answeredCount = Object.keys(answers).length;
+
+  // Keep refs updated
+  useEffect(() => {
+    answersRef.current = answers;
+  }, [answers]);
+
+  useEffect(() => {
+    questionsRef.current = questions || null;
+  }, [questions]);
 
   // Load saved responses
   useEffect(() => {
@@ -98,23 +114,28 @@ export default function MCQAttempt() {
     }
   }, [currentQuestion, attemptId, saveResponse]);
 
-  const handleSubmit = async () => {
-    if (!attemptId || !questions) return;
+  const performSubmit = useCallback(async () => {
+    if (!attemptId) return;
+    
+    const currentAnswers = answersRef.current;
+    const currentQuestions = questionsRef.current;
+    
+    if (!currentQuestions) return;
     
     setIsSubmitting(true);
     try {
-      // Calculate score
+      // Calculate score using refs for fresh data
       let correctCount = 0;
-      questions.forEach(q => {
-        const selectedId = answers[q.id];
+      currentQuestions.forEach(q => {
+        const selectedId = currentAnswers[q.id];
         if (selectedId) {
-          const isCorrect = q.options.find(o => o.id === selectedId)?.is_correct;
+          const isCorrect = q.options.find((o: any) => o.id === selectedId)?.is_correct;
           if (isCorrect) correctCount++;
         }
       });
 
-      const score = (correctCount / questions.length) * 100;
-      const timeTaken = Math.floor((Date.now() - startTime) / 1000);
+      const score = (correctCount / currentQuestions.length) * 100;
+      const timeTaken = Math.floor((Date.now() - startTimeRef.current) / 1000);
 
       await completeAttempt.mutateAsync({
         attemptId,
@@ -130,13 +151,31 @@ export default function MCQAttempt() {
     } finally {
       setIsSubmitting(false);
       setShowSubmitDialog(false);
+      setShowTimeUpDialog(false);
     }
+  }, [attemptId, completeAttempt, navigate]);
+
+  const handleSubmit = async () => {
+    await performSubmit();
   };
 
   const handleTimeUp = useCallback(() => {
-    toast.warning('Time is up!');
-    handleSubmit();
-  }, []);
+    // Check test mode: exam auto-submits, practice shows dialog
+    if (test?.test_mode === 'exam') {
+      toast.warning('Time is up! Submitting your test...');
+      performSubmit();
+    } else {
+      // Practice mode - show dialog with options
+      setTimerPaused(true);
+      setShowTimeUpDialog(true);
+    }
+  }, [test?.test_mode, performSubmit]);
+
+  const handleContinuePractice = () => {
+    setShowTimeUpDialog(false);
+    // Timer stays paused, user can continue at their own pace
+    toast.info('You can continue reviewing and answering questions.');
+  };
 
   if (isLoading) {
     return (
@@ -165,11 +204,17 @@ export default function MCQAttempt() {
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-lg font-semibold truncate">{test?.title}</h1>
-          {test?.time_limit_mins && (
+          {test?.time_limit_mins && !timerPaused && (
             <TestTimer 
               totalSeconds={test.time_limit_mins * 60}
               onTimeUp={handleTimeUp}
             />
+          )}
+          {timerPaused && (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-500/10 text-orange-600 rounded-full text-sm font-medium">
+              <Clock className="w-4 h-4" />
+              Time Up
+            </div>
           )}
         </div>
 
@@ -282,6 +327,36 @@ export default function MCQAttempt() {
                 className="bg-green-600 hover:bg-green-700"
               >
                 {isSubmitting ? 'Submitting...' : 'Submit Test'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Time Up Dialog (Practice Mode Only) */}
+        <AlertDialog open={showTimeUpDialog} onOpenChange={setShowTimeUpDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <Clock className="w-5 h-5 text-orange-500" />
+                Time's Up!
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                Your allotted time has ended. Since this is practice mode, you can choose to continue reviewing or submit your answers now.
+                <span className="block mt-3 text-sm">
+                  You have answered <strong>{answeredCount}</strong> of <strong>{questions.length}</strong> questions.
+                </span>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={handleContinuePractice} disabled={isSubmitting}>
+                Continue Practicing
+              </AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleSubmit}
+                disabled={isSubmitting}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                {isSubmitting ? 'Submitting...' : 'Submit Now'}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

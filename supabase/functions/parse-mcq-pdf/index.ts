@@ -1,12 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import * as pdfParse from "https://esm.sh/pdf-parse@1.1.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-const systemPrompt = `You are an MCQ parser. Given text extracted from a PDF containing multiple choice questions, extract each question with its options and correct answer.
+const systemPrompt = `You are an MCQ parser. Given a PDF document containing multiple choice questions, extract each question with its options and correct answer.
 
 RULES:
 1. Identify questions by patterns like "Q1.", "1.", "1)", or just numbered questions
@@ -58,25 +57,7 @@ serve(async (req) => {
 
     console.log('Processing PDF:', fileName);
 
-    // Decode base64 to buffer
-    const pdfBuffer = Uint8Array.from(atob(pdfBase64), c => c.charCodeAt(0));
-
-    // Extract text from PDF
-    let extractedText: string;
-    try {
-      const pdfData = await pdfParse.default(pdfBuffer);
-      extractedText = pdfData.text;
-      console.log('Extracted text length:', extractedText.length);
-    } catch (pdfError) {
-      console.error('PDF parsing error:', pdfError);
-      throw new Error('Failed to extract text from PDF. Please ensure it contains selectable text.');
-    }
-
-    if (!extractedText || extractedText.trim().length < 50) {
-      throw new Error('PDF appears to be empty or contains mostly images. Please use a PDF with selectable text.');
-    }
-
-    // Send to AI for parsing
+    // Use Gemini's native PDF understanding - send base64 directly
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -87,7 +68,22 @@ serve(async (req) => {
         model: 'google/gemini-3-flash-preview',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Parse these MCQs from a PDF:\n\n${extractedText}` },
+          { 
+            role: 'user', 
+            content: [
+              {
+                type: 'text',
+                text: 'Parse the MCQs from this PDF document and extract all questions with their options and correct answers:'
+              },
+              {
+                type: 'file',
+                file: {
+                  filename: fileName || 'document.pdf',
+                  file_data: `data:application/pdf;base64,${pdfBase64}`
+                }
+              }
+            ]
+          },
         ],
         temperature: 0.1,
       }),
