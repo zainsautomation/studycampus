@@ -1,283 +1,190 @@
 
-# MCQs Test System - Implementation Plan
+# Comprehensive Bug Fixes and Enhancements Plan
 
-## Overview
+## Issues Identified
 
-This plan outlines building a comprehensive MCQs (Multiple Choice Questions) test system for StudyCampus. The system will allow students to practice subject-based tests, while admins can easily create tests via smart copy-paste detection or PDF parsing using AI.
+### 1. PDF MCQ Parser - Edge Function Error
+**Root Cause**: The `pdf-parse` library imported from `esm.sh` is not compatible with Deno Edge Runtime. The error "Failed to send a request to the Edge Function" with 500 status indicates the function crashes during initialization.
+
+**Solution**: Replace `pdf-parse` with a Deno-native PDF text extraction approach using Mozilla's pdf.js via esm.sh with proper Deno-compatible configuration.
 
 ---
 
-## Phase 1: Database Design
+### 2. Q&A Toggle Feature (On/Off)
+**Current State**: The `qa_enabled` setting exists in `useAppSettings.tsx` and the Admin Sidebar already has the toggle UI implemented. However, the Q&A page (`src/pages/QandA.tsx`) does NOT check this setting and always shows the Q&A content.
 
-### New Tables Required
+**Solution**: Add disabled state handling to `QandA.tsx` similar to how `Posts.tsx` handles it with `PostsDisabledBanner`. Create `QandADisabledBanner` component.
 
-```text
-+------------------+     +------------------+     +------------------+
-|   mcq_tests      |---->|  mcq_questions   |---->|   mcq_options    |
-+------------------+     +------------------+     +------------------+
-| id               |     | id               |     | id               |
-| subject_id (FK)  |     | test_id (FK)     |     | question_id (FK) |
-| title            |     | question_text    |     | option_text      |
-| topic_name       |     | order_number     |     | option_label     |
-| description      |     | explanation      |     | is_correct       |
-| time_limit_mins  |     | created_at       |     | order_number     |
-| test_mode        |     +------------------+     +------------------+
-| is_published     |
-| shuffle_questions|            +------------------+
-| shuffle_options  |            |   mcq_attempts   |
-| result_visibility|            +------------------+
-| retake_allowed   |            | id               |
-| created_by       |            | user_id (FK)     |
-| created_at       |            | test_id (FK)     |
-+------------------+            | started_at       |
-                                | completed_at     |
-                                | score            |
-                                | total_questions  |
-                                | correct_answers  |
-                                | time_taken_secs  |
-                                | status           |
-                                +------------------+
-                                        |
-                                        v
-                                +------------------+
-                                | mcq_responses    |
-                                +------------------+
-                                | id               |
-                                | attempt_id (FK)  |
-                                | question_id (FK) |
-                                | selected_option  |
-                                | is_correct       |
-                                | answered_at      |
-                                +------------------+
+---
+
+### 3. MCQ Timer - 0% Score on Time Up
+**Root Cause**: In `MCQAttempt.tsx`, the `handleTimeUp` callback has a stale closure issue:
+```javascript
+const handleTimeUp = useCallback(() => {
+  toast.warning('Time is up!');
+  handleSubmit();  // Uses stale 'answers' state
+}, []);  // Empty dependency array!
 ```
 
-### RLS Policies
-- Students can view published tests
-- Students can create/view their own attempts
-- Admins have full CRUD access to all MCQ tables
+When time runs out, `handleSubmit()` uses the `answers` state from when the callback was created (empty `{}`), not the current answers.
+
+**Solution**: 
+1. Fix the dependency array: `[handleSubmit]` or inline the logic
+2. Use a ref to track current answers to avoid stale closures
 
 ---
 
-## Phase 2: Student-Facing Features
+### 4. Practice vs Exam Mode Time Up Behavior
+**Current Behavior**: Both modes auto-submit when time is up.
+**Expected Behavior**: 
+- Practice Mode: Show dialog "Time's up! Continue or Submit?"
+- Exam Mode: Auto-submit immediately
 
-### Page: `/mcq` - MCQs Home
-- Subject selection grid (reusing existing subjects table)
-- Shows available test count per subject
-- Modern card-based UI matching existing Notes design
-
-### Page: `/mcq/subject/:subjectId` - Tests List
-- Display test cards with:
-  - Test title and topic name
-  - Total questions count
-  - Time limit badge (if set)
-  - Test mode badge (Practice/Exam)
-  - Attempt history summary
-
-### Page: `/mcq/test/:testId` - Test Details
-- Test information overview
-- Start test button
-- Previous attempt history (if any)
-- Retake restrictions display
-
-### Page: `/mcq/attempt/:attemptId` - Active Test
-- Question display (single question or list view - mobile optimized)
-- Options with clear selection UI
-- Timer display (if timed test)
-- Progress indicator (e.g., "5 of 20")
-- Navigation between questions
-- Auto-save answers on selection
-- Submit confirmation dialog
-
-### Page: `/mcq/result/:attemptId` - Results
-- Score summary with percentage
-- Correct/Incorrect count with visual indicators
-- Time taken display
-- Question-by-question review (based on result_visibility setting):
-  - Show user's answer
-  - Show correct answer (if allowed)
-  - Show explanation (if provided)
-- Retake option (if allowed)
+**Solution**: Check `test.test_mode` in `handleTimeUp` and show a dialog for practice mode with options to continue or submit.
 
 ---
 
-## Phase 3: Admin Features
+### 5. Achievement Points - Duplicate Points Issue
+**Analysis**: The point system trigger `on_post_like_insert` awards 1 point per like correctly. The `award_points` function properly inserts into `point_transactions` table. 
 
-### Admin Page: `/admin/mcq` - Manage MCQ Tests
-- List all tests with filters (subject, status, mode)
-- Test stats (attempts count, average score)
-- Create/Edit/Delete tests
-- Publish/Unpublish toggle
-- Bulk actions support
+However, the function doesn't check for duplicate likes - if a user unlikes and re-likes, they could potentially generate multiple point transactions.
 
-### Admin Test Creation Wizard
-**Step 1: Test Details**
-- Subject selection (from existing subjects)
-- Test title and topic name
-- Description (optional)
-- Time limit (optional)
-- Test mode (Practice/Exam)
-- Result visibility (Instant/Delayed/Hidden)
-- Shuffle questions toggle
-- Shuffle options toggle
-- Allow retakes toggle
-
-**Step 2: Add Questions (3 Methods)**
-
-#### Method A: Manual Entry
-- Add questions one by one
-- Question text input
-- 4 options (A/B/C/D) with correct answer selection
-- Optional explanation field
-
-#### Method B: Smart Copy-Paste (AI-Powered)
-- Large text area for pasting MCQs
-- Uses Lovable AI to parse and detect:
-  - Questions
-  - Options (A/B/C/D or 1/2/3/4)
-  - Correct answers (whether inline, at bottom, or in text)
-- Preview parsed results before saving
-- Manual correction interface for parsed data
-
-#### Method C: PDF Upload (AI-Powered)
-- Drag & drop PDF upload
-- Uses Lovable AI to:
-  - Extract text from PDF
-  - Parse MCQ structure
-  - Identify answers (even if on separate pages)
-- Preview and correction interface
-
-**Step 3: Review & Publish**
-- Preview all questions
-- Reorder questions (drag & drop)
-- Edit individual questions
-- Publish or save as draft
+**Solution**: Add duplicate prevention by checking if points were already awarded for this specific reference (post_id + liker combination).
 
 ---
 
-## Phase 4: AI Integration for MCQ Parsing
+## Implementation Plan
 
-### Edge Function: `parse-mcq-text`
-- Receives raw text input
-- Uses Lovable AI (google/gemini-3-flash-preview) to:
-  - Identify question boundaries
-  - Extract options
-  - Detect correct answers using multiple patterns
-- Returns structured JSON with parsed MCQs
+### Task 1: Fix PDF Parser Edge Function
 
-### Edge Function: `parse-mcq-pdf`
-- Receives PDF file (base64)
-- Uses pdf.js for text extraction
-- Sends extracted text to Lovable AI for parsing
-- Returns structured MCQ data
+**File**: `supabase/functions/parse-mcq-pdf/index.ts`
 
-### AI Prompt Strategy
-The AI will be instructed to detect various answer formats:
-- "Answer: B"
-- "Correct: Random Access Memory"
-- Asterisk marking (A)*
-- Bold/highlighted text patterns
-- Answer key at document end
+Replace the incompatible `pdf-parse` with a simpler approach that sends the PDF directly to the AI gateway which can handle base64 PDFs:
+
+```text
+Changes:
+- Remove pdf-parse import (not Deno-compatible)
+- Send PDF base64 directly to AI model that supports document/image understanding
+- Use Gemini's native PDF handling capability
+```
 
 ---
 
-## Phase 5: Gamification Integration
+### Task 2: Add Q&A Disabled State
 
-### Points System
-Integrate with existing gamification:
-- Complete a test: +5 points
-- Score 80%+: +10 bonus points
-- Perfect score: +20 bonus points
-- First attempt bonus: +3 points
+**New File**: `src/components/qa/QandADisabledBanner.tsx`
+```tsx
+// Similar to PostsDisabledBanner but for Q&A
+Alert with message "Q&A is currently disabled by administrator"
+```
 
-### Database Function
-- `on_mcq_attempt_complete()` trigger to award points
-
----
-
-## Technical Implementation Details
-
-### New Files to Create
-
-**Pages:**
-- `src/pages/MCQ.tsx` - Main MCQ home
-- `src/pages/MCQSubject.tsx` - Tests by subject
-- `src/pages/MCQTest.tsx` - Test details
-- `src/pages/MCQAttempt.tsx` - Active test taking
-- `src/pages/MCQResult.tsx` - Results view
-- `src/pages/admin/ManageMCQ.tsx` - Admin management
-
-**Components:**
-- `src/components/mcq/TestCard.tsx` - Test card display
-- `src/components/mcq/QuestionDisplay.tsx` - Question renderer
-- `src/components/mcq/OptionButton.tsx` - Option selection
-- `src/components/mcq/TestTimer.tsx` - Countdown timer
-- `src/components/mcq/ProgressBar.tsx` - Test progress
-- `src/components/mcq/ResultSummary.tsx` - Score display
-- `src/components/mcq/QuestionReview.tsx` - Answer review
-- `src/components/admin/MCQCreationWizard.tsx` - Multi-step form
-- `src/components/admin/MCQTextParser.tsx` - Copy-paste interface
-- `src/components/admin/MCQPDFUploader.tsx` - PDF upload
-- `src/components/admin/MCQPreviewEditor.tsx` - Parsed preview
-
-**Edge Functions:**
-- `supabase/functions/parse-mcq-text/index.ts`
-- `supabase/functions/parse-mcq-pdf/index.ts`
-
-**Hooks:**
-- `src/hooks/useMCQAttempt.tsx` - Manage active test state
-- `src/hooks/useMCQTimer.tsx` - Timer logic
-
-### Navigation Updates
-- Add "MCQ Tests" to BottomNav (replace or add alongside existing items)
-- Add MCQ section to Admin Sidebar under "Content"
-- Add MCQ link to More page menu
+**File**: `src/pages/QandA.tsx`
+```text
+Changes:
+- Import useAppSettings hook (already imported)
+- Add qaEnabled from useAppSettings
+- Add early return with disabled banner if !qaEnabled
+```
 
 ---
 
-## UI/UX Design Principles
+### Task 3: Fix MCQ Timer Score Bug
 
-1. **Dark mode first** - Matching existing theme
-2. **Mobile-first layout** - Touch-friendly options, swipe navigation
-3. **Card-based design** - Consistent with Notes/Q&A pages
-4. **Smooth animations** - Using Framer Motion (existing)
-5. **Clear typography** - Easy to read questions
-6. **Accessibility** - Proper focus states, ARIA labels
-7. **Progress feedback** - Timer, progress bar, auto-save indicator
+**File**: `src/pages/MCQAttempt.tsx`
 
----
+```text
+Changes:
+- Use useRef to track current answers state
+- Update ref whenever answers change
+- Fix handleTimeUp to read from ref instead of stale closure
+- Properly handle the async submission
+```
 
-## Security Considerations
+Key code pattern:
+```typescript
+const answersRef = useRef(answers);
+useEffect(() => { answersRef.current = answers; }, [answers]);
 
-1. **RLS Policies** - Prevent answer leakage before submission
-2. **Timer enforcement** - Server-side validation for timed tests
-3. **Anti-cheating** - Tab visibility detection (optional)
-4. **Rate limiting** - Prevent rapid retakes
-
----
-
-## Migration Order
-
-1. Create database tables and RLS policies
-2. Create student-facing pages (basic version)
-3. Create admin management pages
-4. Implement AI parsing edge functions
-5. Add gamification integration
-6. Polish UI and add advanced features
+const handleTimeUp = useCallback(async () => {
+  // Use answersRef.current for fresh state
+}, [attemptId, questions, startTime]);
+```
 
 ---
 
-## Questions for Clarification
+### Task 4: Practice vs Exam Time Up Behavior
 
-Before implementation, I'd like to confirm a few things:
+**File**: `src/pages/MCQAttempt.tsx`
 
-1. **Navigation placement**: Should MCQ Tests get its own spot in the bottom navigation bar (replacing one item), or should it be accessible from the "More" menu?
+```text
+Changes:
+- Add state for showTimeUpDialog
+- handleTimeUp checks test.test_mode:
+  - 'exam' -> auto submit
+  - 'practice' -> show dialog with "Continue" or "Submit" options
+- Add new AlertDialog for time up choices
+- "Continue" button closes dialog and pauses timer
+- "Submit" button calls handleSubmit
+```
 
-2. **Subjects sharing**: Should MCQ tests use the existing subjects table (same subjects as Notes), or create separate MCQ-specific topics?
+---
 
-3. **Result visibility options**:
-   - "Instant" = Show results immediately after submit
-   - "Delayed" = Admin reveals results later
-   - "Hidden" = Never show correct answers
-   Is this what you had in mind?
+### Task 5: Prevent Duplicate Points on Re-likes
 
-4. **PDF parsing priority**: Should PDF upload be in the initial release, or can it be added as a Phase 2 enhancement (since it's more complex)?
+**New Migration**: Add idempotency check to prevent duplicate point awards
+
+```sql
+-- Modify on_post_like_insert to check for existing point transaction
+CREATE OR REPLACE FUNCTION public.on_post_like_insert()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_post_author_id uuid;
+  v_existing_transaction uuid;
+BEGIN
+  SELECT user_id INTO v_post_author_id FROM posts WHERE id = NEW.post_id;
+  
+  -- Check if points already awarded for this like
+  SELECT id INTO v_existing_transaction 
+  FROM point_transactions 
+  WHERE reference_id = NEW.post_id 
+    AND reference_type = 'post' 
+    AND action = 'post_liked'
+    AND user_id = v_post_author_id;
+  
+  IF v_post_author_id IS NOT NULL 
+     AND v_post_author_id != NEW.user_id 
+     AND v_existing_transaction IS NULL THEN
+    PERFORM award_points(v_post_author_id, 'post_liked', 1, NEW.post_id, 'post');
+  END IF;
+  
+  RETURN NEW;
+END;
+$$;
+```
+
+---
+
+## Files to Create/Modify
+
+| Action | File Path |
+|--------|-----------|
+| Modify | `supabase/functions/parse-mcq-pdf/index.ts` |
+| Create | `src/components/qa/QandADisabledBanner.tsx` |
+| Modify | `src/pages/QandA.tsx` |
+| Modify | `src/pages/MCQAttempt.tsx` |
+| Create | New SQL migration for points idempotency |
+
+---
+
+## Summary
+
+This plan addresses all 5 issues:
+1. PDF parsing will use Gemini's native PDF understanding (no external library)
+2. Q&A will respect the admin toggle with a proper disabled banner
+3. MCQ timer will correctly calculate scores using fresh state
+4. Practice mode will give users a choice when time's up; Exam mode auto-submits
+5. Points system will prevent duplicate awards from like/unlike cycles
