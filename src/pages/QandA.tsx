@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { QuestionCard } from "@/components/qa/QuestionCard";
 import { QuestionForm } from "@/components/qa/QuestionForm";
+import { QandADisabledBanner } from "@/components/qa/QandADisabledBanner";
 import { QuestionCardSkeleton } from "@/components/ui/shimmer-skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +19,7 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 export default function QandA() {
   const { user } = useAuth();
-  const { anonymousPostsEnabled } = useAppSettings();
+  const { anonymousPostsEnabled, qaEnabled, isLoading: settingsLoading } = useAppSettings();
   const { toast } = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -103,6 +104,17 @@ export default function QandA() {
       toast({ title: "Error posting question", description: error.message, variant: "destructive" });
     },
   });
+
+  // Show disabled banner if Q&A is turned off
+  if (!settingsLoading && !qaEnabled) {
+    return (
+      <MainLayout>
+        <div className="container px-4 py-6 md:py-8">
+          <QandADisabledBanner />
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
