@@ -9,15 +9,16 @@ const systemPrompt = `You are an MCQ parser. Given raw text containing multiple 
 
 RULES:
 1. Identify questions by patterns like "Q1.", "1.", "1)", or just numbered questions
-2. Options are labeled as A/B/C/D, a/b/c/d, 1/2/3/4, or i/ii/iii/iv
+2. Options are labeled as A/B/C/D/E, a/b/c/d/e, 1/2/3/4/5, or i/ii/iii/iv/v
 3. Correct answers can be:
    - After "Answer:" or "Ans:" 
    - At the bottom as an answer key
    - Marked with * or (correct) 
    - The full text of the correct option
 4. If no answer is found for a question, set is_correct to false for all options
-5. Always return exactly 4 options per question (A, B, C, D)
+5. Return 4-5 options per question (A, B, C, D, and optionally E if present in the source)
 6. Clean up any extra whitespace or formatting
+7. Look for explanations after answers (marked with "Explanation:", "Reason:", or similar)
 
 OUTPUT FORMAT (strict JSON):
 {
@@ -29,7 +30,8 @@ OUTPUT FORMAT (strict JSON):
         {"option_label": "A", "option_text": "First option", "is_correct": false},
         {"option_label": "B", "option_text": "Second option", "is_correct": true},
         {"option_label": "C", "option_text": "Third option", "is_correct": false},
-        {"option_label": "D", "option_text": "Fourth option", "is_correct": false}
+        {"option_label": "D", "option_text": "Fourth option", "is_correct": false},
+        {"option_label": "E", "option_text": "Fifth option (if present)", "is_correct": false}
       ]
     }
   ]
