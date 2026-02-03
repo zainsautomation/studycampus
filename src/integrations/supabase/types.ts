@@ -1342,6 +1342,14 @@ export type Database = {
         Returns: undefined
       }
       calculate_level: { Args: { total_points: number }; Returns: number }
+      check_and_award_achievements: {
+        Args: { p_user_id: string }
+        Returns: {
+          achievement_key: string
+          achievement_name: string
+          points_reward: number
+        }[]
+      }
       get_rank_title: { Args: { level: number }; Returns: string }
       get_user_role: {
         Args: { _user_id: string }

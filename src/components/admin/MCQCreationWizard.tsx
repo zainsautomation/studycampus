@@ -174,6 +174,32 @@ export function MCQCreationWizard({ testId, onClose }: MCQCreationWizardProps) {
     ]);
   };
 
+  const addOptionToQuestion = (questionIndex: number) => {
+    setQuestions(questions.map((q, idx) => {
+      if (idx !== questionIndex || q.options.length >= 5) return q;
+      const nextLabel = String.fromCharCode(65 + q.options.length); // A=65, B=66, etc.
+      return {
+        ...q,
+        options: [...q.options, { option_label: nextLabel, option_text: '', is_correct: false }]
+      };
+    }));
+  };
+
+  const removeOptionFromQuestion = (questionIndex: number, optionIndex: number) => {
+    setQuestions(questions.map((q, idx) => {
+      if (idx !== questionIndex || q.options.length <= 2) return q;
+      const newOptions = q.options.filter((_, oIdx) => oIdx !== optionIndex);
+      // Relabel options A, B, C, D, E
+      return {
+        ...q,
+        options: newOptions.map((o, oIdx) => ({
+          ...o,
+          option_label: String.fromCharCode(65 + oIdx)
+        }))
+      };
+    }));
+  };
+
   const removeQuestion = (index: number) => {
     setQuestions(questions.filter((_, i) => i !== index));
   };
@@ -539,8 +565,29 @@ export function MCQCreationWizard({ testId, onClose }: MCQCreationWizardProps) {
                                   placeholder={`Option ${o.option_label}`}
                                   className="flex-1"
                                 />
+                                {q.options.length > 2 && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => removeOptionFromQuestion(qIdx, oIdx)}
+                                    className="shrink-0 h-8 w-8 text-muted-foreground hover:text-destructive"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </Button>
+                                )}
                               </div>
                             ))}
+                            {q.options.length < 5 && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => addOptionToQuestion(qIdx)}
+                                className="text-xs text-muted-foreground gap-1 ml-10"
+                              >
+                                <Plus className="w-3 h-3" />
+                                Add Option {String.fromCharCode(65 + q.options.length)}
+                              </Button>
+                            )}
                           </div>
 
                           <div className="pl-10">

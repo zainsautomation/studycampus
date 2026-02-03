@@ -15,7 +15,11 @@ import {
   Plus,
   ArrowRight,
   Download,
-  Bookmark
+  Bookmark,
+  ClipboardCheck,
+  BarChart3,
+  Trophy,
+  Target
 } from 'lucide-react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,6 +27,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
+import { AnimatedCounter } from '@/components/ui/animated-counter';
 
 interface Stats {
   totalNotes: number;
@@ -36,6 +41,9 @@ interface Stats {
   pendingRequests: number;
   totalDownloads: number;
   totalBookmarks: number;
+  totalMCQTests: number;
+  totalMCQAttempts: number;
+  totalAchievementsEarned: number;
 }
 
 interface RecentActivity {
@@ -69,6 +77,9 @@ export default function AdminDashboard() {
     pendingRequests: 0,
     totalDownloads: 0,
     totalBookmarks: 0,
+    totalMCQTests: 0,
+    totalMCQAttempts: 0,
+    totalAchievementsEarned: 0,
   });
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -86,7 +97,10 @@ export default function AdminDashboard() {
         resolvedQuestionsRes,
         postsRes,
         pendingRequestsRes,
-        savedNotesRes
+        savedNotesRes,
+        mcqTestsRes,
+        mcqAttemptsRes,
+        achievementsEarnedRes
       ] = await Promise.all([
         supabase.from('notes').select('id, download_count', { count: 'exact' }),
         supabase.from('announcements').select('id', { count: 'exact', head: true }),
@@ -98,6 +112,9 @@ export default function AdminDashboard() {
         supabase.from('posts').select('id', { count: 'exact', head: true }),
         supabase.from('requests').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
         supabase.from('saved_notes').select('id', { count: 'exact', head: true }),
+        supabase.from('mcq_tests').select('id', { count: 'exact', head: true }).eq('is_published', true),
+        supabase.from('mcq_attempts').select('id', { count: 'exact', head: true }),
+        supabase.from('user_achievements').select('id', { count: 'exact', head: true }),
       ]);
 
       // Calculate total downloads
@@ -115,6 +132,9 @@ export default function AdminDashboard() {
         pendingRequests: pendingRequestsRes.count || 0,
         totalDownloads: totalDownloads,
         totalBookmarks: savedNotesRes.count || 0,
+        totalMCQTests: mcqTestsRes.count || 0,
+        totalMCQAttempts: mcqAttemptsRes.count || 0,
+        totalAchievementsEarned: achievementsEarnedRes.count || 0,
       });
 
       // Fetch recent activity (including community content)
@@ -177,9 +197,11 @@ export default function AdminDashboard() {
 
   const quickActions = [
     { label: 'Add Note', href: '/admin/notes', icon: FileText, color: 'bg-accent/10 text-accent hover:bg-accent/20' },
-    { label: 'New Announcement', href: '/admin/announcements', icon: Megaphone, color: 'bg-warning/10 text-warning hover:bg-warning/20' },
-    { label: 'Add Event', href: '/admin/updates', icon: Calendar, color: 'bg-primary/10 text-primary hover:bg-primary/20' },
+    { label: 'Create MCQ', href: '/admin/mcq', icon: ClipboardCheck, color: 'bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20' },
+    { label: 'Announcement', href: '/admin/announcements', icon: Megaphone, color: 'bg-warning/10 text-warning hover:bg-warning/20' },
+    { label: 'Manage Users', href: '/admin/users', icon: Users, color: 'bg-blue-500/10 text-blue-500 hover:bg-blue-500/20' },
     { label: 'View Requests', href: '/admin/requests', icon: GitPullRequest, color: 'bg-orange-500/10 text-orange-500 hover:bg-orange-500/20' },
+    { label: 'Analytics', href: '/admin/analytics', icon: BarChart3, color: 'bg-purple-500/10 text-purple-500 hover:bg-purple-500/20' },
   ];
 
   return (
@@ -191,16 +213,16 @@ export default function AdminDashboard() {
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-medium text-muted-foreground">Quick Actions</h3>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
             {quickActions.map((action) => (
               <Link key={action.label} to={action.href}>
                 <motion.div
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className={`flex items-center gap-3 p-4 rounded-xl border border-border transition-colors ${action.color}`}
+                  className={`flex items-center gap-2 p-3 rounded-xl border border-border transition-colors ${action.color}`}
                 >
-                  <action.icon className="w-5 h-5" />
-                  <span className="text-sm font-medium">{action.label}</span>
+                  <action.icon className="w-4 h-4" />
+                  <span className="text-xs font-medium">{action.label}</span>
                 </motion.div>
               </Link>
             ))}
@@ -208,67 +230,80 @@ export default function AdminDashboard() {
         </motion.div>
 
         {/* Main Stats Grid */}
-        <motion.div variants={itemVariants} className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-          <Card className="glass">
+        <motion.div variants={itemVariants} className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <Card className="glass bg-gradient-to-br from-accent/5 to-accent/10 border-accent/20">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-accent/10">
+                <div className="p-2 rounded-lg bg-accent/20">
                   <FileText className="w-5 h-5 text-accent" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{stats.totalNotes}</p>
+                  <p className="text-2xl font-bold"><AnimatedCounter value={stats.totalNotes} /></p>
                   <p className="text-xs text-muted-foreground">Notes</p>
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card className="glass">
+          <Card className="glass bg-gradient-to-br from-emerald-500/5 to-emerald-500/10 border-emerald-500/20">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-success/10">
-                  <Users className="w-5 h-5 text-success" />
+                <div className="p-2 rounded-lg bg-emerald-500/20">
+                  <Users className="w-5 h-5 text-emerald-500" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{stats.totalStudents}</p>
+                  <p className="text-2xl font-bold"><AnimatedCounter value={stats.totalStudents} /></p>
                   <p className="text-xs text-muted-foreground">Students</p>
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card className="glass">
+          <Card className="glass bg-gradient-to-br from-blue-500/5 to-blue-500/10 border-blue-500/20">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-blue-500/10">
+                <div className="p-2 rounded-lg bg-blue-500/20">
                   <HelpCircle className="w-5 h-5 text-blue-500" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{stats.totalQuestions}</p>
+                  <p className="text-2xl font-bold"><AnimatedCounter value={stats.totalQuestions} /></p>
                   <p className="text-xs text-muted-foreground">Questions</p>
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card className="glass">
+          <Card className="glass bg-gradient-to-br from-purple-500/5 to-purple-500/10 border-purple-500/20">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-purple-500/10">
-                  <MessageSquare className="w-5 h-5 text-purple-500" />
+                <div className="p-2 rounded-lg bg-purple-500/20">
+                  <ClipboardCheck className="w-5 h-5 text-purple-500" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{stats.totalPosts}</p>
-                  <p className="text-xs text-muted-foreground">Posts</p>
+                  <p className="text-2xl font-bold"><AnimatedCounter value={stats.totalMCQTests} /></p>
+                  <p className="text-xs text-muted-foreground">MCQ Tests</p>
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card className="glass relative overflow-hidden">
+          <Card className="glass bg-gradient-to-br from-amber-500/5 to-amber-500/10 border-amber-500/20">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-orange-500/10">
+                <div className="p-2 rounded-lg bg-amber-500/20">
+                  <Trophy className="w-5 h-5 text-amber-500" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold"><AnimatedCounter value={stats.totalAchievementsEarned} /></p>
+                  <p className="text-xs text-muted-foreground">Achievements</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="glass relative overflow-hidden bg-gradient-to-br from-orange-500/5 to-orange-500/10 border-orange-500/20">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-orange-500/20">
                   <GitPullRequest className="w-5 h-5 text-orange-500" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{stats.pendingRequests}</p>
+                  <p className="text-2xl font-bold"><AnimatedCounter value={stats.pendingRequests} /></p>
                   <p className="text-xs text-muted-foreground">Pending</p>
                 </div>
               </div>
@@ -285,7 +320,7 @@ export default function AdminDashboard() {
         </motion.div>
 
         {/* Community & Engagement Stats */}
-        <motion.div variants={itemVariants} className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <motion.div variants={itemVariants} className="grid md:grid-cols-2 lg:grid-cols-5 gap-4">
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
@@ -302,7 +337,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                {stats.resolvedQuestions} of {stats.totalQuestions} questions resolved
+                {stats.resolvedQuestions} of {stats.totalQuestions} resolved
               </p>
             </CardContent>
           </Card>
@@ -310,8 +345,24 @@ export default function AdminDashboard() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Downloads</p>
-                  <p className="text-2xl font-bold">{stats.totalDownloads}</p>
+                  <p className="text-sm text-muted-foreground">MCQ Attempts</p>
+                  <p className="text-2xl font-bold"><AnimatedCounter value={stats.totalMCQAttempts} /></p>
+                </div>
+                <div className="p-3 rounded-full bg-indigo-500/10">
+                  <Target className="w-5 h-5 text-indigo-500" />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Total test attempts
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Downloads</p>
+                  <p className="text-2xl font-bold"><AnimatedCounter value={stats.totalDownloads} /></p>
                 </div>
                 <div className="p-3 rounded-full bg-accent/10">
                   <Download className="w-5 h-5 text-accent" />
@@ -326,8 +377,8 @@ export default function AdminDashboard() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Bookmarks</p>
-                  <p className="text-2xl font-bold">{stats.totalBookmarks}</p>
+                  <p className="text-sm text-muted-foreground">Bookmarks</p>
+                  <p className="text-2xl font-bold"><AnimatedCounter value={stats.totalBookmarks} /></p>
                 </div>
                 <div className="p-3 rounded-full bg-amber-500/10">
                   <Bookmark className="w-5 h-5 text-amber-500" />
@@ -342,15 +393,15 @@ export default function AdminDashboard() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Content</p>
-                  <p className="text-2xl font-bold">{stats.totalAnnouncements + stats.totalUpdates}</p>
+                  <p className="text-sm text-muted-foreground">Posts</p>
+                  <p className="text-2xl font-bold"><AnimatedCounter value={stats.totalPosts} /></p>
                 </div>
-                <div className="p-3 rounded-full bg-primary/10">
-                  <Megaphone className="w-5 h-5 text-primary" />
+                <div className="p-3 rounded-full bg-purple-500/10">
+                  <MessageSquare className="w-5 h-5 text-purple-500" />
                 </div>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                {stats.totalAnnouncements} announcements, {stats.totalUpdates} events
+                Community discussions
               </p>
             </CardContent>
           </Card>
