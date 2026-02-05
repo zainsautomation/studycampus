@@ -1,50 +1,74 @@
-// App entry point
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "@/hooks/useAuth";
-import { ThemeProvider } from "@/hooks/useTheme";
-import { GoogleDriveProvider } from "@/contexts/GoogleDriveContext";
-import { KeyboardProvider } from "@/contexts/KeyboardContext";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
-import Auth from "./pages/Auth";
-import Dashboard from "./pages/Dashboard";
-import Notes from "./pages/Notes";
-import SavedNotes from "./pages/SavedNotes";
-import Announcements from "./pages/Announcements";
-import Updates from "./pages/Updates";
-import NotFound from "./pages/NotFound";
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import ManageNotes from "./pages/admin/ManageNotes";
-import ManageAnnouncements from "./pages/admin/ManageAnnouncements";
-import ManageUpdates from "./pages/admin/ManageUpdates";
-import ManageSubjects from "./pages/admin/ManageSubjects";
-import ManageUsers from "./pages/admin/ManageUsers";
-import Analytics from "./pages/admin/Analytics";
-import ActivityLog from "./pages/admin/ActivityLog";
-import QandA from "./pages/QandA";
-import QuestionDetail from "./pages/QuestionDetail";
-import Posts from "./pages/Posts";
-import Requests from "./pages/Requests";
-import ManageQandA from "./pages/admin/ManageQandA";
-import ManagePosts from "./pages/admin/ManagePosts";
-import ManageRequests from "./pages/admin/ManageRequests";
-import ManageMCQ from "./pages/admin/ManageMCQ";
-import Moderation from "./pages/admin/Moderation";
-import Profile from "./pages/Profile";
-import PublicProfile from "./pages/PublicProfile";
-import Leaderboard from "./pages/Leaderboard";
-import More from "./pages/More";
-import GoogleDriveCallback from "./pages/GoogleDriveCallback";
-import MCQ from "./pages/MCQ";
-import MCQSubject from "./pages/MCQSubject";
-import MCQTest from "./pages/MCQTest";
-import MCQAttempt from "./pages/MCQAttempt";
-import MCQResult from "./pages/MCQResult";
+ // App entry point with performance optimizations
+ import { lazy, Suspense } from "react";
+ import { Toaster } from "@/components/ui/toaster";
+ import { Toaster as Sonner } from "@/components/ui/sonner";
+ import { TooltipProvider } from "@/components/ui/tooltip";
+ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+ import { AuthProvider } from "@/hooks/useAuth";
+ import { ThemeProvider } from "@/hooks/useTheme";
+ import { GoogleDriveProvider } from "@/contexts/GoogleDriveContext";
+ import { KeyboardProvider } from "@/contexts/KeyboardContext";
+ import { ProtectedRoute } from "@/components/ProtectedRoute";
+ import { Loader2 } from "lucide-react";
+ 
+ // Lazy load all pages for code splitting
+ const Auth = lazy(() => import("./pages/Auth"));
+ const Dashboard = lazy(() => import("./pages/Dashboard"));
+ const Notes = lazy(() => import("./pages/Notes"));
+ const SavedNotes = lazy(() => import("./pages/SavedNotes"));
+ const Announcements = lazy(() => import("./pages/Announcements"));
+ const Updates = lazy(() => import("./pages/Updates"));
+ const NotFound = lazy(() => import("./pages/NotFound"));
+ const QandA = lazy(() => import("./pages/QandA"));
+ const QuestionDetail = lazy(() => import("./pages/QuestionDetail"));
+ const Posts = lazy(() => import("./pages/Posts"));
+ const Requests = lazy(() => import("./pages/Requests"));
+ const Profile = lazy(() => import("./pages/Profile"));
+ const PublicProfile = lazy(() => import("./pages/PublicProfile"));
+ const Leaderboard = lazy(() => import("./pages/Leaderboard"));
+ const More = lazy(() => import("./pages/More"));
+ const GoogleDriveCallback = lazy(() => import("./pages/GoogleDriveCallback"));
+ const MCQ = lazy(() => import("./pages/MCQ"));
+ const MCQSubject = lazy(() => import("./pages/MCQSubject"));
+ const MCQTest = lazy(() => import("./pages/MCQTest"));
+ const MCQAttempt = lazy(() => import("./pages/MCQAttempt"));
+ const MCQResult = lazy(() => import("./pages/MCQResult"));
+ 
+ // Admin pages - lazy loaded
+ const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+ const ManageNotes = lazy(() => import("./pages/admin/ManageNotes"));
+ const ManageAnnouncements = lazy(() => import("./pages/admin/ManageAnnouncements"));
+ const ManageUpdates = lazy(() => import("./pages/admin/ManageUpdates"));
+ const ManageSubjects = lazy(() => import("./pages/admin/ManageSubjects"));
+ const ManageUsers = lazy(() => import("./pages/admin/ManageUsers"));
+ const Analytics = lazy(() => import("./pages/admin/Analytics"));
+ const ActivityLog = lazy(() => import("./pages/admin/ActivityLog"));
+ const ManageQandA = lazy(() => import("./pages/admin/ManageQandA"));
+ const ManagePosts = lazy(() => import("./pages/admin/ManagePosts"));
+ const ManageRequests = lazy(() => import("./pages/admin/ManageRequests"));
+ const ManageMCQ = lazy(() => import("./pages/admin/ManageMCQ"));
+ const Moderation = lazy(() => import("./pages/admin/Moderation"));
+ 
+ // Loading fallback component
+ const PageLoader = () => (
+   <div className="min-h-screen flex items-center justify-center bg-background">
+     <Loader2 className="h-8 w-8 animate-spin text-primary" />
+   </div>
+ );
 
-const queryClient = new QueryClient();
+// Optimized QueryClient configuration
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 2, // 2 minutes - reduces redundant refetches
+      gcTime: 1000 * 60 * 10, // 10 minutes garbage collection
+      retry: 1, // Only retry once on failure
+      refetchOnWindowFocus: false, // Disable refetch on window focus
+      refetchOnReconnect: true, // Refetch on network reconnect
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -56,6 +80,7 @@ const App = () => (
               <Toaster />
               <Sonner />
               <BrowserRouter>
+               <Suspense fallback={<PageLoader />}>
               <Routes>
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
                 <Route path="/auth" element={<Auth />} />
@@ -93,6 +118,7 @@ const App = () => (
                 <Route path="/admin/moderation" element={<ProtectedRoute requireAdmin><Moderation /></ProtectedRoute>} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
+               </Suspense>
               </BrowserRouter>
             </TooltipProvider>
           </KeyboardProvider>

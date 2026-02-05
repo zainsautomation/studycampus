@@ -16,21 +16,37 @@ export function useSavedNotes() {
       return;
     }
 
+     let isMounted = true;
+     const abortController = new AbortController();
+ 
     const fetchSavedNotes = async () => {
       const { data, error } = await supabase
         .from('saved_notes')
         .select('note_id')
-        .eq('user_id', user.id);
+         .eq('user_id', user.id)
+         .abortSignal(abortController.signal);
 
       if (error) {
-        console.error('Error fetching saved notes:', error);
+         // Don't log aborted requests
+         if (error.message !== 'AbortError' && !error.message.includes('abort')) {
+           console.error('Error fetching saved notes:', error);
+         }
       } else {
-        setSavedNoteIds(new Set(data?.map(item => item.note_id) || []));
+         if (isMounted) {
+           setSavedNoteIds(new Set(data?.map(item => item.note_id) || []));
+         }
+       }
+       if (isMounted) {
+         setIsLoading(false);
       }
-      setIsLoading(false);
     };
 
     fetchSavedNotes();
+ 
+     return () => {
+       isMounted = false;
+       abortController.abort();
+     };
   }, [user]);
 
   const isNoteSaved = useCallback((noteId: string) => {
