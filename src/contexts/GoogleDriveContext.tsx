@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -535,3 +536,31 @@ export function useGoogleDriveContext() {
   }
   return context;
 }
+ 
+ // Helper hook to check if user has admin role - for deferred GAPI loading
+ export function useIsAdmin() {
+   const { user } = useAuth();
+   const [isAdmin, setIsAdmin] = useState(false);
+   
+   useEffect(() => {
+     if (!user) {
+       setIsAdmin(false);
+       return;
+     }
+     
+     const checkAdmin = async () => {
+       const { data } = await supabase
+         .from('user_roles')
+         .select('role')
+         .eq('user_id', user.id)
+         .eq('role', 'admin')
+         .single();
+       
+       setIsAdmin(!!data);
+     };
+     
+     checkAdmin();
+   }, [user]);
+   
+   return isAdmin;
+ }
