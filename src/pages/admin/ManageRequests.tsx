@@ -105,11 +105,6 @@ export default function ManageRequests() {
   return (
     <AdminLayout title="Manage Requests">
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold">Manage Requests</h1>
-          <p className="text-muted-foreground">Review and respond to user requests</p>
-        </div>
-
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card>
             <CardHeader className="pb-2">
