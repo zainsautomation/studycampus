@@ -17,6 +17,9 @@ export default function Analytics() {
     topDownloadedNotes,
     topBookmarkedNotes,
     subjectDistribution,
+    mcqTestDetails,
+    mcqUserStats,
+    mcqScoreDistribution,
     isLoading,
   } = useAnalyticsData();
 
@@ -42,7 +45,12 @@ export default function Analytics() {
             topDownloadedNotes={topDownloadedNotes}
             topBookmarkedNotes={topBookmarkedNotes}
           />
-          <CommunityMCQCards stats={stats} />
+          <CommunityMCQCards
+            stats={stats}
+            mcqTestDetails={mcqTestDetails}
+            mcqUserStats={mcqUserStats}
+            mcqScoreDistribution={mcqScoreDistribution}
+          />
           <ContentDistribution
             subjectDistribution={subjectDistribution}
             totalNotes={stats.totalNotes}
