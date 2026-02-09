@@ -54,24 +54,26 @@ export function AnalyticsStatCards({ stats }: AnalyticsStatCardsProps) {
   ];
 
   return (
-    <motion.div variants={itemVariants} className="grid grid-cols-2 md:grid-cols-4 gap-4">
-      {statCards.map((stat) => (
-        <Card key={stat.label} className={`glass bg-gradient-to-br ${stat.gradient} ${stat.border}`}>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className={`p-2.5 rounded-xl ${stat.iconBg}`}>
-                <stat.icon className={`w-5 h-5 ${stat.iconColor}`} />
+    <motion.div variants={itemVariants}>
+      <div className="flex overflow-x-auto gap-4 pb-2 snap-x snap-mandatory scrollbar-hide md:grid md:grid-cols-4">
+        {statCards.map((stat) => (
+          <Card key={stat.label} className={`glass bg-gradient-to-br ${stat.gradient} ${stat.border} min-w-[160px] snap-center flex-shrink-0 md:min-w-0 md:flex-shrink`}>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className={`p-2.5 rounded-xl ${stat.iconBg}`}>
+                  <stat.icon className={`w-5 h-5 ${stat.iconColor}`} />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">
+                    <AnimatedCounter value={stat.value} />
+                  </p>
+                  <p className="text-xs text-muted-foreground">{stat.label}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-2xl font-bold">
-                  <AnimatedCounter value={stat.value} />
-                </p>
-                <p className="text-xs text-muted-foreground">{stat.label}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </motion.div>
   );
 }

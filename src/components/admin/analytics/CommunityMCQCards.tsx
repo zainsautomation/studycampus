@@ -3,7 +3,8 @@ import { HelpCircle, MessageSquare, ClipboardCheck, Target, Heart, CheckCircle2 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { AnimatedCounter } from '@/components/ui/animated-counter';
-import { AnalyticsStats } from '@/hooks/useAnalyticsData';
+import { AnalyticsStats, MCQTestDetail, MCQUserStat, MCQScoreDistribution } from '@/hooks/useAnalyticsData';
+import { MCQDetailsDialog } from './MCQDetailsDialog';
 
 const itemVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -12,9 +13,12 @@ const itemVariants = {
 
 interface CommunityMCQCardsProps {
   stats: AnalyticsStats;
+  mcqTestDetails: MCQTestDetail[];
+  mcqUserStats: MCQUserStat[];
+  mcqScoreDistribution: MCQScoreDistribution[];
 }
 
-export function CommunityMCQCards({ stats }: CommunityMCQCardsProps) {
+export function CommunityMCQCards({ stats, mcqTestDetails, mcqUserStats, mcqScoreDistribution }: CommunityMCQCardsProps) {
   const resolutionRate = stats.totalQuestions > 0
     ? Math.round((stats.resolvedQuestions / stats.totalQuestions) * 100)
     : 0;
@@ -26,6 +30,8 @@ export function CommunityMCQCards({ stats }: CommunityMCQCardsProps) {
   const engagementRate = stats.totalPosts > 0
     ? Math.round((stats.totalPostLikes / stats.totalPosts) * 10) / 10
     : 0;
+
+  const uniqueUsers = new Set(mcqUserStats.map(u => u.userId)).size;
 
   return (
     <motion.div variants={itemVariants} className="grid md:grid-cols-2 gap-4">
@@ -91,11 +97,18 @@ export function CommunityMCQCards({ stats }: CommunityMCQCardsProps) {
       {/* MCQ Performance */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-purple-500/10">
-              <ClipboardCheck className="w-4 h-4 text-purple-500" />
+          <CardTitle className="text-base flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-purple-500/10">
+                <ClipboardCheck className="w-4 h-4 text-purple-500" />
+              </div>
+              MCQ Performance
             </div>
-            MCQ Performance
+            <MCQDetailsDialog
+              testDetails={mcqTestDetails}
+              userStats={mcqUserStats}
+              scoreDistribution={mcqScoreDistribution}
+            />
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-5">
@@ -117,6 +130,20 @@ export function CommunityMCQCards({ stats }: CommunityMCQCardsProps) {
               </div>
               <span className="font-semibold">
                 <AnimatedCounter value={stats.mcqTotalAttempts} />
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                </svg>
+                <span>Unique Users</span>
+              </div>
+              <span className="font-semibold">
+                <AnimatedCounter value={uniqueUsers} />
               </span>
             </div>
           </div>

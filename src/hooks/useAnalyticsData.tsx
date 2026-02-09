@@ -14,6 +14,33 @@ export interface SubjectDistribution {
   color: string;
 }
 
+export interface MCQTestDetail {
+  id: string;
+  title: string;
+  attempts: number;
+  uniqueUsers: number;
+  avgScore: number;
+  highScore: number;
+  lowScore: number;
+  avgTimeSecs: number;
+}
+
+export interface MCQUserStat {
+  userId: string;
+  fullName: string;
+  avatarUrl: string | null;
+  attempts: number;
+  completed: number;
+  avgScore: number;
+  bestScore: number;
+}
+
+export interface MCQScoreDistribution {
+  range: string;
+  count: number;
+  percentage: number;
+}
+
 export interface AnalyticsStats {
   totalNotes: number;
   totalDownloads: number;
@@ -47,6 +74,9 @@ export function useAnalyticsData() {
   const [topDownloadedNotes, setTopDownloadedNotes] = useState<TopNote[]>([]);
   const [topBookmarkedNotes, setTopBookmarkedNotes] = useState<TopNote[]>([]);
   const [subjectDistribution, setSubjectDistribution] = useState<SubjectDistribution[]>([]);
+  const [mcqTestDetails, setMcqTestDetails] = useState<MCQTestDetail[]>([]);
+  const [mcqUserStats, setMcqUserStats] = useState<MCQUserStat[]>([]);
+  const [mcqScoreDistribution, setMcqScoreDistribution] = useState<MCQScoreDistribution[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -99,11 +129,19 @@ export function useAnalyticsData() {
         mcqAvgScore: Math.round(mcqAvgScore * 10) / 10,
       });
 
-      // Fetch top downloaded notes & bookmark data in parallel
-      const [topDownloadedRes, allBookmarksRes, subjectsRes] = await Promise.all([
+      // Fetch detailed data in parallel
+      const [
+        topDownloadedRes,
+        allBookmarksRes,
+        subjectsRes,
+        mcqTestsDetailRes,
+        mcqAllAttemptsRes,
+      ] = await Promise.all([
         supabase.from('notes').select('id, title, download_count').order('download_count', { ascending: false }).limit(5),
         supabase.from('saved_notes').select('note_id'),
         supabase.from('subjects').select('id, name, color'),
+        supabase.from('mcq_tests').select('id, title').eq('is_published', true),
+        supabase.from('mcq_attempts').select('id, test_id, user_id, score, status, time_taken_secs'),
       ]);
 
       // Process top downloaded
@@ -155,17 +193,99 @@ export function useAnalyticsData() {
         }
       }
 
+      // Process MCQ per-test details
+      if (mcqTestsDetailRes.data && mcqAllAttemptsRes.data) {
+        const attempts = mcqAllAttemptsRes.data;
+        const testDetails: MCQTestDetail[] = mcqTestsDetailRes.data.map(test => {
+          const testAttempts = attempts.filter(a => a.test_id === test.id);
+          const completedAttempts = testAttempts.filter(a => a.status === 'completed' && a.score != null);
+          const scores = completedAttempts.map(a => Number(a.score || 0));
+          const times = testAttempts.filter(a => a.time_taken_secs != null).map(a => a.time_taken_secs!);
+          const uniqueUsers = new Set(testAttempts.map(a => a.user_id)).size;
+
+          return {
+            id: test.id,
+            title: test.title,
+            attempts: testAttempts.length,
+            uniqueUsers,
+            avgScore: scores.length > 0 ? Math.round(scores.reduce((s, v) => s + v, 0) / scores.length * 10) / 10 : 0,
+            highScore: scores.length > 0 ? Math.max(...scores) : 0,
+            lowScore: scores.length > 0 ? Math.min(...scores) : 0,
+            avgTimeSecs: times.length > 0 ? Math.round(times.reduce((s, v) => s + v, 0) / times.length) : 0,
+          };
+        }).sort((a, b) => b.attempts - a.attempts);
+        setMcqTestDetails(testDetails);
+
+        // Process MCQ per-user stats
+        const userMap: Record<string, { attempts: number; completed: number; scores: number[]; bestScore: number }> = {};
+        attempts.forEach(a => {
+          if (!userMap[a.user_id]) {
+            userMap[a.user_id] = { attempts: 0, completed: 0, scores: [], bestScore: 0 };
+          }
+          userMap[a.user_id].attempts++;
+          if (a.status === 'completed') {
+            userMap[a.user_id].completed++;
+            if (a.score != null) {
+              const score = Number(a.score);
+              userMap[a.user_id].scores.push(score);
+              userMap[a.user_id].bestScore = Math.max(userMap[a.user_id].bestScore, score);
+            }
+          }
+        });
+
+        const userIds = Object.keys(userMap);
+        if (userIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, full_name, avatar_url')
+            .in('id', userIds);
+
+          const userStats: MCQUserStat[] = userIds.map(uid => {
+            const u = userMap[uid];
+            const profile = profiles?.find(p => p.id === uid);
+            return {
+              userId: uid,
+              fullName: profile?.full_name || 'Unknown',
+              avatarUrl: profile?.avatar_url || null,
+              attempts: u.attempts,
+              completed: u.completed,
+              avgScore: u.scores.length > 0 ? Math.round(u.scores.reduce((s, v) => s + v, 0) / u.scores.length * 10) / 10 : 0,
+              bestScore: u.bestScore,
+            };
+          }).sort((a, b) => b.avgScore - a.avgScore);
+          setMcqUserStats(userStats);
+        }
+
+        // Process score distribution
+        const completedAll = attempts.filter(a => a.status === 'completed' && a.score != null);
+        const ranges = [
+          { range: '80-100%', min: 80, max: 100 },
+          { range: '60-79%', min: 60, max: 79 },
+          { range: '40-59%', min: 40, max: 59 },
+          { range: '0-39%', min: 0, max: 39 },
+        ];
+        const totalCompleted = completedAll.length;
+        const distribution: MCQScoreDistribution[] = ranges.map(r => {
+          const count = completedAll.filter(a => {
+            const score = Number(a.score);
+            return score >= r.min && score <= r.max;
+          }).length;
+          return {
+            range: r.range,
+            count,
+            percentage: totalCompleted > 0 ? Math.round((count / totalCompleted) * 100) : 0,
+          };
+        });
+        setMcqScoreDistribution(distribution);
+      }
+
       // Process subject distribution
-      if (subjectsRes.data && notesRes.data) {
+      if (subjectsRes.data) {
         const subjectMap: Record<string, { name: string; color: string; count: number }> = {};
         subjectsRes.data.forEach(s => {
           subjectMap[s.id] = { name: s.name, color: s.color || '#6366f1', count: 0 };
         });
-        notesRes.data.forEach(note => {
-          // We need subject_id - re-query with it
-        });
 
-        // Fetch notes with subject_id for distribution
         const { data: notesWithSubjects } = await supabase
           .from('notes')
           .select('subject_id');
@@ -202,6 +322,9 @@ export function useAnalyticsData() {
     topDownloadedNotes,
     topBookmarkedNotes,
     subjectDistribution,
+    mcqTestDetails,
+    mcqUserStats,
+    mcqScoreDistribution,
     isLoading,
   };
 }
