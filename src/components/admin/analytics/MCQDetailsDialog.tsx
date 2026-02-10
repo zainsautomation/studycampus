@@ -1,6 +1,6 @@
 import { Info, Trophy, Clock, Target, Users, TrendingUp } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
+
 import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -44,14 +44,14 @@ export function MCQDetailsDialog({ testDetails, userStats, scoreDistribution }: 
           <Info className="w-4 h-4 text-muted-foreground hover:text-primary" />
         </button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[85vh] p-0">
-        <DialogHeader className="p-6 pb-3">
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-lg">
             <Target className="w-5 h-5 text-purple-500" />
             MCQ Detailed Analytics
           </DialogTitle>
         </DialogHeader>
-        <ScrollArea className="px-6 pb-6 max-h-[70vh]">
+        <div className="overflow-y-auto max-h-[60vh] -mx-1 px-1">
           {!hasData ? (
             <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
               <Target className="w-10 h-10 mb-3 opacity-40" />
@@ -69,10 +69,10 @@ export function MCQDetailsDialog({ testDetails, userStats, scoreDistribution }: 
                   <div className="space-y-2.5">
                     {scoreDistribution.map((dist) => (
                       <div key={dist.range} className="space-y-1">
-                        <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center justify-between text-xs sm:text-sm">
                           <span className="font-medium">{dist.range}</span>
                           <span className="text-muted-foreground">
-                            {dist.count} attempt{dist.count !== 1 ? 's' : ''} ({dist.percentage}%)
+                            {dist.count} ({dist.percentage}%)
                           </span>
                         </div>
                         <div className="h-2.5 bg-secondary rounded-full overflow-hidden">
@@ -104,7 +104,7 @@ export function MCQDetailsDialog({ testDetails, userStats, scoreDistribution }: 
                             <TableHead className="text-xs text-center whitespace-nowrap">Users</TableHead>
                             <TableHead className="text-xs text-center whitespace-nowrap">Avg</TableHead>
                             <TableHead className="text-xs text-center whitespace-nowrap">Best</TableHead>
-                            <TableHead className="text-xs text-center whitespace-nowrap">Avg Time</TableHead>
+                            <TableHead className="text-xs text-center whitespace-nowrap hidden sm:table-cell">Avg Time</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -123,7 +123,7 @@ export function MCQDetailsDialog({ testDetails, userStats, scoreDistribution }: 
                                   {test.highScore}%
                                 </Badge>
                               </TableCell>
-                              <TableCell className="text-xs text-center text-muted-foreground">
+                              <TableCell className="text-xs text-center text-muted-foreground hidden sm:table-cell">
                                 <span className="flex items-center justify-center gap-1">
                                   <Clock className="w-3 h-3" />
                                   {formatTime(test.avgTimeSecs)}
@@ -181,7 +181,7 @@ export function MCQDetailsDialog({ testDetails, userStats, scoreDistribution }: 
               )}
             </div>
           )}
-        </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   );
