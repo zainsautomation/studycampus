@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Trophy, Medal, Crown, TrendingUp, Users } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -10,6 +10,7 @@ import { AnimatedCounter } from '@/components/ui/animated-counter';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
+import { useQuery } from '@tanstack/react-query';
 
 interface LeaderboardEntry {
   user_id: string;
@@ -43,13 +44,10 @@ const rankIcons = [
 export default function Leaderboard() {
   const { user } = useAuth();
   const [period, setPeriod] = useState<'weekly' | 'all_time'>('all_time');
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [userRank, setUserRank] = useState<number | null>(null);
 
-  useEffect(() => {
-    const fetchLeaderboard = async () => {
-      setIsLoading(true);
+  const { data: leaderboard = [], isLoading } = useQuery({
+    queryKey: ['leaderboard', period],
+    queryFn: async () => {
       const orderColumn = period === 'weekly' ? 'weekly_points' : 'total_points';
       
       const { data } = await supabase
@@ -58,33 +56,24 @@ export default function Leaderboard() {
         .order(orderColumn, { ascending: false })
         .limit(50);
 
-      if (data) {
-        const userIds = data.map(d => d.user_id);
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('id, full_name, username, avatar_url')
-          .in('id', userIds);
+      if (!data) return [];
 
-        const profileMap = new Map(profiles?.map(p => [p.id, p]));
-        
-        const leaderboardData = data.map(entry => ({
-          ...entry,
-          profile: profileMap.get(entry.user_id) || null
-        }));
-        
-        setLeaderboard(leaderboardData);
+      const userIds = data.map(d => d.user_id);
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name, username, avatar_url')
+        .in('id', userIds);
 
-        // Find current user's rank
-        if (user) {
-          const userIndex = data.findIndex(e => e.user_id === user.id);
-          setUserRank(userIndex >= 0 ? userIndex + 1 : null);
-        }
-      }
-      setIsLoading(false);
-    };
+      const profileMap = new Map(profiles?.map(p => [p.id, p]));
+      
+      return data.map(entry => ({
+        ...entry,
+        profile: profileMap.get(entry.user_id) || null
+      })) as LeaderboardEntry[];
+    },
+  });
 
-    fetchLeaderboard();
-  }, [period, user]);
+  const userRank = user ? leaderboard.findIndex(e => e.user_id === user.id) + 1 || null : null;
 
   const getInitials = (name: string | null | undefined) => {
     if (!name) return '?';
@@ -104,7 +93,7 @@ export default function Leaderboard() {
           className="space-y-6"
         >
           {/* Header */}
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="p-3 rounded-xl bg-amber-100 dark:bg-amber-900/30">
                 <Trophy className="w-6 h-6 text-amber-600 dark:text-amber-400" />
@@ -123,7 +112,7 @@ export default function Leaderboard() {
           </div>
 
           {/* Current User Rank */}
-          {user && userRank && (
+          {user && userRank && userRank > 0 && (
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}

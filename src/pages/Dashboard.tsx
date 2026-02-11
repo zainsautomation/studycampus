@@ -72,36 +72,26 @@ export default function Dashboard() {
   const [updates, setUpdates] = useState<Update[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const [totalAnnouncements, setTotalAnnouncements] = useState(0);
+  const [totalNotes, setTotalNotes] = useState(0);
+
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
       
-      // Fetch announcements
-      const { data: announcementsData } = await supabase
-        .from('announcements')
-        .select('*')
-        .order('is_pinned', { ascending: false })
-        .order('created_at', { ascending: false })
-        .limit(3);
+      const [announcementsRes, notesRes, updatesRes, announcementsCount, notesCount] = await Promise.all([
+        supabase.from('announcements').select('*').order('is_pinned', { ascending: false }).order('created_at', { ascending: false }).limit(3),
+        supabase.from('notes').select('*, subjects(name, color)').order('created_at', { ascending: false }).limit(4),
+        supabase.from('updates').select('*').gte('event_date', new Date().toISOString().split('T')[0]).order('event_date', { ascending: true }).limit(4),
+        supabase.from('announcements').select('*', { count: 'exact', head: true }),
+        supabase.from('notes').select('*', { count: 'exact', head: true }),
+      ]);
 
-      // Fetch recent notes
-      const { data: notesData } = await supabase
-        .from('notes')
-        .select('*, subjects(name, color)')
-        .order('created_at', { ascending: false })
-        .limit(4);
-
-      // Fetch upcoming updates
-      const { data: updatesData } = await supabase
-        .from('updates')
-        .select('*')
-        .gte('event_date', new Date().toISOString().split('T')[0])
-        .order('event_date', { ascending: true })
-        .limit(4);
-
-      setAnnouncements(announcementsData || []);
-      setNotes(notesData || []);
-      setUpdates(updatesData || []);
+      setAnnouncements(announcementsRes.data || []);
+      setNotes(notesRes.data || []);
+      setUpdates(updatesRes.data || []);
+      setTotalAnnouncements(announcementsCount.count || 0);
+      setTotalNotes(notesCount.count || 0);
       setIsLoading(false);
     };
 
@@ -184,7 +174,7 @@ export default function Dashboard() {
                   <Megaphone className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{announcements.length}</p>
+                  <p className="text-2xl font-bold">{totalAnnouncements}</p>
                   <p className="text-xs text-muted-foreground">Announcements</p>
                 </div>
               </CardContent>
@@ -195,8 +185,8 @@ export default function Dashboard() {
                   <BookOpen className="w-5 h-5 text-accent" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{notes.length}</p>
-                  <p className="text-xs text-muted-foreground">Recent Notes</p>
+                  <p className="text-2xl font-bold">{totalNotes}</p>
+                  <p className="text-xs text-muted-foreground">Total Notes</p>
                 </div>
               </CardContent>
             </Card>

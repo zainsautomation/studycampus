@@ -1,20 +1,23 @@
-import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Calendar, Clock } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 import { format, isPast, isToday } from 'date-fns';
+import { useQuery } from '@tanstack/react-query';
 
 interface Update { id: string; title: string; description: string; event_type: string; event_date: string; event_time: string | null; }
 
 export default function Updates() {
-  const [updates, setUpdates] = useState<Update[]>([]);
-
-  useEffect(() => {
-    supabase.from('updates').select('*').order('event_date', { ascending: true }).then(({ data }) => setUpdates(data || []));
-  }, []);
+  const { data: updates = [], isLoading } = useQuery({
+    queryKey: ['updates'],
+    queryFn: async () => {
+      const { data } = await supabase.from('updates').select('*').order('event_date', { ascending: true });
+      return (data || []) as Update[];
+    },
+  });
 
   const getTypeStyles = (type: string) => {
     switch (type) {
@@ -37,7 +40,21 @@ export default function Updates() {
             <h1 className="text-2xl md:text-3xl font-display font-bold">Updates & Events</h1>
             <p className="text-muted-foreground mt-1">Exams, assignments, and important dates</p>
           </div>
-          {updates.length === 0 ? (
+          {isLoading ? (
+            <div className="space-y-4">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Card key={i}>
+                  <CardContent className="p-4 flex items-center gap-4">
+                    <Skeleton className="w-16 h-16 rounded-xl" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-5 w-2/3" />
+                      <Skeleton className="h-4 w-1/3" />
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : updates.length === 0 ? (
             <Card><CardContent className="py-12 text-center"><Calendar className="w-12 h-12 mx-auto text-muted-foreground mb-4" /><p className="text-muted-foreground">No events scheduled</p></CardContent></Card>
           ) : (
             <>
