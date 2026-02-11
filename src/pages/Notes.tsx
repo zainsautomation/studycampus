@@ -63,6 +63,7 @@ export default function Notes() {
   const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [noteCounts, setNoteCounts] = useState<Record<string, number>>({});
   const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
   const { isNoteSaved, toggleSaveNote } = useSavedNotes();
   const { downloadsEnabled } = useAppSettings();
@@ -99,18 +100,27 @@ export default function Notes() {
     }
   };
 
+  // Fetch subjects first, notes lazily when subject is selected
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchSubjects = async () => {
       const { data: subjectsData } = await supabase
         .from('subjects')
         .select('*')
         .order('name');
-      const { data: notesData } = await supabase
-        .from('notes')
-        .select('*, subjects(id, name, color, description, icon)')
-        .order('created_at', { ascending: false });
       setSubjects(subjectsData || []);
-      setNotes(notesData || []);
+
+      // Fetch note counts per subject
+      if (subjectsData && subjectsData.length > 0) {
+        const { data: allNotes } = await supabase
+          .from('notes')
+          .select('subject_id');
+        const counts: Record<string, number> = {};
+        allNotes?.forEach(n => {
+          if (n.subject_id) counts[n.subject_id] = (counts[n.subject_id] || 0) + 1;
+        });
+        setNoteCounts(counts);
+      }
+
       setIsLoading(false);
 
       // Handle URL params for deep linking
@@ -124,39 +134,56 @@ export default function Notes() {
         }
       }
 
-      if (noteParam && notesData) {
-        const note = notesData.find((n: Note) => n.id === noteParam);
-        if (note) {
-          // If no subject param but note has a subject, auto-select it
-          if (!subjectParam && note.subjects) {
-            const subject = subjectsData?.find((s: Subject) => s.id === note.subjects?.id);
-            if (subject) {
-              setSelectedSubject(subject);
-            }
+      // If note param, we need to fetch that specific note for the dialog
+      if (noteParam) {
+        const { data: noteData } = await supabase
+          .from('notes')
+          .select('*, subjects(id, name, color, description, icon)')
+          .eq('id', noteParam)
+          .single();
+        if (noteData) {
+          if (!subjectParam && noteData.subjects) {
+            const subject = subjectsData?.find((s: Subject) => s.id === noteData.subjects?.id);
+            if (subject) setSelectedSubject(subject);
           }
-          setActiveNote(note);
+          setActiveNote(noteData);
           setDetailsOpen(true);
         }
       }
 
-      // Clear URL params after processing
       if (subjectParam || noteParam) {
         setSearchParams({}, { replace: true });
       }
     };
-    fetchData();
+    fetchSubjects();
   }, [searchParams, setSearchParams]);
 
+  // Fetch notes only when a subject is selected
+  useEffect(() => {
+    if (!selectedSubject) {
+      setNotes([]);
+      return;
+    }
+    const fetchNotes = async () => {
+      const { data: notesData } = await supabase
+        .from('notes')
+        .select('*, subjects(id, name, color, description, icon)')
+        .eq('subject_id', selectedSubject.id)
+        .order('created_at', { ascending: false });
+      setNotes(notesData || []);
+    };
+    fetchNotes();
+  }, [selectedSubject]);
+
   const getNotesCount = (subjectId: string) => {
-    return notes.filter(note => note.subjects?.id === subjectId).length;
+    return noteCounts[subjectId] || 0;
   };
 
   const filteredNotes = notes.filter(note => {
-    const matchesSubject = selectedSubject && note.subjects?.id === selectedSubject.id;
     const matchesSearch = !searchQuery || 
       note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       note.description?.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSubject && matchesSearch;
+    return matchesSearch;
   });
 
   const handleDownload = async (note: Note) => {

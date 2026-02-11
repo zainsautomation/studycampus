@@ -50,6 +50,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [searchId, setSearchId] = useState(0);
   
   const debouncedQuery = useDebounce(query, 300);
 
@@ -75,6 +76,9 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
       setResults([]);
       return;
     }
+
+    const currentSearchId = searchId + 1;
+    setSearchId(currentSearchId);
 
     const searchContent = async () => {
       setIsLoading(true);
@@ -167,7 +171,13 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
           })));
         }
 
-        setResults(searchResults);
+        // Only update if this is still the latest search
+        setSearchId(prev => {
+          if (prev === currentSearchId) {
+            setResults(searchResults);
+          }
+          return prev;
+        });
       } catch (error) {
         console.error('Search error:', error);
       } finally {

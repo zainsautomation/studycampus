@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@500;600;700&display=swap');
+/* Google Fonts loaded via index.html <link> for non-render-blocking performance */
 
 /* Student Portal Design System - All colors in HSL */
 

@@ -9,7 +9,8 @@ import {
   User,
   Settings,
   ChevronRight,
-  HelpCircle
+  HelpCircle,
+  MoreHorizontal
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useAuth } from '@/hooks/useAuth';
@@ -31,7 +32,16 @@ export default function More() {
   return (
     <MainLayout>
       <div className="container px-4 py-6 md:py-8 max-w-lg mx-auto">
-        <h1 className="text-2xl font-bold mb-6">More</h1>
+        {/* Gradient Header */}
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-3 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20">
+            <MoreHorizontal className="w-6 h-6 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold">More</h1>
+            <p className="text-sm text-muted-foreground">Explore all features</p>
+          </div>
+        </div>
         
         <div className="space-y-2">
           {menuItems.map((item, index) => (
