@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Download, FileText, ChevronRight, BookOpen, ArrowLeft, ExternalLink, Copy, Check, Bookmark, Eye } from 'lucide-react';
@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
@@ -16,6 +17,8 @@ import { TagFilter } from '@/components/notes/TagFilter';
 import { useSavedNotes } from '@/hooks/useSavedNotes';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
+import { useQuery } from '@tanstack/react-query';
+import { useEffect } from 'react';
 
 interface Subject {
   id: string;
@@ -55,15 +58,40 @@ const itemVariants = {
   }
 };
 
+// Skeleton components for loading states
+const SubjectCardSkeleton = () => (
+  <Card className="overflow-hidden border-2 border-muted">
+    <CardContent className="p-6">
+      <Skeleton className="w-14 h-14 rounded-xl mb-4" />
+      <Skeleton className="h-5 w-3/4 mb-2" />
+      <Skeleton className="h-4 w-full mb-3" />
+      <Skeleton className="h-5 w-16 rounded-full" />
+    </CardContent>
+  </Card>
+);
+
+const NoteCardSkeleton = () => (
+  <Card className="h-full overflow-hidden">
+    <CardContent className="p-5">
+      <div className="flex items-start justify-between mb-4">
+        <Skeleton className="p-3 rounded-xl w-11 h-11" />
+        <Skeleton className="h-5 w-12 rounded-full" />
+      </div>
+      <Skeleton className="h-5 w-full mb-2" />
+      <Skeleton className="h-4 w-3/4 mb-4" />
+      <div className="flex items-center justify-between pt-4 border-t border-border">
+        <Skeleton className="h-3 w-24" />
+        <Skeleton className="h-8 w-20" />
+      </div>
+    </CardContent>
+  </Card>
+);
+
 export default function Notes() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [notes, setNotes] = useState<Note[]>([]);
-  const [subjects, setSubjects] = useState<Subject[]>([]);
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
   const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-  const [noteCounts, setNoteCounts] = useState<Record<string, number>>({});
   const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
   const { isNoteSaved, toggleSaveNote } = useSavedNotes();
   const { downloadsEnabled } = useAppSettings();
@@ -73,10 +101,76 @@ export default function Notes() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [activeNote, setActiveNote] = useState<Note | null>(null);
 
+  // Fetch subjects with note counts - cached by React Query
+  const { data: subjectsData, isLoading: subjectsLoading } = useQuery({
+    queryKey: ['subjects-with-counts'],
+    queryFn: async () => {
+      const [subjectsRes, notesRes] = await Promise.all([
+        supabase.from('subjects').select('*').order('name'),
+        supabase.from('notes').select('subject_id'),
+      ]);
+      const subjects = (subjectsRes.data || []) as Subject[];
+      const counts: Record<string, number> = {};
+      notesRes.data?.forEach(n => {
+        if (n.subject_id) counts[n.subject_id] = (counts[n.subject_id] || 0) + 1;
+      });
+      return { subjects, counts };
+    },
+  });
+
+  const subjects = subjectsData?.subjects || [];
+  const noteCounts = subjectsData?.counts || {};
+
+  // Fetch notes for selected subject - cached per subject
+  const { data: notes = [], isLoading: notesLoading } = useQuery({
+    queryKey: ['subject-notes', selectedSubject?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('notes')
+        .select('*, subjects(id, name, color, description, icon)')
+        .eq('subject_id', selectedSubject!.id)
+        .order('created_at', { ascending: false });
+      return (data || []) as Note[];
+    },
+    enabled: !!selectedSubject,
+  });
+
+  // Handle URL params for deep linking (one-time on mount)
+  useEffect(() => {
+    const subjectParam = searchParams.get('subject');
+    const noteParam = searchParams.get('note');
+    if (!subjectParam && !noteParam) return;
+    if (!subjectsData) return;
+
+    if (subjectParam) {
+      const subject = subjectsData.subjects.find(s => s.id === subjectParam);
+      if (subject) setSelectedSubject(subject);
+    }
+
+    if (noteParam) {
+      (async () => {
+        const { data: noteData } = await supabase
+          .from('notes')
+          .select('*, subjects(id, name, color, description, icon)')
+          .eq('id', noteParam)
+          .single();
+        if (noteData) {
+          if (!subjectParam && noteData.subjects) {
+            const subject = subjectsData.subjects.find(s => s.id === noteData.subjects?.id);
+            if (subject) setSelectedSubject(subject);
+          }
+          setActiveNote(noteData);
+          setDetailsOpen(true);
+        }
+      })();
+    }
+
+    setSearchParams({}, { replace: true });
+  }, [subjectsData, searchParams, setSearchParams]);
+
   const openDetails = (note: Note) => {
     setActiveNote(note);
     setDetailsOpen(true);
-    // Track this view
     trackView(note.id);
   };
 
@@ -100,84 +194,7 @@ export default function Notes() {
     }
   };
 
-  // Fetch subjects first, notes lazily when subject is selected
-  useEffect(() => {
-    const fetchSubjects = async () => {
-      const { data: subjectsData } = await supabase
-        .from('subjects')
-        .select('*')
-        .order('name');
-      setSubjects(subjectsData || []);
-
-      // Fetch note counts per subject
-      if (subjectsData && subjectsData.length > 0) {
-        const { data: allNotes } = await supabase
-          .from('notes')
-          .select('subject_id');
-        const counts: Record<string, number> = {};
-        allNotes?.forEach(n => {
-          if (n.subject_id) counts[n.subject_id] = (counts[n.subject_id] || 0) + 1;
-        });
-        setNoteCounts(counts);
-      }
-
-      setIsLoading(false);
-
-      // Handle URL params for deep linking
-      const subjectParam = searchParams.get('subject');
-      const noteParam = searchParams.get('note');
-
-      if (subjectParam && subjectsData) {
-        const subject = subjectsData.find((s: Subject) => s.id === subjectParam);
-        if (subject) {
-          setSelectedSubject(subject);
-        }
-      }
-
-      // If note param, we need to fetch that specific note for the dialog
-      if (noteParam) {
-        const { data: noteData } = await supabase
-          .from('notes')
-          .select('*, subjects(id, name, color, description, icon)')
-          .eq('id', noteParam)
-          .single();
-        if (noteData) {
-          if (!subjectParam && noteData.subjects) {
-            const subject = subjectsData?.find((s: Subject) => s.id === noteData.subjects?.id);
-            if (subject) setSelectedSubject(subject);
-          }
-          setActiveNote(noteData);
-          setDetailsOpen(true);
-        }
-      }
-
-      if (subjectParam || noteParam) {
-        setSearchParams({}, { replace: true });
-      }
-    };
-    fetchSubjects();
-  }, [searchParams, setSearchParams]);
-
-  // Fetch notes only when a subject is selected
-  useEffect(() => {
-    if (!selectedSubject) {
-      setNotes([]);
-      return;
-    }
-    const fetchNotes = async () => {
-      const { data: notesData } = await supabase
-        .from('notes')
-        .select('*, subjects(id, name, color, description, icon)')
-        .eq('subject_id', selectedSubject.id)
-        .order('created_at', { ascending: false });
-      setNotes(notesData || []);
-    };
-    fetchNotes();
-  }, [selectedSubject]);
-
-  const getNotesCount = (subjectId: string) => {
-    return noteCounts[subjectId] || 0;
-  };
+  const getNotesCount = (subjectId: string) => noteCounts[subjectId] || 0;
 
   const filteredNotes = notes.filter(note => {
     const matchesSearch = !searchQuery || 
@@ -189,8 +206,6 @@ export default function Notes() {
   const handleDownload = async (note: Note) => {
     if (note.file_url) {
       try {
-        // Extract bucket and path from the URL
-        // URL format: https://<project>.supabase.co/storage/v1/object/public/<bucket>/<path>
         const urlParts = note.file_url.split('/storage/v1/object/public/');
         if (urlParts.length === 2) {
           const pathParts = urlParts[1].split('/');
@@ -203,7 +218,6 @@ export default function Notes() {
           
           if (error) throw error;
           
-          // Create download link
           const url = URL.createObjectURL(data);
           const a = document.createElement('a');
           a.href = url;
@@ -213,7 +227,6 @@ export default function Notes() {
           document.body.removeChild(a);
           URL.revokeObjectURL(url);
         } else {
-          // Fallback for external URLs - force download
           const response = await fetch(note.file_url);
           const blob = await response.blob();
           const url = URL.createObjectURL(blob);
@@ -226,14 +239,12 @@ export default function Notes() {
           URL.revokeObjectURL(url);
         }
         
-        // Update download count
         await supabase
           .from('notes')
           .update({ download_count: (note.download_count || 0) + 1 })
           .eq('id', note.id);
       } catch (error) {
         console.error('Download failed:', error);
-        // Fallback: open in new tab
         window.open(note.file_url, '_blank');
       }
     }
@@ -243,22 +254,6 @@ export default function Notes() {
     setSelectedSubject(null);
     setSearchQuery('');
   };
-
-  if (isLoading) {
-    return (
-      <MainLayout>
-        <div className="container py-8">
-          <div className="flex items-center justify-center min-h-[400px]">
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-              className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full"
-            />
-          </div>
-        </div>
-      </MainLayout>
-    );
-  }
 
   return (
     <MainLayout>
@@ -291,7 +286,13 @@ export default function Notes() {
                 </motion.p>
               </div>
 
-              {subjects.length === 0 ? (
+              {subjectsLoading ? (
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <SubjectCardSkeleton key={i} />
+                  ))}
+                </div>
+              ) : subjects.length === 0 ? (
                 <Card>
                   <CardContent className="py-16 text-center">
                     <BookOpen className="w-16 h-16 mx-auto text-muted-foreground/50 mb-4" />
@@ -415,7 +416,13 @@ export default function Notes() {
                 <TagFilter selectedTagId={selectedTagId} onSelectTag={setSelectedTagId} />
               </motion.div>
 
-              {filteredNotes.length === 0 ? (
+              {notesLoading ? (
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <NoteCardSkeleton key={i} />
+                  ))}
+                </div>
+              ) : filteredNotes.length === 0 ? (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}

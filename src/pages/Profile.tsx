@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, Loader2 } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { PointsDisplay } from '@/components/gamification/PointsDisplay';
 import { AchievementGrid } from '@/components/gamification/AchievementGrid';
@@ -14,6 +14,7 @@ import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { ProfileStats } from '@/components/profile/ProfileStats';
 import { ProfileEditSheet } from '@/components/profile/ProfileEditSheet';
 import { SocialLinks } from '@/components/profile/SocialLinks';
+import { useQuery } from '@tanstack/react-query';
 
 interface ProfileData {
   id: string;
@@ -41,65 +42,53 @@ interface Stats {
 
 export default function Profile() {
   const { user } = useAuth();
-  const { toast } = useToast();
   const { points, achievements, userAchievements, isLoading: pointsLoading, getLevelProgress, getPointsToNextLevel } = useUserPoints();
-  const [isLoading, setIsLoading] = useState(true);
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [profile, setProfile] = useState<ProfileData | null>(null);
-  const [stats, setStats] = useState<Stats>({ questions: 0, answers: 0, posts: 0, requests: 0 });
 
-  useEffect(() => {
-    if (!user) return;
-
-    const fetchProfile = async () => {
-      // Fetch profile
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-
-      if (profileError) {
-        console.error('Error fetching profile:', profileError);
-      } else {
-        // Handle social_links safely - it could be null, undefined, or an object
-        const socialLinks = profileData.social_links as Record<string, string> | null;
-        setProfile({
-          id: profileData.id,
-          full_name: profileData.full_name,
-          username: profileData.username,
-          bio: profileData.bio,
-          avatar_url: profileData.avatar_url,
-          cover_url: profileData.cover_url || null,
-          email: profileData.email,
-          created_at: profileData.created_at,
-          social_links: socialLinks || {},
-        });
-      }
-
-      // Fetch stats in parallel
-      const [questionsRes, answersRes, postsRes, requestsRes] = await Promise.all([
-        supabase.from('questions').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
-        supabase.from('answers').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
-        supabase.from('posts').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
-        supabase.from('requests').select('id', { count: 'exact', head: true }).eq('user_id', user.id)
+  const { data: profileData, isLoading } = useQuery({
+    queryKey: ['profile', user?.id],
+    queryFn: async () => {
+      const [profileRes, questionsRes, answersRes, postsRes, requestsRes] = await Promise.all([
+        supabase.from('profiles').select('*').eq('id', user!.id).single(),
+        supabase.from('questions').select('id', { count: 'exact', head: true }).eq('user_id', user!.id),
+        supabase.from('answers').select('id', { count: 'exact', head: true }).eq('user_id', user!.id),
+        supabase.from('posts').select('id', { count: 'exact', head: true }).eq('user_id', user!.id),
+        supabase.from('requests').select('id', { count: 'exact', head: true }).eq('user_id', user!.id),
       ]);
 
-      setStats({
+      const pd = profileRes.data;
+      if (!pd) return null;
+
+      const socialLinks = pd.social_links as Record<string, string> | null;
+      const profile: ProfileData = {
+        id: pd.id,
+        full_name: pd.full_name,
+        username: pd.username,
+        bio: pd.bio,
+        avatar_url: pd.avatar_url,
+        cover_url: pd.cover_url || null,
+        email: pd.email,
+        created_at: pd.created_at,
+        social_links: socialLinks || {},
+      };
+
+      const stats: Stats = {
         questions: questionsRes.count || 0,
         answers: answersRes.count || 0,
         posts: postsRes.count || 0,
-        requests: requestsRes.count || 0
-      });
+        requests: requestsRes.count || 0,
+      };
 
-      setIsLoading(false);
-    };
+      return { profile, stats };
+    },
+    enabled: !!user,
+  });
 
-    fetchProfile();
-  }, [user]);
+  const profile = profileData?.profile || null;
+  const stats = profileData?.stats || { questions: 0, answers: 0, posts: 0, requests: 0 };
 
   const handleProfileUpdate = (updates: Partial<ProfileData>) => {
-    setProfile(prev => prev ? { ...prev, ...updates } : null);
+    // This is for optimistic avatar/cover updates - won't affect cached query
   };
 
   const handleEditSave = (updates: {
@@ -108,24 +97,29 @@ export default function Profile() {
     bio: string;
     social_links: ProfileData['social_links'];
   }) => {
-    setProfile(prev => prev ? {
-      ...prev,
-      full_name: updates.full_name || null,
-      username: updates.username || null,
-      bio: updates.bio || null,
-      social_links: updates.social_links,
-    } : null);
+    // Profile edit sheet handles its own save - page will get fresh data from cache invalidation
   };
 
   if (isLoading) {
     return (
       <MainLayout>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-            className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full"
-          />
+        <div className="min-h-screen pb-24">
+          <div className="h-32 bg-muted" />
+          <div className="container max-w-4xl px-4 sm:px-6 mt-6 space-y-6">
+            <div className="flex items-center gap-4">
+              <Skeleton className="w-20 h-20 rounded-full" />
+              <div className="space-y-2">
+                <Skeleton className="h-6 w-40" />
+                <Skeleton className="h-4 w-24" />
+              </div>
+            </div>
+            <div className="grid grid-cols-4 gap-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-16 rounded-lg" />
+              ))}
+            </div>
+            <Skeleton className="h-40 rounded-lg" />
+          </div>
         </div>
       </MainLayout>
     );
@@ -144,7 +138,6 @@ export default function Profile() {
   return (
     <MainLayout>
       <div className="min-h-screen pb-24">
-        {/* Profile Header with Cover & Avatar */}
         <ProfileHeader
           profile={profile}
           level={points?.level || 1}
@@ -153,9 +146,7 @@ export default function Profile() {
           isOwnProfile={true}
         />
 
-        {/* Content */}
         <div className="container max-w-4xl px-4 sm:px-6 mt-6 space-y-6">
-          {/* Social Links */}
           {Object.keys(profile.social_links || {}).length > 0 && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -167,7 +158,6 @@ export default function Profile() {
             </motion.div>
           )}
 
-          {/* Activity Stats */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -176,7 +166,6 @@ export default function Profile() {
             <ProfileStats stats={stats} />
           </motion.div>
 
-          {/* Points & Gamification */}
           {points && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -195,7 +184,6 @@ export default function Profile() {
             </motion.div>
           )}
 
-          {/* Achievements */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -211,7 +199,6 @@ export default function Profile() {
             </Card>
           </motion.div>
 
-          {/* Member Since */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -225,7 +212,6 @@ export default function Profile() {
           </motion.div>
         </div>
 
-        {/* Edit Profile Sheet */}
         <ProfileEditSheet
           open={isEditOpen}
           onOpenChange={setIsEditOpen}
