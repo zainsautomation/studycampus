@@ -41,7 +41,7 @@ interface Stats {
 }
 
 export default function Profile() {
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const { points, achievements, userAchievements, isLoading: pointsLoading, getLevelProgress, getPointsToNextLevel } = useUserPoints();
   const [isEditOpen, setIsEditOpen] = useState(false);
 
@@ -100,7 +100,7 @@ export default function Profile() {
     // Profile edit sheet handles its own save - page will get fresh data from cache invalidation
   };
 
-  if (isLoading) {
+  if (isLoading || authLoading) {
     return (
       <MainLayout>
         <div className="min-h-screen pb-24">
