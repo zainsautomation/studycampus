@@ -12,28 +12,30 @@
  import { ProtectedRoute } from "@/components/ProtectedRoute";
  import { Loader2 } from "lucide-react";
  
- // Lazy load all pages for code splitting
- const Auth = lazy(() => import("./pages/Auth"));
- const Dashboard = lazy(() => import("./pages/Dashboard"));
- const Notes = lazy(() => import("./pages/Notes"));
- const SavedNotes = lazy(() => import("./pages/SavedNotes"));
- const Announcements = lazy(() => import("./pages/Announcements"));
- const Updates = lazy(() => import("./pages/Updates"));
- const NotFound = lazy(() => import("./pages/NotFound"));
- const QandA = lazy(() => import("./pages/QandA"));
- const QuestionDetail = lazy(() => import("./pages/QuestionDetail"));
- const Posts = lazy(() => import("./pages/Posts"));
- const Requests = lazy(() => import("./pages/Requests"));
- const Profile = lazy(() => import("./pages/Profile"));
- const PublicProfile = lazy(() => import("./pages/PublicProfile"));
- const Leaderboard = lazy(() => import("./pages/Leaderboard"));
- const More = lazy(() => import("./pages/More"));
- const GoogleDriveCallback = lazy(() => import("./pages/GoogleDriveCallback"));
- const MCQ = lazy(() => import("./pages/MCQ"));
- const MCQSubject = lazy(() => import("./pages/MCQSubject"));
- const MCQTest = lazy(() => import("./pages/MCQTest"));
- const MCQAttempt = lazy(() => import("./pages/MCQAttempt"));
- const MCQResult = lazy(() => import("./pages/MCQResult"));
+// Eagerly import main tab pages for instant navigation
+import Dashboard from "./pages/Dashboard";
+import Notes from "./pages/Notes";
+import Posts from "./pages/Posts";
+import MCQ from "./pages/MCQ";
+import More from "./pages/More";
+
+// Lazy load secondary pages
+const Auth = lazy(() => import("./pages/Auth"));
+const SavedNotes = lazy(() => import("./pages/SavedNotes"));
+const Announcements = lazy(() => import("./pages/Announcements"));
+const Updates = lazy(() => import("./pages/Updates"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const QandA = lazy(() => import("./pages/QandA"));
+const QuestionDetail = lazy(() => import("./pages/QuestionDetail"));
+const Requests = lazy(() => import("./pages/Requests"));
+const Profile = lazy(() => import("./pages/Profile"));
+const PublicProfile = lazy(() => import("./pages/PublicProfile"));
+const Leaderboard = lazy(() => import("./pages/Leaderboard"));
+const GoogleDriveCallback = lazy(() => import("./pages/GoogleDriveCallback"));
+const MCQSubject = lazy(() => import("./pages/MCQSubject"));
+const MCQTest = lazy(() => import("./pages/MCQTest"));
+const MCQAttempt = lazy(() => import("./pages/MCQAttempt"));
+const MCQResult = lazy(() => import("./pages/MCQResult"));
  
  // Admin pages - lazy loaded
  const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
