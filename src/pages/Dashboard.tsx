@@ -40,7 +40,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
 
   const { data, isLoading } = useQuery({
-    queryKey: ['dashboard-data'],
+    queryKey: ['dashboard-data', user?.id ?? 'guest'],
     queryFn: async () => {
       const [announcementsRes, notesRes, updatesRes, announcementsCount, notesCount] = await Promise.all([
         supabase.from('announcements').select('*').order('is_pinned', { ascending: false }).order('created_at', { ascending: false }).limit(3),
