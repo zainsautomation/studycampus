@@ -82,27 +82,48 @@ export default function MCQ() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
               >
-                <Link to={`/mcq/subject/${subject.id}`}>
-                  <Card className="group hover:shadow-lg transition-all duration-300 border-border/50 bg-card/50 backdrop-blur-sm overflow-hidden">
+                {subject.testCount > 0 ? (
+                  <Link to={`/mcq/subject/${subject.id}`}>
+                    <Card className="group hover:shadow-lg transition-all duration-300 border-border/50 bg-card/50 backdrop-blur-sm overflow-hidden">
+                      <CardContent className="p-4 flex items-center gap-4">
+                        <div 
+                          className="w-12 h-12 rounded-xl flex items-center justify-center text-white"
+                          style={{ backgroundColor: subject.color || '#2563EB' }}
+                        >
+                          <BookOpen className="w-6 h-6" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">
+                            {subject.name}
+                          </h3>
+                          <p className="text-sm text-muted-foreground">
+                            {subject.testCount} {subject.testCount === 1 ? 'test' : 'tests'} available
+                          </p>
+                        </div>
+                        <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                      </CardContent>
+                    </Card>
+                  </Link>
+                ) : (
+                  <Card className="border-border/50 bg-card/30 opacity-60 cursor-not-allowed">
                     <CardContent className="p-4 flex items-center gap-4">
                       <div 
-                        className="w-12 h-12 rounded-xl flex items-center justify-center text-white"
+                        className="w-12 h-12 rounded-xl flex items-center justify-center text-white/70"
                         style={{ backgroundColor: subject.color || '#2563EB' }}
                       >
                         <BookOpen className="w-6 h-6" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">
+                        <h3 className="font-semibold text-muted-foreground">
                           {subject.name}
                         </h3>
                         <p className="text-sm text-muted-foreground">
-                          {subject.testCount} {subject.testCount === 1 ? 'test' : 'tests'} available
+                          No tests available yet
                         </p>
                       </div>
-                      <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
                     </CardContent>
                   </Card>
-                </Link>
+                )}
               </motion.div>
             ))}
           </div>

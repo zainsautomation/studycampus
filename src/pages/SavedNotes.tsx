@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Download, FileText, Bookmark, ExternalLink, Copy, Check, BookOpen } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -6,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
@@ -50,40 +52,28 @@ const itemVariants = {
 
 export default function SavedNotes() {
   const { user } = useAuth();
-  const { savedNoteIds, toggleSaveNote, isNoteSaved } = useSavedNotes();
+  const { savedNoteIds, toggleSaveNote, isNoteSaved, isLoading: savedLoading } = useSavedNotes();
   const { downloadsEnabled } = useAppSettings();
-  const [notes, setNotes] = useState<Note[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
   const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [activeNote, setActiveNote] = useState<Note | null>(null);
 
-  useEffect(() => {
-    if (!user || savedNoteIds.size === 0) {
-      setNotes([]);
-      setIsLoading(false);
-      return;
-    }
-
-    const fetchSavedNotes = async () => {
+  const { data: notes = [], isLoading } = useQuery({
+    queryKey: ['saved-notes-details', Array.from(savedNoteIds).sort().join(',')],
+    queryFn: async () => {
       const noteIdsArray = Array.from(savedNoteIds);
+      if (noteIdsArray.length === 0) return [];
       const { data, error } = await supabase
         .from('notes')
         .select('*, subjects(id, name, color, description, icon)')
         .in('id', noteIdsArray)
         .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching notes:', error);
-      } else {
-        setNotes(data || []);
-      }
-      setIsLoading(false);
-    };
-
-    fetchSavedNotes();
-  }, [user, savedNoteIds]);
+      if (error) throw error;
+      return (data || []) as Note[];
+    },
+    enabled: !!user && savedNoteIds.size > 0 && !savedLoading,
+  });
 
   const openDetails = (note: Note) => {
     setActiveNote(note);
@@ -160,16 +150,21 @@ export default function SavedNotes() {
     );
   });
 
-  if (isLoading) {
+  if (isLoading || savedLoading) {
     return (
       <MainLayout>
-        <div className="container py-8">
-          <div className="flex items-center justify-center min-h-[400px]">
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-              className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full"
-            />
+        <div className="container py-6 md:py-8 space-y-6">
+          <div className="flex items-center gap-3">
+            <Skeleton className="w-12 h-12 rounded-xl" />
+            <div>
+              <Skeleton className="h-7 w-32 mb-1" />
+              <Skeleton className="h-4 w-20" />
+            </div>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-48 rounded-xl" />
+            ))}
           </div>
         </div>
       </MainLayout>

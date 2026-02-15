@@ -175,6 +175,7 @@ export function Header() {
               whileTap={{ scale: 0.95 }}
               onClick={toggleTheme}
               className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
+              aria-label={`Switch to ${resolvedTheme === 'dark' ? 'light' : 'dark'} mode`}
             >
               <motion.div
                 initial={false}
