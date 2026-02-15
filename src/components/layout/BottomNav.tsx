@@ -51,6 +51,7 @@ export function BottomNav() {
                 <Link
                   key={item.href}
                   to={item.href}
+                  aria-label={`Navigate to ${item.label}`}
                   className="relative flex flex-col items-center justify-center flex-1 h-full tap-highlight-transparent"
                 >
                   <motion.div

@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { GraduationCap, Mail, Lock, User, KeyRound, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { GraduationCap, Mail, Lock, User, KeyRound, Eye, EyeOff, Loader2, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { z } from 'zod';
 
 const loginSchema = z.object({
@@ -25,6 +26,8 @@ export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmailSent, setResetEmailSent] = useState(false);
   
   // Form fields
   const [email, setEmail] = useState('');
@@ -35,6 +38,30 @@ export default function Auth() {
   const { signIn, signUp } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) {
+      toast({ title: 'Please enter your email', variant: 'destructive' });
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth`,
+      });
+      if (error) {
+        toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      } else {
+        setResetEmailSent(true);
+        toast({ title: 'Check your email', description: 'A password reset link has been sent.' });
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Something went wrong.', variant: 'destructive' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,6 +155,46 @@ export default function Auth() {
 
         {/* Form Card */}
         <div className="bg-card rounded-2xl border border-border p-6 shadow-lg">
+          {showForgotPassword ? (
+            <>
+              <button
+                onClick={() => { setShowForgotPassword(false); setResetEmailSent(false); }}
+                className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Back to sign in
+              </button>
+              <h2 className="text-lg font-semibold mb-1">Reset Password</h2>
+              <p className="text-sm text-muted-foreground mb-4">
+                {resetEmailSent
+                  ? 'Check your inbox for a password reset link.'
+                  : 'Enter your email and we\'ll send you a reset link.'}
+              </p>
+              {!resetEmailSent && (
+                <form onSubmit={handleForgotPassword} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="resetEmail">Email</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        id="resetEmail"
+                        type="email"
+                        placeholder="you@example.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+                    Send Reset Link
+                  </Button>
+                </form>
+              )}
+            </>
+          ) : (
+          <>
           {/* Tab Switcher */}
           <div className="flex bg-muted rounded-lg p-1 mb-6">
             <button
@@ -194,7 +261,18 @@ export default function Auth() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Password</Label>
+                {isLogin && (
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotPassword(true)}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Forgot password?
+                  </button>
+                )}
+              </div>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
@@ -224,7 +302,7 @@ export default function Auth() {
                   exit={{ opacity: 0, height: 0 }}
                   className="space-y-2"
                 >
-                  <Label htmlFor="inviteCode">Invite Code</Label>
+          <Label htmlFor="inviteCode">Invite Code</Label>
                   <div className="relative">
                     <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
@@ -234,9 +312,10 @@ export default function Auth() {
                       value={inviteCode}
                       onChange={(e) => setInviteCode(e.target.value)}
                       className="pl-10"
+                      aria-describedby="inviteCodeHelp"
                     />
                   </div>
-                  <p className="text-xs text-muted-foreground">
+                  <p id="inviteCodeHelp" className="text-xs text-muted-foreground">
                     Get the invite code from your class admin
                   </p>
                 </motion.div>
@@ -254,6 +333,8 @@ export default function Auth() {
               {isLogin ? 'Sign In' : 'Create Account'}
             </Button>
           </form>
+          </>
+          )}
         </div>
 
         <p className="text-center text-sm text-muted-foreground mt-6">
