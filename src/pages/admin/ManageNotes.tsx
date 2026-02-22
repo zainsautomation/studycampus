@@ -952,6 +952,7 @@ export default function ManageNotes() {
           createFolder={googleDrive.createFolder}
           currentFolderId={formData.custom_folder_id}
           currentFolderName={formData.custom_folder_name}
+          excludeFolderIds={googleDriveDefaultFolderId ? [googleDriveDefaultFolderId] : []}
         />
 
         {/* Bulk Action Bar */}

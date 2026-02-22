@@ -29,6 +29,7 @@ interface FolderPickerProps {
   createFolder: (name: string, parentId: string) => Promise<string | null>;
   currentFolderId?: string | null;
   currentFolderName?: string | null;
+  excludeFolderIds?: string[];
 }
 
 interface BreadcrumbItem {
@@ -44,6 +45,7 @@ export function FolderPicker({
   createFolder,
   currentFolderId,
   currentFolderName,
+  excludeFolderIds = [],
 }: FolderPickerProps) {
   const [folders, setFolders] = useState<Folder[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -66,7 +68,11 @@ export function FolderPicker({
     setIsLoading(true);
     try {
       const result = await listFolders(parentId);
-      setFolders(result);
+      // Filter out excluded folders (e.g., default storage folder)
+      const filtered = excludeFolderIds.length > 0
+        ? result.filter(f => !excludeFolderIds.includes(f.id))
+        : result;
+      setFolders(filtered);
     } catch (error) {
       console.error('Failed to load folders:', error);
     } finally {
