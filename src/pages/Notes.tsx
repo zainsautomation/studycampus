@@ -317,10 +317,15 @@ export default function Notes() {
                         transition={{ duration: 0.2 }}
                       >
                         <Card 
-                          className="cursor-pointer overflow-hidden group transition-shadow hover:shadow-lg border-2"
+                          className="cursor-pointer overflow-hidden group transition-all hover:shadow-lg border-2 relative"
                           style={{ borderColor: `${subject.color}20` }}
                           onClick={() => setSelectedSubject(subject)}
                         >
+                          {/* Subtle gradient header */}
+                          <div 
+                            className="h-1 w-full"
+                            style={{ background: `linear-gradient(90deg, ${subject.color}, ${subject.color}40)` }}
+                          />
                           <CardContent className="p-6">
                             <div className="flex items-start justify-between">
                               <div 
@@ -454,7 +459,8 @@ export default function Notes() {
                       transition={{ duration: 0.2 }}
                     >
                       <Card
-                        className="h-full overflow-hidden group cursor-pointer"
+                        className="h-full overflow-hidden group cursor-pointer transition-all hover:shadow-md border-l-[3px]"
+                        style={{ borderLeftColor: `${selectedSubject.color}60` }}
                         onClick={() => openDetails(note)}
                       >
                         <CardContent className="p-5">
@@ -501,9 +507,17 @@ export default function Notes() {
                             </p>
                           )}
                           <div className="flex items-center justify-between pt-4 border-t border-border">
-                            <span className="text-xs text-muted-foreground">
-                              {format(new Date(note.created_at), 'MMM dd, yyyy')}
-                            </span>
+                            <div className="flex items-center gap-3">
+                              <span className="text-xs text-muted-foreground">
+                                {format(new Date(note.created_at), 'MMM dd, yyyy')}
+                              </span>
+                              {(note.download_count ?? 0) > 0 && (
+                                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                  <Download className="w-3 h-3" />
+                                  {note.download_count}
+                                </span>
+                              )}
+                            </div>
                             <div className="flex items-center gap-1">
                               {note.link_url && (
                                 <>
