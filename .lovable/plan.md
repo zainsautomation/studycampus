@@ -1,61 +1,60 @@
 
 
-# Fix: Admin Sidebar Reloads on Every Page Navigation
+# Fix Missing MCQ in Desktop Nav + Optimize Page Loading
 
-## Problem
+## Problem 1: MCQ Missing from Desktop Header
 
-Every admin page is lazy-loaded and individually wraps itself in `<AdminLayout>`. The single `<Suspense>` boundary sits above all routes in `App.tsx`. When navigating between admin pages:
+The desktop header shows the first 5 items from `navItems` array (`slice(0, 5)`): Dashboard, Notes, Saved, Announcements, Updates. MCQ is not in the array at all -- it only exists in the mobile BottomNav.
 
-1. React suspends while loading the new lazy chunk
-2. The `<PageLoader>` fallback (full-screen spinner) replaces **everything**, including the sidebar
-3. When the chunk loads, `AdminLayout` + sidebar re-mount from scratch with entry animations
+**Fix:** Add MCQ to `navItems` in `Header.tsx` and reorder so the 5 visible items are the most important ones. Move secondary items to "More" dropdown.
 
-This causes the sidebar to flash/reload on every admin navigation.
+New visible items: **Dashboard, Notes, MCQ Tests, Posts, Announcements**
+Moved to "More": Saved, Updates, Q&A, Requests, Leaderboard
 
-## Solution
+### File: `src/components/layout/Header.tsx`
+- Import `FileQuestion` icon from lucide-react
+- Add MCQ to `navItems` array and reorder priority
+- Adjust `slice(0, 5)` items to show the right 5
 
-Create a **persistent admin layout route** that renders `AdminLayout` once, with a nested `<Suspense>` boundary only around the page content. Admin child pages stop wrapping themselves in `AdminLayout`.
+---
 
-### Architecture Change
+## Problem 2: Pages Load Too Slowly (All-at-once fetching)
 
-```text
-BEFORE:
-  <Suspense fallback={PageLoader}>      ← covers everything
-    <Route path="/admin" element={<AdminDashboard />} />  ← each has <AdminLayout>
-    <Route path="/admin/notes" element={<ManageNotes />} />
+Currently, **Posts, Q&A, Requests, and Announcements** all fetch every record at once with `useQuery`. For growing datasets this gets slower over time.
 
-AFTER:
-  <Route path="/admin" element={<AdminLayoutRoute />}>   ← persistent layout
-    <Route index element={<AdminDashboard />} />          ← content only
-    <Route path="notes" element={<ManageNotes />} />
-  </Route>
-```
+**Fix:** Convert these pages to use `useInfiniteQuery` with scroll-based pagination (infinite scroll), loading ~10-15 items at a time. As the user scrolls to the bottom, more items load automatically.
 
-### Steps
+### Pages to convert to infinite scroll:
 
-1. **Create `AdminLayoutRoute` wrapper** -- A new component that renders `AdminLayout` with an `<Outlet>` inside a local `<Suspense>` boundary. The suspense fallback is a small content-area spinner (not full-page).
+| Page | Current | Change |
+|------|---------|--------|
+| **Posts** (`Posts.tsx`) | Fetches all posts | `useInfiniteQuery` + `.range()` + scroll sentinel |
+| **Q&A** (`QandA.tsx`) | Fetches all questions | `useInfiniteQuery` + `.range()` + scroll sentinel |
+| **Requests** (`Requests.tsx`) | Fetches all requests | `useInfiniteQuery` + `.range()` + scroll sentinel |
+| **Announcements** (`Announcements.tsx`) | Fetches all announcements | `useInfiniteQuery` + `.range()` + scroll sentinel |
 
-2. **Update `App.tsx` routing** -- Replace flat admin routes with nested routes under a single `/admin` parent that uses `AdminLayoutRoute` as its element.
+### Technical approach (same pattern for all 4 pages):
 
-3. **Update `AdminLayout`** -- Accept `children` as before, no changes needed (the Outlet will pass content as children... actually we'll render Outlet inside AdminLayout).
+1. Replace `useQuery` with `useInfiniteQuery`
+2. Use Supabase `.range(offset, offset + PAGE_SIZE - 1)` for pagination
+3. Add an `IntersectionObserver` on a sentinel `<div>` after the last item
+4. When sentinel is visible, call `fetchNextPage()`
+5. Flatten data with `data.pages.flatMap(p => p)` for rendering
+6. Show a small spinner at the bottom while loading more
+7. Page size: 10 items per batch
 
-4. **Remove `<AdminLayout>` wrapper from every admin page** (13 files):
-   - `AdminDashboard.tsx`, `ManageNotes.tsx`, `ManageMCQ.tsx`, `ManageAnnouncements.tsx`, `ManageUpdates.tsx`, `ManageSubjects.tsx`, `ManageUsers.tsx`, `Analytics.tsx`, `ActivityLog.tsx`, `ManageQandA.tsx`, `ManagePosts.tsx`, `ManageRequests.tsx`, `Moderation.tsx`
-   - Each page will just return its content directly; `title` and `description` will be passed via the layout route or kept inline.
+### Also: Eagerly import Announcements
 
-5. **Handle page titles** -- Since `AdminLayout` needs `title`/`description` per page, create a lightweight approach: either use `<Outlet context>` or have each page render its own title header while the layout only provides the sidebar + scrollable container.
+Since Announcements is in the top 5 nav items, it should be eagerly imported in `App.tsx` (like Dashboard, Notes, Posts, MCQ) to avoid the lazy-load spinner.
 
-### Recommended approach for titles
+---
 
-Simplest: Split `AdminLayout` so it only provides the sidebar + main scroll container. Each page keeps its own title/description header inline. This avoids complex context passing.
+## Files to modify
 
-### Files to modify
-- `src/App.tsx` -- Nested admin routes
-- `src/components/admin/AdminLayout.tsx` -- Remove title props, use `<Outlet>`
-- All 13 admin page files -- Remove `<AdminLayout>` wrapper, keep title inline
-
-### Result
-- Sidebar stays mounted and never re-renders on navigation
-- Only the content area shows a loading spinner during lazy chunk loads
-- Entry animations on sidebar only play once on initial admin visit
+1. `src/components/layout/Header.tsx` -- Add MCQ, reorder nav items
+2. `src/App.tsx` -- Eagerly import Announcements
+3. `src/pages/Posts.tsx` -- Infinite scroll
+4. `src/pages/QandA.tsx` -- Infinite scroll
+5. `src/pages/Requests.tsx` -- Infinite scroll
+6. `src/pages/Announcements.tsx` -- Infinite scroll
 
