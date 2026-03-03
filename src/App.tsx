@@ -22,7 +22,7 @@ import More from "./pages/More";
 // Lazy load secondary pages
 const Auth = lazy(() => import("./pages/Auth"));
 const SavedNotes = lazy(() => import("./pages/SavedNotes"));
-const Announcements = lazy(() => import("./pages/Announcements"));
+import Announcements from "./pages/Announcements";
 const Updates = lazy(() => import("./pages/Updates"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const QandA = lazy(() => import("./pages/QandA"));

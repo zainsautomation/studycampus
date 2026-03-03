@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useRef, useCallback, useEffect } from "react";
+import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { PostCard } from "@/components/posts/PostCard";
@@ -7,7 +7,7 @@ import { PostForm } from "@/components/posts/PostForm";
 import { PostsDisabledBanner } from "@/components/posts/PostsDisabledBanner";
 import { CategoryFilter, PostCategory } from "@/components/posts/CategoryFilter";
 import { CardSkeleton } from "@/components/ui/shimmer-skeleton";
-import { MessageSquare, Sparkles } from "lucide-react";
+import { MessageSquare, Sparkles, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useAppSettings } from "@/hooks/useAppSettings";
@@ -24,22 +24,20 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+const PAGE_SIZE = 10;
+
 // Helper function to extract Google Drive file ID from URL
 const extractGoogleDriveFileId = (url: string): string | null => {
   if (!url) return null;
-  
-  // Handle various Google Drive URL formats
   const patterns = [
-    /\/d\/([a-zA-Z0-9_-]+)/,           // /d/FILE_ID format
-    /id=([a-zA-Z0-9_-]+)/,              // id=FILE_ID format
-    /\/file\/d\/([a-zA-Z0-9_-]+)/,     // /file/d/FILE_ID format
+    /\/d\/([a-zA-Z0-9_-]+)/,
+    /id=([a-zA-Z0-9_-]+)/,
+    /\/file\/d\/([a-zA-Z0-9_-]+)/,
   ];
-  
   for (const pattern of patterns) {
     const match = url.match(pattern);
     if (match) return match[1];
   }
-  
   return null;
 };
 
@@ -52,15 +50,17 @@ export default function Posts() {
   const [selectedCategory, setSelectedCategory] = useState<PostCategory>('all');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [postToDelete, setPostToDelete] = useState<{ id: string; imageUrl: string | null } | null>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
-  const { data: posts, isLoading } = useQuery({
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
     queryKey: ['posts', selectedCategory],
-    queryFn: async () => {
+    queryFn: async ({ pageParam = 0 }) => {
       let query = supabase
         .from('posts')
         .select(`*`)
         .order('is_pinned', { ascending: false })
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .range(pageParam, pageParam + PAGE_SIZE - 1);
       
       if (selectedCategory !== 'all') {
         query = query.eq('category', selectedCategory);
@@ -83,13 +83,36 @@ export default function Posts() {
         return data?.map(post => ({
           ...post,
           profiles: post.is_anonymous ? null : profileMap.get(post.user_id) || null
-        }));
+        })) || [];
       }
       
-      return data?.map(post => ({ ...post, profiles: null }));
+      return data?.map(post => ({ ...post, profiles: null })) || [];
     },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) =>
+      lastPage.length === PAGE_SIZE ? allPages.length * PAGE_SIZE : undefined,
     enabled: postsEnabled,
   });
+
+  const posts = data?.pages.flatMap(p => p) ?? [];
+
+  // IntersectionObserver for infinite scroll
+  const observerCallback = useCallback(
+    (entries: IntersectionObserverEntry[]) => {
+      if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+        fetchNextPage();
+      }
+    },
+    [hasNextPage, isFetchingNextPage, fetchNextPage]
+  );
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(observerCallback, { threshold: 0.1 });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [observerCallback]);
 
   const { data: userLikes } = useQuery({
     queryKey: ['post-likes', user?.id],
@@ -157,9 +180,7 @@ export default function Posts() {
 
   const deletePost = useMutation({
     mutationFn: async ({ postId, imageUrl }: { postId: string; imageUrl: string | null }) => {
-      // Always delete image from storage if it exists
       if (imageUrl) {
-        // Check if it's a Supabase storage URL
         if (imageUrl.includes('supabase') && imageUrl.includes('/post-images/')) {
           try {
             const urlParts = imageUrl.split('/post-images/');
@@ -170,23 +191,14 @@ export default function Posts() {
           } catch (storageError) {
             console.error('Failed to delete image from storage:', storageError);
           }
-        }
-        // Check if it's a Google Drive URL
-        else if (imageUrl.includes('drive.google.com') || imageUrl.includes('googleapis.com')) {
+        } else if (imageUrl.includes('drive.google.com') || imageUrl.includes('googleapis.com')) {
           const fileId = extractGoogleDriveFileId(imageUrl);
           if (fileId && googleDrive.isSignedIn) {
             try {
-              // Use the Google Drive API to delete the file
-              await window.gapi.client.drive.files.delete({
-                fileId: fileId,
-              });
-              console.log('[GoogleDrive] Successfully deleted file:', fileId);
+              await window.gapi.client.drive.files.delete({ fileId });
             } catch (driveError) {
               console.error('Failed to delete image from Google Drive:', driveError);
-              // Don't throw error, continue with post deletion
             }
-          } else if (fileId && !googleDrive.isSignedIn) {
-            console.warn('[GoogleDrive] Cannot delete file - not signed in to Google Drive');
           }
         }
       }
@@ -209,10 +221,7 @@ export default function Posts() {
 
   const confirmDelete = () => {
     if (postToDelete) {
-      deletePost.mutate({
-        postId: postToDelete.id,
-        imageUrl: postToDelete.imageUrl,
-      });
+      deletePost.mutate({ postId: postToDelete.id, imageUrl: postToDelete.imageUrl });
     }
   };
 
@@ -220,11 +229,7 @@ export default function Posts() {
     return (
       <MainLayout>
         <div className="container px-4 py-6 md:py-8 space-y-6">
-          <motion.div 
-            className="flex items-center gap-3"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
+          <motion.div className="flex items-center gap-3" initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
             <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5">
               <MessageSquare className="h-6 w-6 text-primary" />
             </div>
@@ -242,12 +247,7 @@ export default function Posts() {
   return (
     <MainLayout>
       <div className="container px-4 py-6 md:py-8 space-y-5">
-        {/* Header */}
-        <motion.div 
-          className="flex items-center gap-3"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
+        <motion.div className="flex items-center gap-3" initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
           <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5">
             <MessageSquare className="h-6 w-6 text-primary" />
           </div>
@@ -257,13 +257,8 @@ export default function Posts() {
           </div>
         </motion.div>
 
-        {/* Post Form */}
         {postCreationEnabled && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-          >
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
             <PostForm
               onSubmit={(content, isAnonymous, category, imageUrl) => createPost.mutate({ content, isAnonymous, category, imageUrl })}
               isSubmitting={createPost.isPending}
@@ -272,43 +267,25 @@ export default function Posts() {
           </motion.div>
         )}
 
-        {/* Category Filter */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.15 }}
-        >
-          <CategoryFilter 
-            selectedCategory={selectedCategory} 
-            onSelectCategory={setSelectedCategory} 
-          />
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }}>
+          <CategoryFilter selectedCategory={selectedCategory} onSelectCategory={setSelectedCategory} />
         </motion.div>
 
-        {/* Posts List */}
         {isLoading ? (
           <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <CardSkeleton key={i} />
-            ))}
+            {[1, 2, 3].map((i) => (<CardSkeleton key={i} />))}
           </div>
-        ) : posts?.length === 0 ? (
-          <motion.div 
-            className="text-center py-16 px-4"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2 }}
-          >
+        ) : posts.length === 0 ? (
+          <motion.div className="text-center py-16 px-4" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }}>
             <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
               <Sparkles className="h-8 w-8 text-primary" />
             </div>
             <h3 className="text-lg font-semibold mb-2">No posts yet</h3>
-            <p className="text-muted-foreground max-w-sm mx-auto">
-              Be the first to share something with your classmates!
-            </p>
+            <p className="text-muted-foreground max-w-sm mx-auto">Be the first to share something with your classmates!</p>
           </motion.div>
         ) : (
           <div className="space-y-4">
-            {posts?.map((post) => (
+            {posts.map((post) => (
               <PostCard
                 key={post.id}
                 post={post}
@@ -320,10 +297,12 @@ export default function Posts() {
                 onDelete={() => handleDeleteClick(post.id, post.image_url)}
               />
             ))}
+            <div ref={sentinelRef} className="flex justify-center py-4">
+              {isFetchingNextPage && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />}
+            </div>
           </div>
         )}
 
-        {/* Delete Confirmation Dialog */}
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -334,11 +313,7 @@ export default function Posts() {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction 
-                onClick={confirmDelete}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                disabled={deletePost.isPending}
-              >
+              <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90" disabled={deletePost.isPending}>
                 {deletePost.isPending ? "Deleting..." : "Delete"}
               </AlertDialogAction>
             </AlertDialogFooter>
