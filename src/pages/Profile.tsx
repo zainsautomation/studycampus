@@ -45,7 +45,7 @@ export default function Profile() {
   const { points, achievements, userAchievements, isLoading: pointsLoading, getLevelProgress, getPointsToNextLevel } = useUserPoints();
   const [isEditOpen, setIsEditOpen] = useState(false);
 
-  const { data: profileData, isLoading } = useQuery({
+  const { data: profileData, isLoading, isPending } = useQuery({
     queryKey: ['profile', user?.id],
     queryFn: async () => {
       const [profileRes, questionsRes, answersRes, postsRes, requestsRes] = await Promise.all([
@@ -100,7 +100,7 @@ export default function Profile() {
     // Profile edit sheet handles its own save - page will get fresh data from cache invalidation
   };
 
-  if (isLoading || authLoading) {
+  if (isLoading || authLoading || (isPending && !!user)) {
     return (
       <MainLayout>
         <div className="min-h-screen pb-24">
