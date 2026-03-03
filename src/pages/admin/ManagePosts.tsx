@@ -65,6 +65,7 @@ export default function ManagePosts() {
   const queryClient = useQueryClient();
   const { 
     postsEnabled, 
+    postCreationEnabled,
     postImagesStorageType,
     postImagesGoogleDriveFolderId,
     updateSetting 
@@ -157,6 +158,17 @@ export default function ManagePosts() {
       {
         onSuccess: () => {
           toast({ title: `Posts ${!postsEnabled ? 'enabled' : 'disabled'}` });
+        },
+      }
+    );
+  };
+
+  const togglePostCreation = () => {
+    updateSetting.mutate(
+      { key: 'post_creation_enabled', value: !postCreationEnabled },
+      {
+        onSuccess: () => {
+          toast({ title: `Post creation ${!postCreationEnabled ? 'enabled' : 'disabled'}` });
         },
       }
     );
@@ -273,7 +285,19 @@ export default function ManagePosts() {
             </CardContent>
           </Card>
 
-          <div className="flex items-center justify-end">
+          <div className="flex items-center justify-end gap-3 flex-wrap">
+            {postsEnabled && (
+              <div className="flex items-center space-x-2 p-3 rounded-lg bg-muted/50 border">
+                <Switch
+                  id="post-creation"
+                  checked={postCreationEnabled}
+                  onCheckedChange={togglePostCreation}
+                />
+                <Label htmlFor="post-creation" className="text-sm">
+                  New Posts {postCreationEnabled ? 'Allowed' : 'Blocked'}
+                </Label>
+              </div>
+            )}
             <div className="flex items-center space-x-2 p-3 rounded-lg bg-muted/50 border">
               <Switch
                 id="posts-enabled"

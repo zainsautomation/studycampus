@@ -262,6 +262,19 @@ export function AdminSidebar() {
                   onCheckedChange={(checked) => updateSetting.mutate({ key: 'posts_enabled', value: checked })}
                 />
               </div>
+              {settings.posts_enabled && (
+                <div className="flex items-center justify-between pl-6">
+                  <Label htmlFor="post-creation-toggle" className="text-xs flex items-center gap-2 cursor-pointer text-muted-foreground">
+                    New Posts
+                  </Label>
+                  <Switch
+                    id="post-creation-toggle"
+                    checked={settings.post_creation_enabled}
+                    onCheckedChange={(checked) => updateSetting.mutate({ key: 'post_creation_enabled', value: checked })}
+                    className="scale-90"
+                  />
+                </div>
+              )}
               <div className="flex items-center justify-between">
                 <Label htmlFor="qa-toggle" className="text-sm flex items-center gap-2 cursor-pointer">
                   <HelpCircle className="h-3.5 w-3.5" />
