@@ -1,0 +1,1 @@
+ALTER TABLE mcq_tests ADD COLUMN results_revealed boolean NOT NULL DEFAULT false;

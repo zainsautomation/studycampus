@@ -62,6 +62,8 @@ interface MCQTestWithStats {
   is_published: boolean;
   time_limit_mins: number | null;
   created_at: string;
+  result_visibility: string;
+  results_revealed: boolean;
   subject: { name: string } | null;
   questionCount: number;
   attemptCount: number;
@@ -83,6 +85,8 @@ function useAdminMCQTests(subjectFilter: string, searchQuery: string) {
           time_limit_mins,
           created_at,
           subject_id,
+          result_visibility,
+          results_revealed,
           subjects (name),
           mcq_questions (id)
         `)
@@ -124,6 +128,8 @@ function useAdminMCQTests(subjectFilter: string, searchQuery: string) {
         is_published: t.is_published,
         time_limit_mins: t.time_limit_mins,
         created_at: t.created_at,
+        result_visibility: (t as any).result_visibility || 'instant',
+        results_revealed: (t as any).results_revealed || false,
         subject: t.subjects ? { name: (t.subjects as any).name } : null,
         questionCount: t.mcq_questions?.length || 0,
         attemptCount: statsMap.get(t.id)?.count || 0,
@@ -174,6 +180,23 @@ export default function ManageMCQ() {
     },
     onError: (error: any) => {
       toast.error(error.message || 'Failed to update test');
+    },
+  });
+
+  const toggleReveal = useMutation({
+    mutationFn: async ({ testId, revealed }: { testId: string; revealed: boolean }) => {
+      const { error } = await supabase
+        .from('mcq_tests')
+        .update({ results_revealed: revealed } as any)
+        .eq('id', testId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-mcq-tests'] });
+      toast.success('Results visibility updated');
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to update');
     },
   });
 
@@ -258,6 +281,11 @@ export default function ManageMCQ() {
                           <Badge variant="outline">
                             {test.test_mode === 'exam' ? 'Exam' : 'Practice'}
                           </Badge>
+                          {test.result_visibility === 'delayed' && (
+                            <Badge variant="outline" className={test.results_revealed ? 'border-green-500/50 text-green-600' : 'border-yellow-500/50 text-yellow-600'}>
+                              {test.results_revealed ? 'Answers Revealed' : 'Answers Pending'}
+                            </Badge>
+                          )}
                         </div>
                         <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
                           {test.subject && <span>{test.subject.name}</span>}
@@ -315,6 +343,26 @@ export default function ManageMCQ() {
                               </>
                             )}
                           </DropdownMenuItem>
+                          {test.result_visibility === 'delayed' && (
+                            <DropdownMenuItem
+                              onClick={() => toggleReveal.mutate({
+                                testId: test.id,
+                                revealed: !test.results_revealed,
+                              })}
+                            >
+                              {test.results_revealed ? (
+                                <>
+                                  <EyeOff className="w-4 h-4 mr-2" />
+                                  Hide Answers
+                                </>
+                              ) : (
+                                <>
+                                  <Eye className="w-4 h-4 mr-2" />
+                                  Reveal Answers
+                                </>
+                              )}
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuSeparator />
                           <DropdownMenuItem 
                             onClick={() => setDeleteTestId(test.id)}

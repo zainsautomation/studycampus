@@ -554,6 +554,7 @@ export type Database = {
           id: string
           is_published: boolean
           result_visibility: string
+          results_revealed: boolean
           retake_allowed: boolean
           shuffle_options: boolean
           shuffle_questions: boolean
@@ -571,6 +572,7 @@ export type Database = {
           id?: string
           is_published?: boolean
           result_visibility?: string
+          results_revealed?: boolean
           retake_allowed?: boolean
           shuffle_options?: boolean
           shuffle_questions?: boolean
@@ -588,6 +590,7 @@ export type Database = {
           id?: string
           is_published?: boolean
           result_visibility?: string
+          results_revealed?: boolean
           retake_allowed?: boolean
           shuffle_options?: boolean
           shuffle_questions?: boolean

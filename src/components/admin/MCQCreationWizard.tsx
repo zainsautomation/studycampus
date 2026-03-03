@@ -460,7 +460,7 @@ export function MCQCreationWizard({ testId, onClose }: MCQCreationWizardProps) {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="instant">Instant (show immediately)</SelectItem>
-                      <SelectItem value="delayed">Delayed (admin reveals later)</SelectItem>
+                      <SelectItem value="delayed">Delayed (score shown, answers revealed by you later)</SelectItem>
                       <SelectItem value="hidden">Hidden (never show answers)</SelectItem>
                     </SelectContent>
                   </Select>
