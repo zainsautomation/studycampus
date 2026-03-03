@@ -1,78 +1,61 @@
 
 
-# MCQ Result Visibility -- Audit and Improvements
+# Fix: Admin Sidebar Reloads on Every Page Navigation
 
-## Current State
+## Problem
 
-The system has three result visibility modes: `instant`, `delayed`, and `hidden`.
+Every admin page is lazy-loaded and individually wraps itself in `<AdminLayout>`. The single `<Suspense>` boundary sits above all routes in `App.tsx`. When navigating between admin pages:
 
-**Issues found:**
+1. React suspends while loading the new lazy chunk
+2. The `<PageLoader>` fallback (full-screen spinner) replaces **everything**, including the sidebar
+3. When the chunk loads, `AdminLayout` + sidebar re-mount from scratch with entry animations
 
-1. **"Delayed" mode has no reveal mechanism.** It currently behaves identically to "instant" -- students can see correct answers immediately after submission. There is no admin-controlled toggle to reveal results later. This defeats the purpose of "delayed" visibility.
+This causes the sidebar to flash/reload on every admin navigation.
 
-2. **Score is always visible.** Even in "hidden" mode, the score percentage, correct/incorrect count are shown. Only the answer review is hidden. This may be intentional but could be improved with clearer distinction.
+## Solution
 
-3. **No "score only" mode.** There's no option to show score but hide correct answers -- which is what "delayed" should do before reveal.
+Create a **persistent admin layout route** that renders `AdminLayout` once, with a nested `<Suspense>` boundary only around the page content. Admin child pages stop wrapping themselves in `AdminLayout`.
 
-4. **The "delayed" badge on test info page says "Answers hidden"** only for hidden mode. Delayed mode has no badge explaining when answers will be available.
+### Architecture Change
 
----
+```text
+BEFORE:
+  <Suspense fallback={PageLoader}>      ← covers everything
+    <Route path="/admin" element={<AdminDashboard />} />  ← each has <AdminLayout>
+    <Route path="/admin/notes" element={<ManageNotes />} />
 
-## Plan
-
-### 1. Add `results_revealed` column to `mcq_tests`
-
-Add a boolean column `results_revealed` (default `false`) to `mcq_tests`. This controls whether "delayed" mode tests show the review tab.
-
-- `instant`: Always show review (ignore `results_revealed`)
-- `delayed`: Show review only when `results_revealed = true`; otherwise show score only with a message "Answers will be revealed by the instructor"
-- `hidden`: Never show review
-
-### 2. Update MCQResult page logic
-
-Change line 136 from:
-```
-const showReview = test?.result_visibility === 'instant' || test?.result_visibility === 'delayed';
-```
-To:
-```
-const showReview = test?.result_visibility === 'instant' || 
-  (test?.result_visibility === 'delayed' && test?.results_revealed === true);
+AFTER:
+  <Route path="/admin" element={<AdminLayoutRoute />}>   ← persistent layout
+    <Route index element={<AdminDashboard />} />          ← content only
+    <Route path="notes" element={<ManageNotes />} />
+  </Route>
 ```
 
-Add an info banner when `delayed` and not yet revealed: "The instructor will reveal correct answers later."
+### Steps
 
-### 3. Add "Reveal Results" toggle in Admin ManageMCQ
+1. **Create `AdminLayoutRoute` wrapper** -- A new component that renders `AdminLayout` with an `<Outlet>` inside a local `<Suspense>` boundary. The suspense fallback is a small content-area spinner (not full-page).
 
-Add a new dropdown menu item for tests with `result_visibility === 'delayed'`:
-- "Reveal Answers" / "Hide Answers" toggle that updates `results_revealed`
-- Show a badge on delayed tests indicating revealed/unrevealed status
+2. **Update `App.tsx` routing** -- Replace flat admin routes with nested routes under a single `/admin` parent that uses `AdminLayoutRoute` as its element.
 
-### 4. Update MCQTest info page
+3. **Update `AdminLayout`** -- Accept `children` as before, no changes needed (the Outlet will pass content as children... actually we'll render Outlet inside AdminLayout).
 
-- Add a badge for delayed mode: "Answers revealed later" or "Answers available" depending on `results_revealed`
-- Keep existing badges for instant/hidden
+4. **Remove `<AdminLayout>` wrapper from every admin page** (13 files):
+   - `AdminDashboard.tsx`, `ManageNotes.tsx`, `ManageMCQ.tsx`, `ManageAnnouncements.tsx`, `ManageUpdates.tsx`, `ManageSubjects.tsx`, `ManageUsers.tsx`, `Analytics.tsx`, `ActivityLog.tsx`, `ManageQandA.tsx`, `ManagePosts.tsx`, `ManageRequests.tsx`, `Moderation.tsx`
+   - Each page will just return its content directly; `title` and `description` will be passed via the layout route or kept inline.
 
-### 5. Update MCQCreationWizard
+5. **Handle page titles** -- Since `AdminLayout` needs `title`/`description` per page, create a lightweight approach: either use `<Outlet context>` or have each page render its own title header while the layout only provides the sidebar + scrollable container.
 
-- Add helper text under the "Delayed" option explaining: "Score shown immediately, correct answers revealed by you later"
-- Reset `results_revealed` to `false` when creating a new test
+### Recommended approach for titles
 
----
+Simplest: Split `AdminLayout` so it only provides the sidebar + main scroll container. Each page keeps its own title/description header inline. This avoids complex context passing.
 
-## Technical Details
+### Files to modify
+- `src/App.tsx` -- Nested admin routes
+- `src/components/admin/AdminLayout.tsx` -- Remove title props, use `<Outlet>`
+- All 13 admin page files -- Remove `<AdminLayout>` wrapper, keep title inline
 
-### Database Migration
-```sql
-ALTER TABLE mcq_tests 
-ADD COLUMN results_revealed boolean NOT NULL DEFAULT false;
-```
-
-### Files to modify:
-1. **New migration** -- Add `results_revealed` column
-2. **`src/pages/MCQResult.tsx`** -- Update `showReview` logic, add "answers not yet revealed" banner
-3. **`src/pages/MCQTest.tsx`** -- Update badges for delayed mode
-4. **`src/pages/admin/ManageMCQ.tsx`** -- Add "Reveal/Hide Answers" action in dropdown
-5. **`src/hooks/useMCQAttempt.tsx`** -- Add `results_revealed` to `MCQTest` interface
-6. **`src/components/admin/MCQCreationWizard.tsx`** -- Add helper description text for delayed mode
+### Result
+- Sidebar stays mounted and never re-renders on navigation
+- Only the content area shows a loading spinner during lazy chunk loads
+- Entry animations on sidebar only play once on initial admin visit
 
