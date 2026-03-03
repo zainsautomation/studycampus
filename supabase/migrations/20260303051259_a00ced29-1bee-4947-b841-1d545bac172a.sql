@@ -1,0 +1,1 @@
+UPDATE mcq_tests SET subject_id = 'c8ade3ac-bef6-4340-83bc-7a3d1c6c325e' WHERE id = '65899b5d-fca6-4e1d-a475-51146ae2bfdd' AND subject_id IS NULL;
