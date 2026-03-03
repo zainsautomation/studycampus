@@ -37,7 +37,7 @@ import { GlobalSearch } from '@/components/search/GlobalSearch';
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/notes', label: 'Notes', icon: BookOpen },
-  { href: '/mcq', label: 'MCQ Tests', icon: FileQuestion },
+  { href: '/mcq', label: 'MCQ', icon: FileQuestion },
   { href: '/posts', label: 'Posts', icon: MessageSquare },
   { href: '/announcements', label: 'Announcements', icon: Megaphone },
   // Below items go into "More" dropdown
