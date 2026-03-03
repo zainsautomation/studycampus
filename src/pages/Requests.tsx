@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useRef, useCallback, useEffect } from "react";
+import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { RequestCard } from "@/components/requests/RequestCard";
@@ -7,11 +7,13 @@ import { RequestForm } from "@/components/requests/RequestForm";
 import { RequestCardSkeleton } from "@/components/ui/shimmer-skeleton";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, GitPullRequest } from "lucide-react";
+import { Plus, GitPullRequest, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
+
+const PAGE_SIZE = 10;
 
 export default function Requests() {
   const { user } = useAuth();
@@ -21,14 +23,16 @@ export default function Requests() {
   
   const [formOpen, setFormOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
-  const { data: requests, isLoading } = useQuery({
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
     queryKey: ['requests', activeTab],
-    queryFn: async () => {
+    queryFn: async ({ pageParam = 0 }) => {
       let query = supabase
         .from('requests')
         .select(`*`)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .range(pageParam, pageParam + PAGE_SIZE - 1);
 
       if (activeTab === "mine") {
         query = query.eq('user_id', user?.id);
@@ -36,10 +40,33 @@ export default function Requests() {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data;
+      return data || [];
     },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) =>
+      lastPage.length === PAGE_SIZE ? allPages.length * PAGE_SIZE : undefined,
     enabled: !!user?.id,
   });
+
+  const requests = data?.pages.flatMap(p => p) ?? [];
+
+  // IntersectionObserver
+  const observerCallback = useCallback(
+    (entries: IntersectionObserverEntry[]) => {
+      if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+        fetchNextPage();
+      }
+    },
+    [hasNextPage, isFetchingNextPage, fetchNextPage]
+  );
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(observerCallback, { threshold: 0.1 });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [observerCallback]);
 
   const { data: userUpvotes } = useQuery({
     queryKey: ['request-upvotes', user?.id],
@@ -145,26 +172,21 @@ export default function Requests() {
     if (isLoading) {
       return (
         <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
-            <RequestCardSkeleton key={i} />
-          ))}
+          {[1, 2, 3].map((i) => (<RequestCardSkeleton key={i} />))}
         </div>
       );
     }
 
-    if (requests?.length === 0) {
+    if (requests.length === 0) {
       return (
         <div className="text-center py-12">
           <GitPullRequest className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-lg font-medium mb-2">No requests yet</h3>
           <p className="text-muted-foreground mb-4">
-            {activeTab === "mine" 
-              ? "You haven't submitted any requests yet" 
-              : "Be the first to submit a request!"}
+            {activeTab === "mine" ? "You haven't submitted any requests yet" : "Be the first to submit a request!"}
           </p>
           <Button onClick={() => setFormOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            New Request
+            <Plus className="h-4 w-4 mr-2" />New Request
           </Button>
         </div>
       );
@@ -172,7 +194,7 @@ export default function Requests() {
 
     return (
       <div className="space-y-4">
-        {requests?.map((request) => (
+        {requests.map((request) => (
           <RequestCard
             key={request.id}
             request={request}
@@ -181,6 +203,9 @@ export default function Requests() {
             onUpvote={() => upvoteRequest.mutate(request.id)}
           />
         ))}
+        <div ref={sentinelRef} className="flex justify-center py-4">
+          {isFetchingNextPage && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />}
+        </div>
       </div>
     );
   }

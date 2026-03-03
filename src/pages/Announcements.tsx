@@ -1,23 +1,56 @@
+import { useRef, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Megaphone, Pin } from 'lucide-react';
+import { Megaphone, Pin, Loader2 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
+
+const PAGE_SIZE = 10;
 
 interface Announcement { id: string; title: string; content: string; priority: string; is_pinned: boolean; created_at: string; }
 
 export default function Announcements() {
-  const { data: announcements = [], isLoading } = useQuery({
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
     queryKey: ['announcements'],
-    queryFn: async () => {
-      const { data } = await supabase.from('announcements').select('*').order('is_pinned', { ascending: false }).order('created_at', { ascending: false });
+    queryFn: async ({ pageParam = 0 }) => {
+      const { data } = await supabase
+        .from('announcements')
+        .select('*')
+        .order('is_pinned', { ascending: false })
+        .order('created_at', { ascending: false })
+        .range(pageParam, pageParam + PAGE_SIZE - 1);
       return (data || []) as Announcement[];
     },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) =>
+      lastPage.length === PAGE_SIZE ? allPages.length * PAGE_SIZE : undefined,
   });
+
+  const announcements = data?.pages.flatMap(p => p) ?? [];
+
+  // IntersectionObserver for infinite scroll
+  const observerCallback = useCallback(
+    (entries: IntersectionObserverEntry[]) => {
+      if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+        fetchNextPage();
+      }
+    },
+    [hasNextPage, isFetchingNextPage, fetchNextPage]
+  );
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(observerCallback, { threshold: 0.1 });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [observerCallback]);
 
   const getPriorityStyles = (priority: string) => {
     switch (priority) {
@@ -75,6 +108,10 @@ export default function Announcements() {
                   </motion.div>
                 );
               })}
+              {/* Sentinel + loading spinner */}
+              <div ref={sentinelRef} className="flex justify-center py-4">
+                {isFetchingNextPage && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />}
+              </div>
             </div>
           )}
         </motion.div>

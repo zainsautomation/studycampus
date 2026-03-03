@@ -17,7 +17,9 @@ import {
   HelpCircle,
   MessageSquare,
   GitPullRequest,
-  Search
+  Search,
+  FileQuestion,
+  Trophy
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
@@ -35,11 +37,13 @@ import { GlobalSearch } from '@/components/search/GlobalSearch';
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/notes', label: 'Notes', icon: BookOpen },
-  { href: '/saved-notes', label: 'Saved', icon: Bookmark },
+  { href: '/mcq', label: 'MCQ Tests', icon: FileQuestion },
+  { href: '/posts', label: 'Posts', icon: MessageSquare },
   { href: '/announcements', label: 'Announcements', icon: Megaphone },
+  // Below items go into "More" dropdown
+  { href: '/saved-notes', label: 'Saved', icon: Bookmark },
   { href: '/updates', label: 'Updates', icon: Calendar },
   { href: '/qa', label: 'Q&A', icon: HelpCircle },
-  { href: '/posts', label: 'Posts', icon: MessageSquare },
   { href: '/requests', label: 'Requests', icon: GitPullRequest },
 ];
 
@@ -136,7 +140,7 @@ export function Header() {
                   ))}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => navigate('/leaderboard')}>
-                    <User className="w-4 h-4 mr-2" />
+                    <Trophy className="w-4 h-4 mr-2" />
                     Leaderboard
                   </DropdownMenuItem>
                 </DropdownMenuContent>
