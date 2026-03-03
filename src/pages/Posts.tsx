@@ -47,7 +47,7 @@ export default function Posts() {
   const { user, isAdmin } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { postsEnabled, anonymousPostsEnabled } = useAppSettings();
+  const { postsEnabled, anonymousPostsEnabled, postCreationEnabled } = useAppSettings();
   const googleDrive = useGoogleDriveContext();
   const [selectedCategory, setSelectedCategory] = useState<PostCategory>('all');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -258,17 +258,19 @@ export default function Posts() {
         </motion.div>
 
         {/* Post Form */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <PostForm
-            onSubmit={(content, isAnonymous, category, imageUrl) => createPost.mutate({ content, isAnonymous, category, imageUrl })}
-            isSubmitting={createPost.isPending}
-            anonymousEnabled={anonymousPostsEnabled}
-          />
-        </motion.div>
+        {postCreationEnabled && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+          >
+            <PostForm
+              onSubmit={(content, isAnonymous, category, imageUrl) => createPost.mutate({ content, isAnonymous, category, imageUrl })}
+              isSubmitting={createPost.isPending}
+              anonymousEnabled={anonymousPostsEnabled}
+            />
+          </motion.div>
+        )}
 
         {/* Category Filter */}
         <motion.div
