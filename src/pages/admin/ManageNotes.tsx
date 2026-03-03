@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Pencil, Trash2, Upload, FileText, X, Link, Download, Cloud, Database, Settings2, FolderOpen, Tag } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { AdminLayout } from '@/components/admin/AdminLayout';
+import { AdminPageHeader } from '@/components/admin/AdminLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -490,7 +490,8 @@ export default function ManageNotes() {
   };
 
   return (
-    <AdminLayout title="Manage Notes" description="Upload and manage study materials">
+    <>
+      <AdminPageHeader title="Manage Notes" description="Upload and manage study materials" />
       <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-6">
         {/* Tabs for Notes and Settings */}
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'notes' | 'settings')} className="w-full">
@@ -1057,6 +1058,6 @@ export default function ManageNotes() {
           </AlertDialogContent>
         </AlertDialog>
       </motion.div>
-    </AdminLayout>
+    </>
   );
 }

@@ -12,7 +12,7 @@ import {
   Download,
   Search,
 } from 'lucide-react';
-import { AdminLayout } from '@/components/admin/AdminLayout';
+import { AdminPageHeader } from '@/components/admin/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -152,7 +152,8 @@ export default function ActivityLog() {
   };
 
   return (
-    <AdminLayout title="Activity Log" description="View all activity across the platform">
+    <>
+      <AdminPageHeader title="Activity Log" description="View all activity across the platform" />
       <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-6">
         {/* Filters */}
         <motion.div variants={itemVariants}>
@@ -254,6 +255,6 @@ export default function ActivityLog() {
           </Card>
         </motion.div>
       </motion.div>
-    </AdminLayout>
+    </>
   );
 }

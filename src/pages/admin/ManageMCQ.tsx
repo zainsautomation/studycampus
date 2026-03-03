@@ -13,7 +13,7 @@ import {
   Users,
   BarChart3
 } from 'lucide-react';
-import { AdminLayout } from '@/components/admin/AdminLayout';
+import { AdminPageHeader } from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -219,7 +219,8 @@ export default function ManageMCQ() {
   });
 
   return (
-    <AdminLayout title="MCQ Tests" description="Create and manage MCQ tests">
+    <>
+      <AdminPageHeader title="MCQ Tests" description="Create and manage MCQ tests" />
       <div className="space-y-6">
         <div className="flex items-center justify-end">
           <Button onClick={() => setIsCreating(true)} className="gap-2">
@@ -442,6 +443,6 @@ export default function ManageMCQ() {
           </SheetContent>
         </Sheet>
       </div>
-    </AdminLayout>
+    </>
   );
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Copy, Trash2, Users, Ticket, CheckCircle, XCircle, Eye, EyeOff } from 'lucide-react';
-import { AdminLayout } from '@/components/admin/AdminLayout';
+import { AdminPageHeader } from '@/components/admin/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -120,7 +120,8 @@ export default function ManageUsers() {
   };
 
   return (
-    <AdminLayout title="User Management" description="Manage invite codes and students">
+    <>
+      <AdminPageHeader title="User Management" description="Manage invite codes and students" />
       <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-6">
         <motion.div variants={itemVariants}>
           <Tabs defaultValue="codes" className="space-y-6">
@@ -298,6 +299,6 @@ export default function ManageUsers() {
           </Tabs>
         </motion.div>
       </motion.div>
-    </AdminLayout>
+    </>
   );
 }

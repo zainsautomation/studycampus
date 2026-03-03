@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { AdminLayout } from '@/components/admin/AdminLayout';
+import { AdminPageHeader } from '@/components/admin/AdminLayout';
 import { useAnalyticsData } from '@/hooks/useAnalyticsData';
 import { AnalyticsStatCards } from '@/components/admin/analytics/AnalyticsStatCards';
 import { TopNotesCharts } from '@/components/admin/analytics/TopNotesCharts';
@@ -24,7 +24,8 @@ export default function Analytics() {
   } = useAnalyticsData();
 
   return (
-    <AdminLayout title="Analytics" description="Platform engagement and performance insights">
+    <>
+      <AdminPageHeader title="Analytics" description="Platform engagement and performance insights" />
       {isLoading ? (
         <div className="space-y-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -57,6 +58,6 @@ export default function Analytics() {
           />
         </motion.div>
       )}
-    </AdminLayout>
+    </>
   );
 }
