@@ -251,7 +251,7 @@ export default function MCQAttempt() {
         </AnimatePresence>
 
         {/* Question Navigator (dots) */}
-        <div className="flex flex-wrap justify-center gap-2 mt-6">
+        <div className="flex flex-wrap justify-center gap-2 mt-6 mb-24 md:mb-16">
           {questions.map((q, idx) => (
             <button
               key={q.id}
