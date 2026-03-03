@@ -284,6 +284,11 @@ export default function MCQTest() {
                 {test.result_visibility === 'instant' && (
                   <Badge variant="outline">Instant results</Badge>
                 )}
+                {test.result_visibility === 'delayed' && (
+                  <Badge variant="outline">
+                    {(test as any).results_revealed ? 'Answers available' : 'Answers revealed later'}
+                  </Badge>
+                )}
                 {test.result_visibility === 'hidden' && (
                   <Badge variant="outline">Answers hidden</Badge>
                 )}

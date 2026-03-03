@@ -133,7 +133,9 @@ export default function MCQResult() {
     );
   }
 
-  const showReview = test?.result_visibility === 'instant' || test?.result_visibility === 'delayed';
+  const showReview = test?.result_visibility === 'instant' || 
+    (test?.result_visibility === 'delayed' && test?.results_revealed === true);
+  const isDelayedUnrevealed = test?.result_visibility === 'delayed' && !test?.results_revealed;
 
   return (
     <MainLayout>
@@ -162,6 +164,15 @@ export default function MCQResult() {
         >
           {test?.title} - Results
         </motion.h1>
+
+        {/* Delayed unrevealed banner */}
+        {isDelayedUnrevealed && (
+          <div className="mb-6 p-4 rounded-lg bg-muted/50 border border-border/50 text-center">
+            <p className="text-sm text-muted-foreground">
+              📋 The instructor will reveal correct answers later.
+            </p>
+          </div>
+        )}
 
         {showReview ? (
           <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TabValue)} className="space-y-6">

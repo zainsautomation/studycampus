@@ -30,6 +30,7 @@ interface MCQTest {
   shuffle_questions: boolean;
   shuffle_options: boolean;
   result_visibility: string;
+  results_revealed: boolean;
   retake_allowed: boolean;
   subject_id: string | null;
 }
