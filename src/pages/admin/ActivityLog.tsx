@@ -72,12 +72,15 @@ export default function ActivityLog() {
       ...(announcements.data || []).map((a) => ({ ...a, type: 'announcement' as const })),
       ...(updates.data || []).map((u) => ({ ...u, type: 'update' as const })),
       ...(questions.data || []).map((q) => ({ ...q, type: 'question' as const })),
-      ...(posts.data || []).map((p) => ({
-        id: p.id,
-        title: p.content.slice(0, 60) + (p.content.length > 60 ? '...' : ''),
-        created_at: p.created_at,
-        type: 'post' as const,
-      })),
+      ...(posts.data || []).map((p) => {
+        const cleanContent = p.content.replace(/<[^>]*>/g, '').trim();
+        return {
+          id: p.id,
+          title: cleanContent.slice(0, 60) + (cleanContent.length > 60 ? '...' : ''),
+          created_at: p.created_at,
+          type: 'post' as const,
+        };
+      }),
       ...(requests.data || []).map((r) => ({ ...r, type: 'request' as const })),
     ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 

@@ -132,7 +132,7 @@ export function AdminSidebar() {
       variants={sidebarVariants}
       initial="hidden"
       animate="visible"
-      className="hidden lg:flex w-64 flex-col border-r border-border bg-card/50 backdrop-blur-sm min-h-screen sticky top-0"
+      className="hidden lg:flex w-64 flex-col border-r border-border bg-card/50 backdrop-blur-sm h-screen sticky top-0 overflow-hidden"
     >
       {/* Logo/Brand */}
       <div className="p-4 border-b border-border">
