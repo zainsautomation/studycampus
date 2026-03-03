@@ -250,58 +250,60 @@ export default function MCQAttempt() {
           </motion.div>
         </AnimatePresence>
 
-        {/* Question Navigator (dots) */}
-        <div className="flex flex-wrap justify-center gap-2 mt-6 mb-24 md:mb-16">
-          {questions.map((q, idx) => (
-            <button
-              key={q.id}
-              onClick={() => setCurrentIndex(idx)}
-              className={cn(
-                "w-8 h-8 rounded-full text-xs font-medium transition-all",
-                idx === currentIndex && "ring-2 ring-primary ring-offset-2 ring-offset-background",
-                answers[q.id] ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-              )}
-            >
-              {idx + 1}
-            </button>
-          ))}
-        </div>
-
-        {/* Navigation */}
-        <div className="fixed bottom-20 md:bottom-6 left-0 right-0 px-4">
-          <div className="max-w-2xl mx-auto flex items-center gap-3 p-3 bg-background/95 backdrop-blur-lg border border-border rounded-2xl shadow-lg">
-            <Button
-              variant="outline"
-              onClick={() => setCurrentIndex(i => Math.max(0, i - 1))}
-              disabled={currentIndex === 0}
-              className="gap-1"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              Prev
-            </Button>
-            
-            <div className="flex-1 text-center text-sm text-muted-foreground">
-              {currentIndex + 1} / {questions.length}
+        {/* Navigation - fixed bottom bar with question dots */}
+        <div className="fixed bottom-20 md:bottom-6 left-0 right-0 px-4 z-30">
+          <div className="max-w-2xl mx-auto bg-background/95 backdrop-blur-lg border border-border rounded-2xl shadow-lg overflow-hidden">
+            {/* Question Navigator (dots) */}
+            <div className="flex flex-wrap justify-center gap-1.5 px-3 pt-3 pb-2">
+              {questions.map((q, idx) => (
+                <button
+                  key={q.id}
+                  onClick={() => setCurrentIndex(idx)}
+                  className={cn(
+                    "w-7 h-7 rounded-full text-xs font-medium transition-all",
+                    idx === currentIndex && "ring-2 ring-primary ring-offset-1 ring-offset-background",
+                    answers[q.id] ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                  )}
+                >
+                  {idx + 1}
+                </button>
+              ))}
             </div>
-
-            {currentIndex < questions.length - 1 ? (
+            {/* Prev / Next buttons */}
+            <div className="flex items-center gap-3 p-3 pt-1">
               <Button
-                onClick={() => setCurrentIndex(i => Math.min(questions.length - 1, i + 1))}
+                variant="outline"
+                onClick={() => setCurrentIndex(i => Math.max(0, i - 1))}
+                disabled={currentIndex === 0}
                 className="gap-1"
               >
-                Next
-                <ChevronRight className="w-4 h-4" />
+                <ChevronLeft className="w-4 h-4" />
+                Prev
               </Button>
-            ) : (
-              <Button
-                onClick={() => setShowSubmitDialog(true)}
-                variant="default"
-                className="gap-1 bg-green-600 hover:bg-green-700"
-              >
-                <Flag className="w-4 h-4" />
-                Submit
-              </Button>
-            )}
+              
+              <div className="flex-1 text-center text-sm text-muted-foreground">
+                {currentIndex + 1} / {questions.length}
+              </div>
+
+              {currentIndex < questions.length - 1 ? (
+                <Button
+                  onClick={() => setCurrentIndex(i => Math.min(questions.length - 1, i + 1))}
+                  className="gap-1"
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => setShowSubmitDialog(true)}
+                  variant="default"
+                  className="gap-1 bg-green-600 hover:bg-green-700"
+                >
+                  <Flag className="w-4 h-4" />
+                  Submit
+                </Button>
+              )}
+            </div>
           </div>
         </div>
 
