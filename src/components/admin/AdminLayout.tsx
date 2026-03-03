@@ -19,9 +19,9 @@ export function AdminLayout({ children, title, description }: AdminLayoutProps) 
   const showDriveWarning = isConfigured && !isSignedIn;
 
   return (
-    <div className="min-h-screen flex w-full bg-background">
+    <div className="h-screen flex w-full bg-background overflow-hidden">
       <AdminSidebar />
-      <div className="flex-1 flex flex-col min-h-screen min-w-0">
+      <div className="flex-1 flex flex-col h-screen min-w-0 overflow-hidden">
         <AdminMobileNav />
         
         {/* Google Drive Status Banner - only show if not connected */}
