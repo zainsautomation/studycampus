@@ -1,60 +1,52 @@
+# Redesign: User Management Page
 
+The current page is functional but plain — raw tables with minimal visual hierarchy. Here's a polished redesign plan:
 
-# Fix Missing MCQ in Desktop Nav + Optimize Page Loading
+## Changes to `src/pages/admin/ManageUsers.tsx`
 
-## Problem 1: MCQ Missing from Desktop Header
+### 1. Add Stat Cards at Top
 
-The desktop header shows the first 5 items from `navItems` array (`slice(0, 5)`): Dashboard, Notes, Saved, Announcements, Updates. MCQ is not in the array at all -- it only exists in the mobile BottomNav.
+Add summary stat cards above the tabs showing:
 
-**Fix:** Add MCQ to `navItems` in `Header.tsx` and reorder so the 5 visible items are the most important ones. Move secondary items to "More" dropdown.
+- **Total Students** count with Users icon
+- **Active Invite Codes** count with Ticket icon  
+- **Total Code Uses** (sum of current_uses) with CheckCircle icon
 
-New visible items: **Dashboard, Notes, MCQ Tests, Posts, Announcements**
-Moved to "More": Saved, Updates, Q&A, Requests, Leaderboard
+Cards use `bg-card border border-border/50 rounded-xl` with icon accent colors, matching the existing admin analytics card pattern.
 
-### File: `src/components/layout/Header.tsx`
-- Import `FileQuestion` icon from lucide-react
-- Add MCQ to `navItems` array and reorder priority
-- Adjust `slice(0, 5)` items to show the right 5
+### 2. Improve Tabs Styling
 
----
+- Center the tabs and make them wider (`max-w-lg mx-auto`)
+- Add subtle background container around tabs area
 
-## Problem 2: Pages Load Too Slowly (All-at-once fetching)
+### 3. Redesign Invite Codes Tab
 
-Currently, **Posts, Q&A, Requests, and Announcements** all fetch every record at once with `useQuery`. For growing datasets this gets slower over time.
+- Add a search/filter input alongside the "Generate Code" button in a proper toolbar row
+- Replace plain table rows with **card-style rows**: each code gets a subtle card with rounded corners, slight padding, and hover elevation
+- Show code description as a secondary line under the code
+- Usage shown as a mini progress bar (not just text badge)
+- Status toggle and actions inline with better spacing
+- Mobile: stack into cards instead of hiding columns
 
-**Fix:** Convert these pages to use `useInfiniteQuery` with scroll-based pagination (infinite scroll), loading ~10-15 items at a time. As the user scrolls to the bottom, more items load automatically.
+### 4. Redesign Students Tab
 
-### Pages to convert to infinite scroll:
+- Add a **search input** to filter students by name or email
+- Each student row becomes a card-like row with an **avatar circle** (initials-based) on the left
+- Name bold, email subtle below, joined date right-aligned
+- Add student count badge in the header
+- Mobile: responsive card layout
 
-| Page | Current | Change |
-|------|---------|--------|
-| **Posts** (`Posts.tsx`) | Fetches all posts | `useInfiniteQuery` + `.range()` + scroll sentinel |
-| **Q&A** (`QandA.tsx`) | Fetches all questions | `useInfiniteQuery` + `.range()` + scroll sentinel |
-| **Requests** (`Requests.tsx`) | Fetches all requests | `useInfiniteQuery` + `.range()` + scroll sentinel |
-| **Announcements** (`Announcements.tsx`) | Fetches all announcements | `useInfiniteQuery` + `.range()` + scroll sentinel |
+### 5. Empty States
 
-### Technical approach (same pattern for all 4 pages):
+- Improve empty state illustrations with larger icons, descriptive text, and a CTA button
 
-1. Replace `useQuery` with `useInfiniteQuery`
-2. Use Supabase `.range(offset, offset + PAGE_SIZE - 1)` for pagination
-3. Add an `IntersectionObserver` on a sentinel `<div>` after the last item
-4. When sentinel is visible, call `fetchNextPage()`
-5. Flatten data with `data.pages.flatMap(p => p)` for rendering
-6. Show a small spinner at the bottom while loading more
-7. Page size: 10 items per batch
+### 6. Loading State
 
-### Also: Eagerly import Announcements
+- Add shimmer skeletons (3 skeleton rows) instead of a plain spinner, matching the project's shimmer pattern
 
-Since Announcements is in the top 5 nav items, it should be eagerly imported in `App.tsx` (like Dashboard, Notes, Posts, MCQ) to avoid the lazy-load spinner.
+## File to edit
 
----
-
-## Files to modify
-
-1. `src/components/layout/Header.tsx` -- Add MCQ, reorder nav items
-2. `src/App.tsx` -- Eagerly import Announcements
-3. `src/pages/Posts.tsx` -- Infinite scroll
-4. `src/pages/QandA.tsx` -- Infinite scroll
-5. `src/pages/Requests.tsx` -- Infinite scroll
-6. `src/pages/Announcements.tsx` -- Infinite scroll
-
+- `src/pages/admin/ManageUsers.tsx` — Full redesign of the component  
+  
+mobile responsive first then other devices like desktop
+- &nbsp;
