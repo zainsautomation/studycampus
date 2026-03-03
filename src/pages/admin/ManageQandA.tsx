@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { AdminLayout } from "@/components/admin/AdminLayout";
+import { AdminPageHeader } from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -69,7 +69,8 @@ export default function ManageQandA() {
   };
 
   return (
-    <AdminLayout title="Manage Q&A" description="Moderate questions and answers">
+    <>
+      <AdminPageHeader title="Manage Q&A" description="Moderate questions and answers" />
       <div className="space-y-6">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card>
@@ -245,6 +246,6 @@ export default function ManageQandA() {
           </CardContent>
         </Card>
       </div>
-    </AdminLayout>
+    </>
   );
 }

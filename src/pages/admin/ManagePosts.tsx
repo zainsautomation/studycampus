@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { AdminLayout } from "@/components/admin/AdminLayout";
+import { AdminPageHeader } from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -204,7 +204,8 @@ export default function ManagePosts() {
   };
 
   return (
-    <AdminLayout title="Manage Posts" description="Moderate posts and toggle the feature">
+    <>
+      <AdminPageHeader title="Manage Posts" description="Moderate posts and toggle the feature" />
       <div className="space-y-6">
         {/* Controls */}
         <div className="flex flex-col gap-4">
@@ -447,6 +448,6 @@ export default function ManagePosts() {
           </AlertDialogContent>
         </AlertDialog>
       </div>
-    </AdminLayout>
+    </>
   );
 }

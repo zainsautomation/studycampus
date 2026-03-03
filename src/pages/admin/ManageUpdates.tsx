@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Pencil, Trash2, Calendar } from 'lucide-react';
-import { AdminLayout } from '@/components/admin/AdminLayout';
+import { AdminPageHeader } from '@/components/admin/AdminLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -111,7 +111,8 @@ export default function ManageUpdates() {
   };
 
   return (
-    <AdminLayout title="Manage Events" description="Schedule exams, assignments, and events">
+    <>
+      <AdminPageHeader title="Manage Events" description="Schedule exams, assignments, and events" />
       <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-6">
         <motion.div variants={itemVariants} className="flex justify-end">
           <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
@@ -233,6 +234,6 @@ export default function ManageUpdates() {
           </Card>
         </motion.div>
       </motion.div>
-    </AdminLayout>
+    </>
   );
 }

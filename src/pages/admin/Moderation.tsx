@@ -18,7 +18,7 @@ import {
   ExternalLink,
   ImageIcon
 } from 'lucide-react';
-import { AdminLayout } from '@/components/admin/AdminLayout';
+import { AdminPageHeader } from '@/components/admin/AdminLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -414,7 +414,8 @@ export default function Moderation() {
   const ContentIcon = selectedItem ? contentTypeIcons[selectedItem.content_type] || FileText : FileText;
 
   return (
-    <AdminLayout title="Content Moderation" description="Review reported content and take action">
+    <>
+      <AdminPageHeader title="Content Moderation" description="Review reported content and take action" />
       <div className="space-y-6">
         {/* Stats Dashboard - Redesigned */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
@@ -856,6 +857,6 @@ export default function Moderation() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </AdminLayout>
+    </>
   );
 }
