@@ -98,18 +98,17 @@ Deno.serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const token = authHeader.replace('Bearer ', '');
-    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
 
-    if (claimsError || !claimsData?.claims?.sub) {
-      console.error('[google-drive-token] JWT validation failed:', claimsError?.message);
+    if (userError || !user?.id) {
+      console.error('[google-drive-token] JWT validation failed:', userError?.message);
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const userId = claimsData.claims.sub as string;
+    const userId = user.id;
 
     // Use service role to get connection (bypasses RLS for reading)
     const supabaseAdmin = createClient(
