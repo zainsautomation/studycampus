@@ -33,11 +33,21 @@ export default function GoogleDriveCallback() {
 
       try {
         console.log('[GoogleDriveCallback] Exchanging code for tokens...');
-        
+
+        const { data: sessionData } = await supabase.auth.getSession();
+        const accessToken = sessionData.session?.access_token;
+
+        if (!accessToken) {
+          throw new Error('Your session expired. Please sign in again and retry Google Drive connection.');
+        }
+
         const { data, error: invokeError } = await supabase.functions.invoke('google-drive-auth', {
           body: {
             code,
             redirect_uri: `${window.location.origin}/auth/google-drive/callback`,
+          },
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
           },
         });
 
