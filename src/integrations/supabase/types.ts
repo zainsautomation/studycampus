@@ -1353,6 +1353,7 @@ export type Database = {
           points_reward: number
         }[]
       }
+      get_public_profile: { Args: { lookup_value: string }; Returns: Json }
       get_rank_title: { Args: { level: number }; Returns: string }
       get_user_role: {
         Args: { _user_id: string }

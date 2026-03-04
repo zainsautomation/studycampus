@@ -24,7 +24,7 @@ interface ProfileHeaderProps {
     bio: string | null;
     avatar_url: string | null;
     cover_url: string | null;
-    email: string | null;
+    email?: string | null;
     created_at: string;
   };
   level: number;
