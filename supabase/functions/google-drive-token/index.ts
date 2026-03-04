@@ -94,21 +94,22 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_ANON_KEY')!
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authHeader } } }
     );
 
     const token = authHeader.replace('Bearer ', '');
-    const { data: userData, error: userError } = await supabase.auth.getUser(token);
+    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
 
-    if (userError || !userData?.user?.id) {
-      console.error('[google-drive-token] JWT validation failed:', userError?.message);
+    if (claimsError || !claimsData?.claims?.sub) {
+      console.error('[google-drive-token] JWT validation failed:', claimsError?.message);
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const userId = userData.user.id;
+    const userId = claimsData.claims.sub as string;
 
     // Use service role to get connection (bypasses RLS for reading)
     const supabaseAdmin = createClient(
