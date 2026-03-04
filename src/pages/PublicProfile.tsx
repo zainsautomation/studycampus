@@ -52,19 +52,8 @@ export default function PublicProfile() {
 
       setIsLoading(true);
       try {
-        // Try to find by username first, then by id
-        let query = supabase.from('profiles').select('*');
-        
-        // Check if it looks like a UUID
-        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId);
-        
-        if (isUuid) {
-          query = query.eq('id', userId);
-        } else {
-          query = query.eq('username', userId);
-        }
-
-        const { data, error } = await query.maybeSingle();
+        // Use secure function that excludes email
+        const { data, error } = await supabase.rpc('get_public_profile', { lookup_value: userId });
 
         if (error) {
           console.error('Error fetching profile:', error);
@@ -78,41 +67,43 @@ export default function PublicProfile() {
           return;
         }
 
+        const profileData = data as unknown as ProfileData;
+
         // Check if profile is public
-        if (data.is_public === false) {
+        if (profileData.is_public === false) {
           setIsPrivate(true);
           setProfile({
-            id: data.id,
-            full_name: data.full_name,
-            username: data.username,
+            id: profileData.id,
+            full_name: profileData.full_name,
+            username: profileData.username,
             bio: null,
-            avatar_url: data.avatar_url,
+            avatar_url: profileData.avatar_url,
             cover_url: null,
             is_public: false,
-            created_at: data.created_at,
+            created_at: profileData.created_at,
           });
           setIsLoading(false);
           return;
         }
 
         setProfile({
-          id: data.id,
-          full_name: data.full_name,
-          username: data.username,
-          bio: data.bio,
-          avatar_url: data.avatar_url,
-          cover_url: data.cover_url,
-          is_public: data.is_public ?? true,
-          created_at: data.created_at,
-          social_links: data.social_links as ProfileData['social_links'],
+          id: profileData.id,
+          full_name: profileData.full_name,
+          username: profileData.username,
+          bio: profileData.bio,
+          avatar_url: profileData.avatar_url,
+          cover_url: profileData.cover_url,
+          is_public: profileData.is_public ?? true,
+          created_at: profileData.created_at,
+          social_links: profileData.social_links,
         });
 
         // Fetch stats
         const [questionsRes, answersRes, postsRes, requestsRes] = await Promise.all([
-          supabase.from('questions').select('id', { count: 'exact', head: true }).eq('user_id', data.id),
-          supabase.from('answers').select('id', { count: 'exact', head: true }).eq('user_id', data.id),
-          supabase.from('posts').select('id', { count: 'exact', head: true }).eq('user_id', data.id),
-          supabase.from('requests').select('id', { count: 'exact', head: true }).eq('user_id', data.id).eq('is_public', true),
+          supabase.from('questions').select('id', { count: 'exact', head: true }).eq('user_id', profileData.id),
+          supabase.from('answers').select('id', { count: 'exact', head: true }).eq('user_id', profileData.id),
+          supabase.from('posts').select('id', { count: 'exact', head: true }).eq('user_id', profileData.id),
+          supabase.from('requests').select('id', { count: 'exact', head: true }).eq('user_id', profileData.id).eq('is_public', true),
         ]);
 
         setStats({
