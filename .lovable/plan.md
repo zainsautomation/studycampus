@@ -1,52 +1,94 @@
-# Redesign: User Management Page
+# Plan: MCQ Student Results Explorer + Terms & Conditions Page
 
-The current page is functional but plain — raw tables with minimal visual hierarchy. Here's a polished redesign plan:
+## Part 1: MCQ Student Results in Analytics
 
-## Changes to `src/pages/admin/ManageUsers.tsx`
+### What exists today
 
-### 1. Add Stat Cards at Top
+The Analytics page has an MCQ Performance card with an "Info" dialog showing aggregated stats (score distribution, per-test breakdown, top performers). However, there is no way to drill into **individual student results per test** -- e.g., "Which students attempted Test X, what did they score, when did they attempt it?"
 
-Add summary stat cards above the tabs showing:
+### What we will build
 
-- **Total Students** count with Users icon
-- **Active Invite Codes** count with Ticket icon  
-- **Total Code Uses** (sum of current_uses) with CheckCircle icon
+**A new "MCQ Results" admin page** (`/admin/mcq-results`) accessible from the admin sidebar, providing a full student-by-test results explorer.
 
-Cards use `bg-card border border-border/50 rounded-xl` with icon accent colors, matching the existing admin analytics card pattern.
+#### UI Flow (Mobile-first)
 
-### 2. Improve Tabs Styling
+1. **Filter Bar** (sticky top):
+  - Test selector dropdown (all published tests)
+  - Student search input (by name)
+  - Status filter chips: All / Completed / In Progress
+2. **Results List** (card-based on mobile, table on desktop):
+  - Each row/card shows: Student avatar + name, Test title, Score (color-coded), Status badge, Time taken, Date attempted
+  - Tap a row to expand inline details: per-question responses (correct/incorrect), time breakdown
+  - Sort by: Score (asc/desc), Date, Student name
+3. **Summary Header**:
+  - Total attempts shown, average score, completion rate for current filter
+4. **Export** (stretch): CSV download button for filtered results
 
-- Center the tabs and make them wider (`max-w-lg mx-auto`)
-- Add subtle background container around tabs area
+#### Data Source
 
-### 3. Redesign Invite Codes Tab
+All data already exists in `mcq_attempts`, `mcq_responses`, `mcq_tests`, `mcq_questions`, `mcq_options`, and `profiles`. Admin RLS policies already grant full SELECT access. No database changes needed.
 
-- Add a search/filter input alongside the "Generate Code" button in a proper toolbar row
-- Replace plain table rows with **card-style rows**: each code gets a subtle card with rounded corners, slight padding, and hover elevation
-- Show code description as a secondary line under the code
-- Usage shown as a mini progress bar (not just text badge)
-- Status toggle and actions inline with better spacing
-- Mobile: stack into cards instead of hiding columns
+#### Files to create/modify
 
-### 4. Redesign Students Tab
 
-- Add a **search input** to filter students by name or email
-- Each student row becomes a card-like row with an **avatar circle** (initials-based) on the left
-- Name bold, email subtle below, joined date right-aligned
-- Add student count badge in the header
-- Mobile: responsive card layout
+| File                                                      | Action                                                                          |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `src/pages/admin/MCQResults.tsx`                          | **Create** - Main page with filters, summary, results list                      |
+| `src/components/admin/mcq-results/ResultsFilterBar.tsx`   | **Create** - Test selector, search, status filters                              |
+| `src/components/admin/mcq-results/ResultCard.tsx`         | **Create** - Mobile card / desktop table row for each attempt                   |
+| `src/components/admin/mcq-results/AttemptDetailSheet.tsx` | **Create** - Expandable detail view showing per-question responses              |
+| `src/components/admin/mcq-results/ResultsSummary.tsx`     | **Create** - Summary stats for current filter                                   |
+| `src/hooks/useMCQResults.tsx`                             | **Create** - Data fetching hook with filters, joins attempts + profiles + tests |
+| `src/components/admin/AdminSidebar.tsx`                   | **Modify** - Add "MCQ Results" nav link under existing MCQ entry                |
+| `src/App.tsx`                                             | **Modify** - Add `/admin/mcq-results` route                                     |
 
-### 5. Empty States
 
-- Improve empty state illustrations with larger icons, descriptive text, and a CTA button
+---
 
-### 6. Loading State
+## Part 2: Terms & Conditions Page
 
-- Add shimmer skeletons (3 skeleton rows) instead of a plain spinner, matching the project's shimmer pattern
+### What we will build
 
-## File to edit
+A professional, modern Terms & Conditions page at `/terms` accessible to all users (no auth required).
 
-- `src/pages/admin/ManageUsers.tsx` — Full redesign of the component  
-  
-mobile responsive first then other devices like desktop
-- &nbsp;
+#### Content Sections
+
+1. Acceptance of Terms
+2. User Accounts & Eligibility
+3. Acceptable Use Policy
+4. Intellectual Property (notes, MCQs, posts)
+5. User-Generated Content
+6. Privacy & Data Collection
+7. Limitation of Liability
+8. Termination
+9. Changes to Terms
+10. Contact Information
+11. While sign up show user by create account you agrees term and conditions
+
+#### UI Design (Mobile-first)
+
+- Clean, readable layout with a sticky table of contents sidebar on desktop, collapsible accordion on mobile
+- Section headings with anchor links for easy navigation
+- "Last updated" date at the top
+- Subtle card-based sections with proper typography hierarchy
+- Back-to-top floating button on mobile
+
+#### Files to create/modify
+
+
+| File                                                | Action                                                          |
+| --------------------------------------------------- | --------------------------------------------------------------- |
+| `src/pages/Terms.tsx`                               | **Create** - Full Terms & Conditions page                       |
+| `src/App.tsx`                                       | **Modify** - Add `/terms` public route                          |
+| `src/components/layout/BottomNav.tsx` or `More.tsx` | **Modify** - Add link to Terms page from the More/Settings area |
+
+
+---
+
+## Technical Notes
+
+- No database migrations required -- all MCQ data is already available via existing tables and admin RLS policies
+- The MCQ Results page fetches from `mcq_attempts` joined with `profiles` and `mcq_tests`, with client-side filtering for responsiveness
+- Terms page is purely static content, no backend dependency
+- All components use existing UI primitives (Card, Badge, Avatar, Select, Sheet, Accordion, ScrollArea)
+- Mobile-first: card layouts, bottom sheets for details, horizontal scroll where needed; desktop gets table views and sidebar navigation
