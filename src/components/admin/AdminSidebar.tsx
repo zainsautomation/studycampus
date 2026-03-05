@@ -50,6 +50,7 @@ const adminNavGroups = [
     items: [
       { href: '/admin/notes', label: 'Notes', icon: FileText },
       { href: '/admin/mcq', label: 'MCQ Tests', icon: HelpCircle },
+      { href: '/admin/mcq-results', label: 'MCQ Results', icon: BarChart3 },
       { href: '/admin/announcements', label: 'Announcements', icon: Megaphone },
       { href: '/admin/updates', label: 'Events', icon: Calendar },
       { href: '/admin/subjects', label: 'Subjects', icon: BookOpen },

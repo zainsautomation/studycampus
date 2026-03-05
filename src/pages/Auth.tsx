@@ -332,6 +332,15 @@ export default function Auth() {
               ) : null}
               {isLogin ? 'Sign In' : 'Create Account'}
             </Button>
+
+            {!isLogin && (
+              <p className="text-xs text-center text-muted-foreground mt-2">
+                By creating an account, you agree to our{' '}
+                <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">
+                  Terms & Conditions
+                </a>
+              </p>
+            )}
           </form>
           </>
           )}
