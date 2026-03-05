@@ -10,7 +10,8 @@ import {
   Settings,
   ChevronRight,
   HelpCircle,
-  MoreHorizontal
+  MoreHorizontal,
+  FileText
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useAuth } from '@/hooks/useAuth';
@@ -23,6 +24,7 @@ const menuItems = [
   { href: '/requests', label: 'Requests', icon: GitPullRequest, description: 'Note & feature requests' },
   { href: '/leaderboard', label: 'Leaderboard', icon: Trophy, description: 'Top contributors' },
   { href: '/profile', label: 'My Profile', icon: User, description: 'View your profile' },
+  { href: '/terms', label: 'Terms & Conditions', icon: FileText, description: 'Platform usage terms' },
 ];
 
 export default function More() {
