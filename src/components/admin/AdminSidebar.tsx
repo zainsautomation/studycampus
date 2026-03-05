@@ -388,8 +388,8 @@ export function AdminMobileNav() {
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-[280px] p-0">
-              <SheetHeader className="p-4 border-b border-border">
+            <SheetContent side="left" className="w-[280px] p-0 flex flex-col h-full">
+              <SheetHeader className="p-4 border-b border-border flex-shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-md">
                     <GraduationCap className="w-5 h-5 text-primary-foreground" />
@@ -401,7 +401,7 @@ export function AdminMobileNav() {
                 </div>
               </SheetHeader>
 
-              <ScrollArea className="flex-1 h-[calc(100vh-180px)]">
+              <ScrollArea className="flex-1 min-h-0">
                 <nav className="p-3 space-y-4">
                   {adminNavGroups.map((group) => (
                     <div key={group.label}>
@@ -444,7 +444,7 @@ export function AdminMobileNav() {
               </ScrollArea>
 
               {/* Feature Settings in Sheet */}
-              <div className="border-t border-border p-4 space-y-3">
+              <div className="border-t border-border p-4 space-y-3 flex-shrink-0">
                 <p className="text-xs font-medium text-muted-foreground uppercase">Quick Settings</p>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
