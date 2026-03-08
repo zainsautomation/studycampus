@@ -630,7 +630,7 @@ export default function Moderation() {
                         </div>
 
                         {/* Reported Content Preview */}
-                        {item.content && (
+                        {item.content ? (
                           <div className="rounded-lg border bg-card overflow-hidden">
                             <div className="px-3 py-2 border-b bg-muted/30">
                               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
@@ -670,6 +670,16 @@ export default function Moderation() {
                                   Posted {format(new Date(item.content.created_at), 'MMM d, yyyy')}
                                 </p>
                               )}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="rounded-lg border border-dashed bg-muted/20 p-4 flex items-center gap-3">
+                            <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                              <Trash2 className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-muted-foreground">Content deleted</p>
+                              <p className="text-xs text-muted-foreground/70">This content has already been removed</p>
                             </div>
                           </div>
                         )}
