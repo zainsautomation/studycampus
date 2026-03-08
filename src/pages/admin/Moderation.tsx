@@ -562,43 +562,56 @@ export default function Moderation() {
                           </div>
                         </div>
                         
-                        {/* Quick Actions - Horizontal on all screens */}
-                        {item.status === 'pending' && (
-                          <div className="flex items-center gap-2 shrink-0">
+                        {/* Quick Actions */}
+                        <div className="flex items-center gap-2 shrink-0">
+                          {item.status === 'pending' ? (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 px-3 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10"
+                                onClick={() => handleQuickAction(item, 'approved')}
+                                disabled={isProcessing}
+                              >
+                                <CheckCircle className="h-4 w-4 mr-1.5" />
+                                <span className="hidden sm:inline">Dismiss</span>
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 px-3 text-red-600 hover:text-red-700 hover:bg-red-500/10"
+                                onClick={() => handleQuickAction(item, 'removed')}
+                                disabled={isProcessing}
+                              >
+                                <Trash2 className="h-4 w-4 mr-1.5" />
+                                <span className="hidden sm:inline">Remove</span>
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8 px-3"
+                                onClick={() => {
+                                  setSelectedItem(item);
+                                  setIsActionDialogOpen(true);
+                                }}
+                              >
+                                <Eye className="h-4 w-4 mr-1.5" />
+                                <span className="hidden sm:inline">Review</span>
+                              </Button>
+                            </>
+                          ) : (
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="h-8 px-3 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10"
-                              onClick={() => handleQuickAction(item, 'approved')}
+                              className="h-8 px-3 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                              onClick={() => handleClearCase(item.id)}
                               disabled={isProcessing}
                             >
-                              <CheckCircle className="h-4 w-4 mr-1.5" />
-                              <span className="hidden sm:inline">Dismiss</span>
+                              <XCircle className="h-4 w-4 mr-1.5" />
+                              <span className="hidden sm:inline">Clear</span>
                             </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-8 px-3 text-red-600 hover:text-red-700 hover:bg-red-500/10"
-                              onClick={() => handleQuickAction(item, 'removed')}
-                              disabled={isProcessing}
-                            >
-                              <Trash2 className="h-4 w-4 mr-1.5" />
-                              <span className="hidden sm:inline">Remove</span>
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-8 px-3"
-                              onClick={() => {
-                                setSelectedItem(item);
-                                setIsActionDialogOpen(true);
-                              }}
-                            >
-                              <Eye className="h-4 w-4 mr-1.5" />
-                              <span className="hidden sm:inline">Review</span>
-                            </Button>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
 
                       {/* Body */}
