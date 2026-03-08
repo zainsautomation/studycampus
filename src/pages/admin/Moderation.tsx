@@ -412,31 +412,35 @@ export default function Moderation() {
     }
   };
 
-  const handleClearCase = async (itemId: string) => {
-    setIsProcessing(true);
-    try {
-      await supabase.from('moderation_queue').delete().eq('id', itemId);
-      toast({ title: 'Case cleared' });
-      fetchModerationQueue();
-      fetchStats();
-    } catch (error: any) {
-      toast({ title: 'Failed to clear', description: error.message, variant: 'destructive' });
-    } finally {
-      setIsProcessing(false);
-    }
+  const handleClearCase = (itemId: string) => {
+    setClearTarget(itemId);
+    setClearConfirmOpen(true);
   };
 
-  const handleClearAllResolved = async (): Promise<void> => {
+  const handleClearAllResolved = () => {
+    setClearTarget('all');
+    setClearConfirmOpen(true);
+  };
+
+  const confirmClear = async () => {
+    if (!clearTarget) return;
     setIsProcessing(true);
     try {
-      await supabase.from('moderation_queue').delete().neq('status', 'pending');
-      toast({ title: 'All resolved cases cleared' });
+      if (clearTarget === 'all') {
+        await supabase.from('moderation_queue').delete().neq('status', 'pending');
+        toast({ title: 'All resolved cases cleared' });
+      } else {
+        await supabase.from('moderation_queue').delete().eq('id', clearTarget);
+        toast({ title: 'Case cleared' });
+      }
       fetchModerationQueue();
       fetchStats();
     } catch (error: any) {
       toast({ title: 'Failed to clear', description: error.message, variant: 'destructive' });
     } finally {
       setIsProcessing(false);
+      setClearConfirmOpen(false);
+      setClearTarget(null);
     }
   };
 
