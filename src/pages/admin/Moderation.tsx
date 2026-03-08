@@ -356,7 +356,7 @@ export default function Moderation() {
           const fileId = extractGoogleDriveFileId(post.image_url);
           if (fileId && isSignedIn && window.gapi?.client?.drive) {
             try {
-              await window.gapi.client.drive.files.delete({ fileId });
+              await window.gapi.client.drive.files.update({ fileId, resource: { trashed: true } });
             } catch (driveError) {
               console.error('Failed to delete image from Google Drive:', driveError);
             }
