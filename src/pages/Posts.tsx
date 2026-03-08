@@ -195,7 +195,7 @@ export default function Posts() {
           const fileId = extractGoogleDriveFileId(imageUrl);
           if (fileId && googleDrive.isSignedIn) {
             try {
-              await window.gapi.client.drive.files.delete({ fileId });
+              await window.gapi.client.drive.files.update({ fileId, resource: { trashed: true } });
             } catch (driveError) {
               console.error('Failed to delete image from Google Drive:', driveError);
             }
