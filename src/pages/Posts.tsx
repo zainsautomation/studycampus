@@ -308,7 +308,7 @@ export default function Posts() {
             <AlertDialogHeader>
               <AlertDialogTitle>Delete Post?</AlertDialogTitle>
               <AlertDialogDescription>
-                This action cannot be undone. This will permanently delete this post{postToDelete?.imageUrl ? " and its image" : ""}.
+                This action cannot be undone. This will permanently delete this post.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

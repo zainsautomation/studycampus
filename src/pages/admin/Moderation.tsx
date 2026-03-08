@@ -411,6 +411,34 @@ export default function Moderation() {
     }
   };
 
+  const handleClearCase = async (itemId: string) => {
+    setIsProcessing(true);
+    try {
+      await supabase.from('moderation_queue').delete().eq('id', itemId);
+      toast({ title: 'Case cleared' });
+      fetchModerationQueue();
+      fetchStats();
+    } catch (error: any) {
+      toast({ title: 'Failed to clear', description: error.message, variant: 'destructive' });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleClearAllResolved = async () => {
+    setIsProcessing(true);
+    try {
+      await supabase.from('moderation_queue').delete().neq('status', 'pending');
+      toast({ title: 'All resolved cases cleared' });
+      fetchModerationQueue();
+      fetchStats();
+    } catch (error: any) {
+      toast({ title: 'Failed to clear', description: error.message, variant: 'destructive' });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const ContentIcon = selectedItem ? contentTypeIcons[selectedItem.content_type] || FileText : FileText;
 
   return (
