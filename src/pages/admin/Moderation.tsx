@@ -937,6 +937,32 @@ export default function Moderation() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Clear Confirmation Dialog */}
+      <AlertDialog open={clearConfirmOpen} onOpenChange={setClearConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {clearTarget === 'all' ? 'Clear all resolved cases?' : 'Clear this case?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {clearTarget === 'all' 
+                ? 'This will remove all resolved reports from the moderation queue. This action cannot be undone.'
+                : 'This will remove this report from the moderation queue. This action cannot be undone.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmClear} 
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isProcessing}
+            >
+              {isProcessing ? 'Clearing...' : 'Clear'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
