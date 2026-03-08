@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Heart, Pin, Trash2, MoreVertical, EyeOff, Clock, ImageOff, Flag } from "lucide-react";
+import { Heart, Pin, Trash2, MoreHorizontal, EyeOff, ImageOff, MessageCircle, Share2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { motion } from "framer-motion";
 import {
@@ -15,9 +15,10 @@ import { RichTextDisplay } from "@/components/ui/rich-text-display";
 import { ImageViewerDialog } from "@/components/ui/ImageViewerDialog";
 import { PostCommentSection } from "./PostCommentSection";
 import { ReportButton } from "@/components/ui/ReportButton";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useLongPress } from "@/hooks/useLongPress";
 import { useNavigate } from "react-router-dom";
+
 interface PostCardProps {
   post: {
     id: string;
@@ -42,52 +43,36 @@ interface PostCardProps {
   onLike: () => void;
   onPin?: () => void;
   onDelete: () => void;
+  index?: number;
 }
 
-// Helper to transform Google Drive URLs to thumbnail format for reliable display
 function getDisplayImageUrl(url: string | null | undefined): string | null {
   if (!url) return null;
-
-  // Check if it's a Google Drive URL
   if (url.includes("drive.google.com")) {
     let fileId: string | null = null;
-
-    // Format: https://drive.google.com/uc?export=view&id=FILE_ID
     const ucMatch = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-    if (ucMatch) {
-      fileId = ucMatch[1];
-    }
-
-    // Format: https://drive.google.com/file/d/FILE_ID/view
+    if (ucMatch) fileId = ucMatch[1];
     const fileMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-    if (fileMatch) {
-      fileId = fileMatch[1];
-    }
-
-    // Already thumbnail format - return as is
-    if (url.includes("/thumbnail?id=")) {
-      return url;
-    }
-
-    if (fileId) {
-      return `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`;
-    }
+    if (fileMatch) fileId = fileMatch[1];
+    if (url.includes("/thumbnail?id=")) return url;
+    if (fileId) return `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`;
   }
-
   return url;
 }
 
-export function PostCard({ post, hasLiked, currentUserId, isAdmin, onLike, onPin, onDelete }: PostCardProps) {
+export function PostCard({ post, hasLiked, currentUserId, isAdmin, onLike, onPin, onDelete, index = 0 }: PostCardProps) {
   const navigate = useNavigate();
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [imageLoading, setImageLoading] = useState(true);
+  const [contentExpanded, setContentExpanded] = useState(false);
+  const [commentsOpen, setCommentsOpen] = useState(false);
   const canDelete = isAdmin || currentUserId === post.user_id;
   const isAnonymous = post.is_anonymous;
+  const contentRef = useRef<HTMLDivElement>(null);
 
-  // Transform Google Drive URLs to thumbnail format for display
   const displayImageUrl = useMemo(() => getDisplayImageUrl(post.image_url), [post.image_url]);
 
-  // Display actual username/name from profiles
   const displayName = isAnonymous
     ? "Anonymous"
     : post.profiles?.username
@@ -102,11 +87,10 @@ export function PostCard({ post, hasLiked, currentUserId, isAdmin, onLike, onPin
         .join("")
         .toUpperCase() || "U";
 
-  // Long press (600ms) or click for image viewing
   const longPressHandlers = useLongPress({
     delay: 900,
     onLongPress: () => setImageViewerOpen(true),
-    onClick: () => setImageViewerOpen(true), // Quick tap also opens viewer
+    onClick: () => setImageViewerOpen(true),
   });
 
   const handleUserClick = () => {
@@ -115,65 +99,67 @@ export function PostCard({ post, hasLiked, currentUserId, isAdmin, onLike, onPin
     }
   };
 
+  // Check if content is long enough to need truncation
+  const plainText = post.content.replace(/<[^>]*>/g, '').trim();
+  const isLongContent = plainText.length > 280;
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.25 }}
+      transition={{ duration: 0.3, delay: index * 0.05 }}
       className="tap-highlight-transparent"
     >
-      <Card
-        variant={post.is_pinned ? "elevated" : "default"}
-        className={`overflow-hidden ${post.is_pinned ? "ring-1 ring-primary/20" : ""}`}
-      >
-        <CardContent className="p-4">
+      <Card className={`overflow-hidden border-border/60 ${post.is_pinned ? "border-t-2 border-t-primary" : ""}`}>
+        <CardContent className="p-0">
+          {/* Pinned strip */}
+          {post.is_pinned && (
+            <div className="flex items-center gap-1.5 px-4 pt-2.5 pb-0">
+              <Pin className="h-3 w-3 text-primary" />
+              <span className="text-[11px] font-medium text-primary">Pinned</span>
+            </div>
+          )}
+
           {/* Header */}
-          <div className="flex items-start justify-between mb-3">
-            <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between px-4 pt-3 pb-0">
+            <div className="flex items-center gap-2.5 min-w-0">
               <Avatar
-                className={`h-10 w-10 ring-2 ring-background ${!isAnonymous ? "cursor-pointer" : ""}`}
+                className={`h-9 w-9 shrink-0 ${!isAnonymous ? "cursor-pointer" : ""}`}
                 onClick={handleUserClick}
               >
                 {!isAnonymous && post.profiles?.avatar_url && (
                   <AvatarImage src={post.profiles.avatar_url} alt={displayName} />
                 )}
-                <AvatarFallback className={`${isAnonymous ? "bg-muted" : "bg-primary/10 text-primary"}`}>
-                  {isAnonymous ? <EyeOff className="h-4 w-4" /> : initials}
+                <AvatarFallback className={`text-xs ${isAnonymous ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary"}`}>
+                  {isAnonymous ? <EyeOff className="h-3.5 w-3.5" /> : initials}
                 </AvatarFallback>
               </Avatar>
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2">
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
                   <p
-                    className={`font-semibold text-sm ${isAnonymous ? "text-muted-foreground italic" : "cursor-pointer hover:underline"}`}
+                    className={`font-semibold text-[13px] leading-tight truncate ${isAnonymous ? "text-muted-foreground italic" : "cursor-pointer hover:underline"}`}
                     onClick={handleUserClick}
                   >
                     {displayName}
                   </p>
-                  {post.is_pinned && (
-                    <div className="flex items-center gap-1 text-primary text-xs">
-                      <Pin className="h-3 w-3" />
-                    </div>
-                  )}
+                  <CategoryBadge category={post.category} compact />
                 </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <div className="flex items-center gap-1">
-                    <Clock className="h-3 w-3 opacity-60" />
-                    <span>{formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}</span>
-                  </div>
-                  <CategoryBadge category={post.category} />
-                </div>
+                <p className="text-[11px] text-muted-foreground leading-tight mt-0.5">
+                  {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
+                </p>
               </div>
             </div>
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <motion.button
                   whileTap={{ scale: 0.9 }}
-                  className="p-2 -mr-2 -mt-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
+                  className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors shrink-0"
                 >
-                  <MoreVertical className="h-4 w-4" />
+                  <MoreHorizontal className="h-4 w-4" />
                 </motion.button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end" className="w-44">
                 {isAdmin && onPin && (
                   <DropdownMenuItem onClick={onPin}>
                     <Pin className="h-4 w-4 mr-2" />
@@ -206,24 +192,43 @@ export function PostCard({ post, hasLiked, currentUserId, isAdmin, onLike, onPin
           </div>
 
           {/* Content */}
-          <RichTextDisplay content={post.content} className="mb-3" />
+          <div className="px-4 pt-2.5 pb-0">
+            <div
+              ref={contentRef}
+              className={`${!contentExpanded && isLongContent ? "line-clamp-6" : ""}`}
+            >
+              <RichTextDisplay content={post.content} />
+            </div>
+            {isLongContent && !contentExpanded && (
+              <button
+                onClick={() => setContentExpanded(true)}
+                className="text-primary text-xs font-medium mt-1 hover:underline"
+              >
+                Read more
+              </button>
+            )}
+          </div>
 
           {/* Image */}
           {displayImageUrl && !imageError && (
             <>
               <div
-                className="relative rounded-xl overflow-hidden mb-3 cursor-pointer group select-none"
+                className="relative mx-4 mt-3 rounded-2xl overflow-hidden cursor-pointer group select-none bg-muted/30"
+                style={{ aspectRatio: '16/10' }}
                 {...longPressHandlers}
               >
+                {imageLoading && (
+                  <div className="absolute inset-0 animate-pulse bg-muted rounded-2xl" />
+                )}
                 <img
                   src={displayImageUrl}
                   alt="Post image"
-                  className="max-h-96 w-full object-cover transition-transform duration-200 group-hover:scale-[1.02]"
+                  className={`w-full h-full object-cover transition-all duration-300 group-hover:scale-[1.02] ${imageLoading ? 'opacity-0' : 'opacity-100'}`}
                   loading="lazy"
-                  onError={() => setImageError(true)}
+                  onLoad={() => setImageLoading(false)}
+                  onError={() => { setImageError(true); setImageLoading(false); }}
                   draggable={false}
                 />
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors pointer-events-none" />
               </div>
               <ImageViewerDialog
                 open={imageViewerOpen}
@@ -236,32 +241,54 @@ export function PostCard({ post, hasLiked, currentUserId, isAdmin, onLike, onPin
 
           {/* Image error fallback */}
           {post.image_url && imageError && (
-            <div className="flex items-center justify-center gap-2 p-6 mb-3 rounded-xl bg-muted/50 text-muted-foreground">
-              <ImageOff className="h-5 w-5" />
-              <span className="text-sm">Image unavailable</span>
+            <div className="flex items-center justify-center gap-2 mx-4 mt-3 p-5 rounded-2xl bg-muted/30 text-muted-foreground">
+              <ImageOff className="h-4 w-4" />
+              <span className="text-xs">Image unavailable</span>
             </div>
           )}
 
-          {/* Actions */}
-          <div className="flex items-center gap-2 pt-1">
+          {/* Unified Action Bar */}
+          <div className="flex items-center px-2 py-1 mt-2 border-t border-border/40">
             <motion.button
               whileTap={{ scale: 0.9 }}
               onClick={onLike}
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm transition-colors ${
                 hasLiked
-                  ? "bg-primary/10 text-primary"
-                  : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
+                  ? "text-primary"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
               }`}
             >
-              <motion.div animate={hasLiked ? { scale: [1, 1.4, 1] } : { scale: 1 }} transition={{ duration: 0.25 }}>
-                <Heart className={`h-4 w-4 ${hasLiked ? "fill-current" : ""}`} />
+              <motion.div animate={hasLiked ? { scale: [1, 1.3, 1] } : { scale: 1 }} transition={{ duration: 0.2 }}>
+                <Heart className={`h-[18px] w-[18px] ${hasLiked ? "fill-current" : ""}`} />
               </motion.div>
-              <span>{post.likes_count || 0}</span>
+              <span className="text-xs font-medium">{post.likes_count || 0}</span>
             </motion.button>
+
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={() => setCommentsOpen(!commentsOpen)}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm transition-colors ${
+                commentsOpen
+                  ? "text-primary"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+              }`}
+            >
+              <MessageCircle className="h-[18px] w-[18px]" />
+              <span className="text-xs font-medium">{post.comment_count || 0}</span>
+            </motion.button>
+
+            <div className="flex-1" />
           </div>
 
           {/* Comment Section */}
-          <PostCommentSection postId={post.id} commentCount={post.comment_count} />
+          <div className={`${commentsOpen ? 'px-4 pb-3' : ''}`}>
+            <PostCommentSection 
+              postId={post.id} 
+              commentCount={post.comment_count}
+              isOpen={commentsOpen}
+              onToggle={() => setCommentsOpen(!commentsOpen)}
+            />
+          </div>
         </CardContent>
       </Card>
     </motion.div>

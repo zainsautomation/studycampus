@@ -26,14 +26,9 @@ import {
 
 const PAGE_SIZE = 10;
 
-// Helper function to extract Google Drive file ID from URL
 const extractGoogleDriveFileId = (url: string): string | null => {
   if (!url) return null;
-  const patterns = [
-    /\/d\/([a-zA-Z0-9_-]+)/,
-    /id=([a-zA-Z0-9_-]+)/,
-    /\/file\/d\/([a-zA-Z0-9_-]+)/,
-  ];
+  const patterns = [/\/d\/([a-zA-Z0-9_-]+)/, /id=([a-zA-Z0-9_-]+)/, /\/file\/d\/([a-zA-Z0-9_-]+)/];
   for (const pattern of patterns) {
     const match = url.match(pattern);
     if (match) return match[1];
@@ -61,47 +56,28 @@ export default function Posts() {
         .order('is_pinned', { ascending: false })
         .order('created_at', { ascending: false })
         .range(pageParam, pageParam + PAGE_SIZE - 1);
-      
-      if (selectedCategory !== 'all') {
-        query = query.eq('category', selectedCategory);
-      }
-      
+      if (selectedCategory !== 'all') query = query.eq('category', selectedCategory);
       const { data, error } = await query;
       if (error) throw error;
-      
-      // Fetch profiles for non-anonymous posts
       const userIds = data?.filter(p => !p.is_anonymous).map(p => p.user_id) || [];
       const uniqueUserIds = [...new Set(userIds)];
-      
       if (uniqueUserIds.length > 0) {
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('id, full_name, username, avatar_url')
-          .in('id', uniqueUserIds);
-        
+        const { data: profiles } = await supabase.from('profiles').select('id, full_name, username, avatar_url').in('id', uniqueUserIds);
         const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
-        return data?.map(post => ({
-          ...post,
-          profiles: post.is_anonymous ? null : profileMap.get(post.user_id) || null
-        })) || [];
+        return data?.map(post => ({ ...post, profiles: post.is_anonymous ? null : profileMap.get(post.user_id) || null })) || [];
       }
-      
       return data?.map(post => ({ ...post, profiles: null })) || [];
     },
     initialPageParam: 0,
-    getNextPageParam: (lastPage, allPages) =>
-      lastPage.length === PAGE_SIZE ? allPages.length * PAGE_SIZE : undefined,
+    getNextPageParam: (lastPage, allPages) => lastPage.length === PAGE_SIZE ? allPages.length * PAGE_SIZE : undefined,
     enabled: postsEnabled,
   });
 
   const posts = data?.pages.flatMap(p => p) ?? [];
 
-  // IntersectionObserver for infinite scroll
   const observerCallback = useCallback(
     (entries: IntersectionObserverEntry[]) => {
-      if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
-        fetchNextPage();
-      }
+      if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) fetchNextPage();
     },
     [hasNextPage, isFetchingNextPage, fetchNextPage]
   );
@@ -118,10 +94,7 @@ export default function Posts() {
     queryKey: ['post-likes', user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
-      const { data, error } = await supabase
-        .from('post_likes')
-        .select('post_id')
-        .eq('user_id', user.id);
+      const { data, error } = await supabase.from('post_likes').select('post_id').eq('user_id', user.id);
       if (error) throw error;
       return data.map(l => l.post_id);
     },
@@ -130,26 +103,16 @@ export default function Posts() {
 
   const createPost = useMutation({
     mutationFn: async ({ content, isAnonymous, category, imageUrl }: { content: string; isAnonymous: boolean; category?: string; imageUrl?: string }) => {
-      const { error } = await supabase.from('posts').insert({
-        user_id: user?.id,
-        content,
-        is_anonymous: isAnonymous,
-        category: category || 'discussion',
-        image_url: imageUrl || null,
-      });
+      const { error } = await supabase.from('posts').insert({ user_id: user?.id, content, is_anonymous: isAnonymous, category: category || 'discussion', image_url: imageUrl || null });
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['posts'] });
-      toast({ title: "Post created!" });
-    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['posts'] }); toast({ title: "Post created!" }); },
   });
 
   const likePost = useMutation({
     mutationFn: async (postId: string) => {
       const hasLiked = userLikes?.includes(postId);
       const post = posts?.find(p => p.id === postId);
-      
       if (hasLiked) {
         await supabase.from('post_likes').delete().eq('post_id', postId).eq('user_id', user?.id);
         await supabase.from('posts').update({ likes_count: (post?.likes_count || 1) - 1 }).eq('id', postId);
@@ -167,15 +130,10 @@ export default function Posts() {
   const pinPost = useMutation({
     mutationFn: async (postId: string) => {
       const post = posts?.find(p => p.id === postId);
-      const { error } = await supabase
-        .from('posts')
-        .update({ is_pinned: !post?.is_pinned })
-        .eq('id', postId);
+      const { error } = await supabase.from('posts').update({ is_pinned: !post?.is_pinned }).eq('id', postId);
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['posts'] });
-    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['posts'] }); },
   });
 
   const deletePost = useMutation({
@@ -188,21 +146,14 @@ export default function Posts() {
               const filePath = decodeURIComponent(urlParts[1].split('?')[0]);
               await supabase.storage.from('post-images').remove([filePath]);
             }
-          } catch (storageError) {
-            console.error('Failed to delete image from storage:', storageError);
-          }
+          } catch (e) { console.error('Failed to delete image:', e); }
         } else if (imageUrl.includes('drive.google.com') || imageUrl.includes('googleapis.com')) {
           const fileId = extractGoogleDriveFileId(imageUrl);
           if (fileId && googleDrive.isSignedIn) {
-            try {
-              await window.gapi.client.drive.files.update({ fileId, resource: { trashed: true } });
-            } catch (driveError) {
-              console.error('Failed to delete image from Google Drive:', driveError);
-            }
+            try { await window.gapi.client.drive.files.update({ fileId, resource: { trashed: true } }); } catch (e) { console.error('Failed to delete from Drive:', e); }
           }
         }
       }
-      
       const { error } = await supabase.from('posts').delete().eq('id', postId);
       if (error) throw error;
     },
@@ -220,15 +171,13 @@ export default function Posts() {
   };
 
   const confirmDelete = () => {
-    if (postToDelete) {
-      deletePost.mutate({ postId: postToDelete.id, imageUrl: postToDelete.imageUrl });
-    }
+    if (postToDelete) deletePost.mutate({ postId: postToDelete.id, imageUrl: postToDelete.imageUrl });
   };
 
   if (!postsEnabled) {
     return (
       <MainLayout>
-        <div className="container px-4 py-6 md:py-8 space-y-6">
+        <div className="container px-4 py-6 md:py-8 max-w-2xl mx-auto space-y-6">
           <motion.div className="flex items-center gap-3" initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
             <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5">
               <MessageSquare className="h-6 w-6 text-primary" />
@@ -246,19 +195,21 @@ export default function Posts() {
 
   return (
     <MainLayout>
-      <div className="container px-4 py-6 md:py-8 space-y-5">
-        <motion.div className="flex items-center gap-3" initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
-          <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5">
-            <MessageSquare className="h-6 w-6 text-primary" />
+      <div className="container px-4 py-6 md:py-8 max-w-2xl mx-auto space-y-4">
+        {/* Header */}
+        <motion.div className="flex items-center gap-3" initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }}>
+          <div className="p-2 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5">
+            <MessageSquare className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold">Posts</h1>
-            <p className="text-sm text-muted-foreground">Share updates with classmates</p>
+            <h1 className="text-xl font-bold">Posts</h1>
+            <p className="text-xs text-muted-foreground">Share updates with classmates</p>
           </div>
         </motion.div>
 
+        {/* Composer */}
         {postCreationEnabled && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
             <PostForm
               onSubmit={(content, isAnonymous, category, imageUrl) => createPost.mutate({ content, isAnonymous, category, imageUrl })}
               isSubmitting={createPost.isPending}
@@ -267,25 +218,27 @@ export default function Posts() {
           </motion.div>
         )}
 
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }}>
+        {/* Category Filter */}
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
           <CategoryFilter selectedCategory={selectedCategory} onSelectCategory={setSelectedCategory} />
         </motion.div>
 
+        {/* Feed */}
         {isLoading ? (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {[1, 2, 3].map((i) => (<CardSkeleton key={i} />))}
           </div>
         ) : posts.length === 0 ? (
-          <motion.div className="text-center py-16 px-4" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }}>
-            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-              <Sparkles className="h-8 w-8 text-primary" />
+          <motion.div className="text-center py-16 px-4" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.15 }}>
+            <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+              <Sparkles className="h-7 w-7 text-primary" />
             </div>
-            <h3 className="text-lg font-semibold mb-2">No posts yet</h3>
-            <p className="text-muted-foreground max-w-sm mx-auto">Be the first to share something with your classmates!</p>
+            <h3 className="text-base font-semibold mb-1">No posts yet</h3>
+            <p className="text-sm text-muted-foreground max-w-xs mx-auto">Be the first to share something with your classmates!</p>
           </motion.div>
         ) : (
-          <div className="space-y-4">
-            {posts.map((post) => (
+          <div className="space-y-3">
+            {posts.map((post, i) => (
               <PostCard
                 key={post.id}
                 post={post}
@@ -295,9 +248,10 @@ export default function Posts() {
                 onLike={() => likePost.mutate(post.id)}
                 onPin={() => pinPost.mutate(post.id)}
                 onDelete={() => handleDeleteClick(post.id, post.image_url)}
+                index={i}
               />
             ))}
-            <div ref={sentinelRef} className="flex justify-center py-4">
+            <div ref={sentinelRef} className="flex justify-center py-3">
               {isFetchingNextPage && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />}
             </div>
           </div>
@@ -307,9 +261,7 @@ export default function Posts() {
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Delete Post?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This action cannot be undone. This will permanently delete this post.
-              </AlertDialogDescription>
+              <AlertDialogDescription>This action cannot be undone. This will permanently delete this post.</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
