@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { CommentCard } from "@/components/qa/CommentCard";
 import { CommentForm } from "@/components/qa/CommentForm";
 import { Button } from "@/components/ui/button";
+import { MessageCircle, ChevronDown, ChevronUp } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
@@ -11,8 +12,6 @@ import { motion, AnimatePresence } from "framer-motion";
 interface PostCommentSectionProps {
   postId: string;
   commentCount?: number;
-  isOpen?: boolean;
-  onToggle?: () => void;
 }
 
 interface CommentWithProfile {
@@ -34,10 +33,11 @@ interface CommentWithProfile {
   } | null;
 }
 
-export function PostCommentSection({ postId, commentCount = 0, isOpen = false, onToggle }: PostCommentSectionProps) {
+export function PostCommentSection({ postId, commentCount = 0 }: PostCommentSectionProps) {
   const { user, isAdmin } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [isExpanded, setIsExpanded] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
 
@@ -50,19 +50,24 @@ export function PostCommentSection({ postId, commentCount = 0, isOpen = false, o
         .eq('post_id', postId)
         .order('created_at', { ascending: true });
       if (error) throw error;
+
       if (!data || data.length === 0) return [];
+
+      // Fetch profiles for all comment authors
       const userIds = [...new Set(data.map(c => c.user_id))];
       const { data: profiles } = await supabase
         .from('profiles')
         .select('id, full_name, username, avatar_url, is_public')
         .in('id', userIds);
+
+      // Map profiles to comments
       return data.map(comment => ({
         ...comment,
         likes_count: comment.likes_count || 0,
         profile: profiles?.find(p => p.id === comment.user_id) || null
       })) as CommentWithProfile[];
     },
-    enabled: isOpen,
+    enabled: isExpanded,
   });
 
   const createComment = useMutation({
@@ -113,103 +118,129 @@ export function PostCommentSection({ postId, commentCount = 0, isOpen = false, o
     },
   });
 
+  // Organize comments into threads
   const topLevelComments = comments?.filter(c => !c.parent_comment_id) || [];
   const replies = comments?.filter(c => c.parent_comment_id) || [];
-  const getReplies = (parentId: string) => replies.filter(r => r.parent_comment_id === parentId);
+  
+  const getReplies = (parentId: string) => 
+    replies.filter(r => r.parent_comment_id === parentId);
 
-  if (!isOpen) return null;
+  const displayCount = comments?.length ?? commentCount;
 
   return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ height: 0, opacity: 0 }}
-        animate={{ height: "auto", opacity: 1 }}
-        exit={{ height: 0, opacity: 0 }}
-        transition={{ duration: 0.2 }}
-        className="overflow-hidden"
+    <div className="pt-2">
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="gap-2 text-muted-foreground hover:text-foreground h-8 px-2"
       >
-        <div className="space-y-3 pt-2">
-          {isLoading ? (
-            <div className="space-y-3">
-              {[1, 2].map((i) => (
-                <div key={i} className="flex gap-2">
-                  <div className="h-7 w-7 bg-muted animate-pulse rounded-full shrink-0" />
-                  <div className="flex-1 h-10 bg-muted animate-pulse rounded-xl" />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <>
-              {topLevelComments.length > 0 ? (
-                <div className="space-y-2.5">
-                  {topLevelComments.map((comment) => (
-                    <div key={comment.id} className="space-y-2">
-                      <CommentCard
-                        comment={comment}
-                        currentUserId={user?.id}
-                        isAdmin={isAdmin}
-                        onEdit={(content) => updateComment.mutate({ id: comment.id, content })}
-                        onDelete={() => deleteComment.mutate(comment.id)}
-                        onReply={() => setReplyingTo(comment.id)}
-                        showReplyButton={true}
-                      />
-                      {getReplies(comment.id).length > 0 && (
-                        <div className="ml-9 space-y-2 pl-3 border-l-2 border-muted">
-                          {getReplies(comment.id).map((reply) => (
+        <MessageCircle className="h-4 w-4" />
+        <span className="text-xs">
+          {displayCount > 0 ? `${displayCount} comment${displayCount > 1 ? 's' : ''}` : 'Comment'}
+        </span>
+        {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+      </Button>
+
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+              <div className="mt-3 space-y-3 pt-3 border-t border-border/50">
+                {isLoading ? (
+                  <div className="space-y-3">
+                    {[1, 2].map((i) => (
+                      <div key={i} className="flex gap-2">
+                        <div className="h-8 w-8 bg-muted animate-pulse rounded-full shrink-0" />
+                        <div className="flex-1 h-12 bg-muted animate-pulse rounded-xl" />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <>
+                    {topLevelComments.length > 0 ? (
+                      <div className="space-y-3">
+                        {topLevelComments.map((comment) => (
+                          <div key={comment.id} className="space-y-2">
                             <CommentCard
-                              key={reply.id}
-                              comment={reply}
+                              comment={comment}
                               currentUserId={user?.id}
                               isAdmin={isAdmin}
-                              onEdit={(content) => updateComment.mutate({ id: reply.id, content })}
-                              onDelete={() => deleteComment.mutate(reply.id)}
-                              isReply={true}
-                              showReplyButton={false}
+                              onEdit={(content) => updateComment.mutate({ id: comment.id, content })}
+                              onDelete={() => deleteComment.mutate(comment.id)}
+                              onReply={() => setReplyingTo(comment.id)}
+                              showReplyButton={true}
                             />
-                          ))}
-                        </div>
-                      )}
-                      {replyingTo === comment.id && user && (
-                        <div className="ml-9 pl-3 border-l-2 border-primary/30">
+                            
+                            {/* Replies */}
+                            {getReplies(comment.id).length > 0 && (
+                              <div className="ml-10 space-y-2 pl-3 border-l-2 border-muted">
+                                {getReplies(comment.id).map((reply) => (
+                                  <CommentCard
+                                    key={reply.id}
+                                    comment={reply}
+                                    currentUserId={user?.id}
+                                    isAdmin={isAdmin}
+                                    onEdit={(content) => updateComment.mutate({ id: reply.id, content })}
+                                    onDelete={() => deleteComment.mutate(reply.id)}
+                                    isReply={true}
+                                    showReplyButton={false}
+                                  />
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Reply form */}
+                            {replyingTo === comment.id && user && (
+                              <div className="ml-10 pl-3 border-l-2 border-primary/30">
+                                <CommentForm
+                                  onSubmit={(content) => createComment.mutate({ content, parentId: comment.id })}
+                                  onCancel={() => setReplyingTo(null)}
+                                  isSubmitting={createComment.isPending}
+                                  placeholder="Write a reply..."
+                                />
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground text-center py-3">
+                        No comments yet. Be the first to comment!
+                      </p>
+                    )}
+                    
+                    {user && (
+                      showForm ? (
+                        <div className="pt-2">
                           <CommentForm
-                            onSubmit={(content) => createComment.mutate({ content, parentId: comment.id })}
-                            onCancel={() => setReplyingTo(null)}
+                            onSubmit={(content) => createComment.mutate({ content })}
+                            onCancel={() => setShowForm(false)}
                             isSubmitting={createComment.isPending}
-                            placeholder="Write a reply..."
                           />
                         </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-xs text-muted-foreground text-center py-3">
-                  No comments yet. Be the first!
-                </p>
-              )}
-              
-              {user && (
-                showForm ? (
-                  <CommentForm
-                    onSubmit={(content) => createComment.mutate({ content })}
-                    onCancel={() => setShowForm(false)}
-                    isSubmitting={createComment.isPending}
-                  />
-                ) : (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowForm(true)}
-                    className="w-full text-xs h-8 rounded-full bg-muted/40 hover:bg-muted text-muted-foreground"
-                  >
-                    Add a comment...
-                  </Button>
-                )
-              )}
-            </>
-          )}
-        </div>
-      </motion.div>
-    </AnimatePresence>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowForm(true)}
+                          className="w-full text-xs h-9 rounded-full bg-muted/50 hover:bg-muted"
+                        >
+                          Add a comment...
+                        </Button>
+                      )
+                    )}
+                  </>
+                )}
+              </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
