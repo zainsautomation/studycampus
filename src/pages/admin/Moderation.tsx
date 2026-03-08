@@ -425,7 +425,7 @@ export default function Moderation() {
     }
   };
 
-  const handleClearAllResolved = async () => {
+  const handleClearAllResolved = async (): Promise<void> => {
     setIsProcessing(true);
     try {
       await supabase.from('moderation_queue').delete().neq('status', 'pending');
