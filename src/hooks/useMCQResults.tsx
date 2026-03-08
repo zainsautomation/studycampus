@@ -47,7 +47,7 @@ export function useMCQResults() {
     },
   });
 
-  // Fetch all attempts with joined data
+  // Fetch all attempts with test info
   const { data: attempts = [], isLoading } = useQuery({
     queryKey: ['admin-mcq-results'],
     queryFn: async () => {
@@ -56,28 +56,46 @@ export function useMCQResults() {
         .select(`
           id, test_id, user_id, status, score, correct_answers, total_questions,
           time_taken_secs, started_at, completed_at,
-          mcq_tests!inner(title),
-          profiles:user_id(full_name, avatar_url, email)
+          mcq_tests!inner(title)
         `)
         .order('started_at', { ascending: false });
       if (error) throw error;
 
-      return (data || []).map((a: any) => ({
-        id: a.id,
-        test_id: a.test_id,
-        user_id: a.user_id,
-        status: a.status,
-        score: a.score,
-        correct_answers: a.correct_answers,
-        total_questions: a.total_questions,
-        time_taken_secs: a.time_taken_secs,
-        started_at: a.started_at,
-        completed_at: a.completed_at,
-        test_title: a.mcq_tests?.title || 'Unknown Test',
-        student_name: a.profiles?.full_name || 'Unknown',
-        student_avatar: a.profiles?.avatar_url || null,
-        student_email: a.profiles?.email || null,
-      })) as AttemptWithDetails[];
+      // Get unique user IDs and fetch profiles separately
+      const userIds = [...new Set((data || []).map((a: any) => a.user_id))];
+      const profilesMap: Record<string, any> = {};
+
+      if (userIds.length > 0) {
+        // Fetch in batches of 50 to avoid query limits
+        for (let i = 0; i < userIds.length; i += 50) {
+          const batch = userIds.slice(i, i + 50);
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, full_name, avatar_url, email')
+            .in('id', batch);
+          (profiles || []).forEach((p: any) => { profilesMap[p.id] = p; });
+        }
+      }
+
+      return (data || []).map((a: any) => {
+        const profile = profilesMap[a.user_id];
+        return {
+          id: a.id,
+          test_id: a.test_id,
+          user_id: a.user_id,
+          status: a.status,
+          score: a.score,
+          correct_answers: a.correct_answers,
+          total_questions: a.total_questions,
+          time_taken_secs: a.time_taken_secs,
+          started_at: a.started_at,
+          completed_at: a.completed_at,
+          test_title: a.mcq_tests?.title || 'Unknown Test',
+          student_name: profile?.full_name || 'Unknown',
+          student_avatar: profile?.avatar_url || null,
+          student_email: profile?.email || null,
+        };
+      }) as AttemptWithDetails[];
     },
   });
 
