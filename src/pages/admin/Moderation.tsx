@@ -137,7 +137,8 @@ export default function Moderation() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string>('');
-
+  const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
+  const [clearTarget, setClearTarget] = useState<string | 'all' | null>(null);
   useEffect(() => {
     fetchModerationQueue();
     fetchStats();
