@@ -480,24 +480,38 @@ export default function Moderation() {
           </Card>
         </div>
 
-        {/* Tabs */}
-        <Tabs value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
-          <TabsList className="w-full sm:w-auto">
-            <TabsTrigger value="pending" className="flex-1 sm:flex-none gap-2">
-              <Clock className="h-4 w-4" />
-              <span className="hidden sm:inline">Pending</span>
-              {stats.pending > 0 && (
-                <Badge variant="secondary" className="h-5 px-1.5 text-xs bg-amber-500/20 text-amber-700 dark:text-amber-300">
-                  {stats.pending}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="all" className="flex-1 sm:flex-none gap-2">
-              <Eye className="h-4 w-4" />
-              <span className="hidden sm:inline">All Reports</span>
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+        {/* Tabs & Clear All */}
+        <div className="flex items-center justify-between gap-3">
+          <Tabs value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
+            <TabsList className="w-full sm:w-auto">
+              <TabsTrigger value="pending" className="flex-1 sm:flex-none gap-2">
+                <Clock className="h-4 w-4" />
+                <span className="hidden sm:inline">Pending</span>
+                {stats.pending > 0 && (
+                  <Badge variant="secondary" className="h-5 px-1.5 text-xs bg-amber-500/20 text-amber-700 dark:text-amber-300">
+                    {stats.pending}
+                  </Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="all" className="flex-1 sm:flex-none gap-2">
+                <Eye className="h-4 w-4" />
+                <span className="hidden sm:inline">All Reports</span>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+          {filter === 'all' && items.some(i => i.status !== 'pending') && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-muted-foreground hover:text-destructive hover:border-destructive/50 shrink-0"
+              onClick={handleClearAllResolved}
+              disabled={isProcessing}
+            >
+              <Trash2 className="h-4 w-4 mr-1.5" />
+              Clear Resolved
+            </Button>
+          )}
+        </div>
 
         {/* Queue */}
         {isLoading ? (
