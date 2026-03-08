@@ -34,6 +34,16 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -137,7 +147,8 @@ export default function Moderation() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string>('');
-
+  const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
+  const [clearTarget, setClearTarget] = useState<string | 'all' | null>(null);
   useEffect(() => {
     fetchModerationQueue();
     fetchStats();
@@ -411,31 +422,35 @@ export default function Moderation() {
     }
   };
 
-  const handleClearCase = async (itemId: string) => {
-    setIsProcessing(true);
-    try {
-      await supabase.from('moderation_queue').delete().eq('id', itemId);
-      toast({ title: 'Case cleared' });
-      fetchModerationQueue();
-      fetchStats();
-    } catch (error: any) {
-      toast({ title: 'Failed to clear', description: error.message, variant: 'destructive' });
-    } finally {
-      setIsProcessing(false);
-    }
+  const handleClearCase = (itemId: string) => {
+    setClearTarget(itemId);
+    setClearConfirmOpen(true);
   };
 
-  const handleClearAllResolved = async (): Promise<void> => {
+  const handleClearAllResolved = () => {
+    setClearTarget('all');
+    setClearConfirmOpen(true);
+  };
+
+  const confirmClear = async () => {
+    if (!clearTarget) return;
     setIsProcessing(true);
     try {
-      await supabase.from('moderation_queue').delete().neq('status', 'pending');
-      toast({ title: 'All resolved cases cleared' });
+      if (clearTarget === 'all') {
+        await supabase.from('moderation_queue').delete().neq('status', 'pending');
+        toast({ title: 'All resolved cases cleared' });
+      } else {
+        await supabase.from('moderation_queue').delete().eq('id', clearTarget);
+        toast({ title: 'Case cleared' });
+      }
       fetchModerationQueue();
       fetchStats();
     } catch (error: any) {
       toast({ title: 'Failed to clear', description: error.message, variant: 'destructive' });
     } finally {
       setIsProcessing(false);
+      setClearConfirmOpen(false);
+      setClearTarget(null);
     }
   };
 
@@ -922,6 +937,32 @@ export default function Moderation() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Clear Confirmation Dialog */}
+      <AlertDialog open={clearConfirmOpen} onOpenChange={setClearConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {clearTarget === 'all' ? 'Clear all resolved cases?' : 'Clear this case?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {clearTarget === 'all' 
+                ? 'This will remove all resolved reports from the moderation queue. This action cannot be undone.'
+                : 'This will remove this report from the moderation queue. This action cannot be undone.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmClear} 
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isProcessing}
+            >
+              {isProcessing ? 'Clearing...' : 'Clear'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
