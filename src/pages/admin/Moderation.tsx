@@ -356,7 +356,7 @@ export default function Moderation() {
           const fileId = extractGoogleDriveFileId(post.image_url);
           if (fileId && isSignedIn && window.gapi?.client?.drive) {
             try {
-              await window.gapi.client.drive.files.delete({ fileId });
+              await window.gapi.client.drive.files.update({ fileId, resource: { trashed: true } });
             } catch (driveError) {
               console.error('Failed to delete image from Google Drive:', driveError);
             }
@@ -406,6 +406,34 @@ export default function Moderation() {
       fetchStats();
     } catch (error: any) {
       toast({ title: 'Action failed', description: error.message, variant: 'destructive' });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleClearCase = async (itemId: string) => {
+    setIsProcessing(true);
+    try {
+      await supabase.from('moderation_queue').delete().eq('id', itemId);
+      toast({ title: 'Case cleared' });
+      fetchModerationQueue();
+      fetchStats();
+    } catch (error: any) {
+      toast({ title: 'Failed to clear', description: error.message, variant: 'destructive' });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleClearAllResolved = async () => {
+    setIsProcessing(true);
+    try {
+      await supabase.from('moderation_queue').delete().neq('status', 'pending');
+      toast({ title: 'All resolved cases cleared' });
+      fetchModerationQueue();
+      fetchStats();
+    } catch (error: any) {
+      toast({ title: 'Failed to clear', description: error.message, variant: 'destructive' });
     } finally {
       setIsProcessing(false);
     }
@@ -480,24 +508,38 @@ export default function Moderation() {
           </Card>
         </div>
 
-        {/* Tabs */}
-        <Tabs value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
-          <TabsList className="w-full sm:w-auto">
-            <TabsTrigger value="pending" className="flex-1 sm:flex-none gap-2">
-              <Clock className="h-4 w-4" />
-              <span className="hidden sm:inline">Pending</span>
-              {stats.pending > 0 && (
-                <Badge variant="secondary" className="h-5 px-1.5 text-xs bg-amber-500/20 text-amber-700 dark:text-amber-300">
-                  {stats.pending}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="all" className="flex-1 sm:flex-none gap-2">
-              <Eye className="h-4 w-4" />
-              <span className="hidden sm:inline">All Reports</span>
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+        {/* Tabs & Clear All */}
+        <div className="flex items-center justify-between gap-3">
+          <Tabs value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
+            <TabsList className="w-full sm:w-auto">
+              <TabsTrigger value="pending" className="flex-1 sm:flex-none gap-2">
+                <Clock className="h-4 w-4" />
+                <span className="hidden sm:inline">Pending</span>
+                {stats.pending > 0 && (
+                  <Badge variant="secondary" className="h-5 px-1.5 text-xs bg-amber-500/20 text-amber-700 dark:text-amber-300">
+                    {stats.pending}
+                  </Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="all" className="flex-1 sm:flex-none gap-2">
+                <Eye className="h-4 w-4" />
+                <span className="hidden sm:inline">All Reports</span>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+          {filter === 'all' && items.some(i => i.status !== 'pending') && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-muted-foreground hover:text-destructive hover:border-destructive/50 shrink-0"
+              onClick={handleClearAllResolved}
+              disabled={isProcessing}
+            >
+              <Trash2 className="h-4 w-4 mr-1.5" />
+              Clear Resolved
+            </Button>
+          )}
+        </div>
 
         {/* Queue */}
         {isLoading ? (
@@ -562,43 +604,56 @@ export default function Moderation() {
                           </div>
                         </div>
                         
-                        {/* Quick Actions - Horizontal on all screens */}
-                        {item.status === 'pending' && (
-                          <div className="flex items-center gap-2 shrink-0">
+                        {/* Quick Actions */}
+                        <div className="flex items-center gap-2 shrink-0">
+                          {item.status === 'pending' ? (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 px-3 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10"
+                                onClick={() => handleQuickAction(item, 'approved')}
+                                disabled={isProcessing}
+                              >
+                                <CheckCircle className="h-4 w-4 mr-1.5" />
+                                <span className="hidden sm:inline">Dismiss</span>
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 px-3 text-red-600 hover:text-red-700 hover:bg-red-500/10"
+                                onClick={() => handleQuickAction(item, 'removed')}
+                                disabled={isProcessing}
+                              >
+                                <Trash2 className="h-4 w-4 mr-1.5" />
+                                <span className="hidden sm:inline">Remove</span>
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8 px-3"
+                                onClick={() => {
+                                  setSelectedItem(item);
+                                  setIsActionDialogOpen(true);
+                                }}
+                              >
+                                <Eye className="h-4 w-4 mr-1.5" />
+                                <span className="hidden sm:inline">Review</span>
+                              </Button>
+                            </>
+                          ) : (
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="h-8 px-3 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10"
-                              onClick={() => handleQuickAction(item, 'approved')}
+                              className="h-8 px-3 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                              onClick={() => handleClearCase(item.id)}
                               disabled={isProcessing}
                             >
-                              <CheckCircle className="h-4 w-4 mr-1.5" />
-                              <span className="hidden sm:inline">Dismiss</span>
+                              <XCircle className="h-4 w-4 mr-1.5" />
+                              <span className="hidden sm:inline">Clear</span>
                             </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-8 px-3 text-red-600 hover:text-red-700 hover:bg-red-500/10"
-                              onClick={() => handleQuickAction(item, 'removed')}
-                              disabled={isProcessing}
-                            >
-                              <Trash2 className="h-4 w-4 mr-1.5" />
-                              <span className="hidden sm:inline">Remove</span>
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-8 px-3"
-                              onClick={() => {
-                                setSelectedItem(item);
-                                setIsActionDialogOpen(true);
-                              }}
-                            >
-                              <Eye className="h-4 w-4 mr-1.5" />
-                              <span className="hidden sm:inline">Review</span>
-                            </Button>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
 
                       {/* Body */}
@@ -617,7 +672,7 @@ export default function Moderation() {
                         </div>
 
                         {/* Reported Content Preview */}
-                        {item.content && (
+                        {item.content ? (
                           <div className="rounded-lg border bg-card overflow-hidden">
                             <div className="px-3 py-2 border-b bg-muted/30">
                               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
@@ -657,6 +712,16 @@ export default function Moderation() {
                                   Posted {format(new Date(item.content.created_at), 'MMM d, yyyy')}
                                 </p>
                               )}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="rounded-lg border border-dashed bg-muted/20 p-4 flex items-center gap-3">
+                            <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                              <Trash2 className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-muted-foreground">Content deleted</p>
+                              <p className="text-xs text-muted-foreground/70">This content has already been removed</p>
                             </div>
                           </div>
                         )}
