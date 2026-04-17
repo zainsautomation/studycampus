@@ -133,9 +133,11 @@ Deno.serve(async (req) => {
     }
 
     if (!connection) {
+      // Return 200 with connected:false — this is a normal state for users without Drive connected,
+      // not an error. Avoids spurious client-side error logs.
       return new Response(
-        JSON.stringify({ error: 'No active connection', connected: false }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ connected: false, message: 'No active connection' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
