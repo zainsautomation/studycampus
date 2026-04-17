@@ -20,7 +20,7 @@ export function useLongPress({
   onLongPress,
   onClick,
 }: LongPressOptions): LongPressHandlers {
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressTriggeredRef = useRef(false);
   const startPosRef = useRef<{ x: number; y: number } | null>(null);
 
