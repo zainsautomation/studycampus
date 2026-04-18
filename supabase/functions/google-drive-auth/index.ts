@@ -5,12 +5,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 }
 
-// AES-256-GCM encryption utilities
 async function encrypt(text: string, key: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(text);
-  
-  // Derive a proper 256-bit key from the provided key
   const keyData = encoder.encode(key.padEnd(32, '0').slice(0, 32));
   const cryptoKey = await crypto.subtle.importKey(
     'raw',
@@ -19,27 +16,22 @@ async function encrypt(text: string, key: string): Promise<string> {
     false,
     ['encrypt']
   );
-  
-  // Generate random IV
+
   const iv = crypto.getRandomValues(new Uint8Array(12));
-  
-  // Encrypt
   const encrypted = await crypto.subtle.encrypt(
     { name: 'AES-GCM', iv },
     cryptoKey,
     data
   );
-  
-  // Combine IV + encrypted data and base64 encode
+
   const combined = new Uint8Array(iv.length + encrypted.byteLength);
   combined.set(iv);
   combined.set(new Uint8Array(encrypted), iv.length);
-  
+
   return btoa(String.fromCharCode(...combined));
 }
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -54,7 +46,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get secrets
     const GOOGLE_CLIENT_ID = Deno.env.get('VITE_GOOGLE_CLIENT_ID') || Deno.env.get('GOOGLE_CLIENT_ID');
     const GOOGLE_CLIENT_SECRET = Deno.env.get('GOOGLE_CLIENT_SECRET');
     const ENCRYPTION_KEY = Deno.env.get('ENCRYPTION_KEY');
@@ -67,7 +58,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get user from auth header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return new Response(
@@ -79,23 +69,28 @@ Deno.serve(async (req) => {
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_ANON_KEY')!,
+      {
+        global: {
+          headers: {
+            Authorization: authHeader,
+          },
+        },
+      }
     );
 
-    const token = authHeader.replace('Bearer ', '');
-    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
+    const { data: userData, error: userError } = await supabase.auth.getUser();
 
-    if (claimsError || !claimsData?.claims?.sub) {
-      console.error('[google-drive-auth] JWT validation failed:', claimsError?.message);
+    if (userError || !userData?.user?.id) {
+      console.error('[google-drive-auth] JWT validation failed:', userError?.message);
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const userId = claimsData.claims.sub;
+    const userId = userData.user.id;
     console.log(`[google-drive-auth] Processing OAuth for user: ${userId}`);
 
-    // Exchange code for tokens with Google
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -128,7 +123,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get user email from Google
     const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
       headers: { Authorization: `Bearer ${access_token}` },
     });
@@ -137,20 +131,15 @@ Deno.serve(async (req) => {
 
     console.log(`[google-drive-auth] Got tokens for: ${email}`);
 
-    // Encrypt tokens
     const encryptedAccessToken = await encrypt(access_token, ENCRYPTION_KEY);
     const encryptedRefreshToken = await encrypt(refresh_token, ENCRYPTION_KEY);
-
-    // Calculate expiry
     const tokenExpiresAt = new Date(Date.now() + (expires_in || 3600) * 1000).toISOString();
 
-    // Use service role for database operations
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
-    // Upsert connection
     const { error: upsertError } = await supabaseAdmin
       .from('google_drive_connections')
       .upsert({
@@ -176,14 +165,13 @@ Deno.serve(async (req) => {
     console.log(`[google-drive-auth] Connection saved for user: ${userId}`);
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
+      JSON.stringify({
+        success: true,
         email,
-        message: 'Google Drive connected permanently' 
+        message: 'Google Drive connected permanently'
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-
   } catch (error) {
     console.error('[google-drive-auth] Error:', error);
     return new Response(
