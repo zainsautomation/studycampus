@@ -89,6 +89,22 @@ export default function Leaderboard() {
     return period === 'weekly' ? entry.weekly_points : entry.total_points;
   };
 
+  if (!settingsLoading && !leaderboardEnabled) {
+    return (
+      <MainLayout>
+        <div className="container px-4 py-6 md:py-8 max-w-4xl mx-auto">
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Leaderboard Disabled</AlertTitle>
+            <AlertDescription>
+              The leaderboard is currently disabled by the administrator. Check back later!
+            </AlertDescription>
+          </Alert>
+        </div>
+      </MainLayout>
+    );
+  }
+
   return (
     <MainLayout>
       <div className="container px-4 py-6 md:py-8 max-w-4xl mx-auto">
