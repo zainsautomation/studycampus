@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Loader2, Github, Twitter, Linkedin, Globe, Eye, EyeOff, User, AtSign, FileText, Link2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Loader2, Github, Twitter, Linkedin, Globe, Eye, EyeOff, User, AtSign, FileText, Link2, AlertCircle, CheckCircle2, Trophy } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -25,6 +25,7 @@ interface ProfileEditSheetProps {
     username: string | null;
     bio: string | null;
     is_public?: boolean;
+    show_on_leaderboard?: boolean;
     social_links?: {
       github?: string;
       twitter?: string;
@@ -88,6 +89,7 @@ export function ProfileEditSheet({
     username: profile.username || "",
     bio: profile.bio || "",
     is_public: profile.is_public !== false,
+    show_on_leaderboard: profile.show_on_leaderboard !== false,
     github: profile.social_links?.github || "",
     twitter: profile.social_links?.twitter || "",
     linkedin: profile.social_links?.linkedin || "",
@@ -101,6 +103,7 @@ export function ProfileEditSheet({
       username: profile.username || "",
       bio: profile.bio || "",
       is_public: profile.is_public !== false,
+      show_on_leaderboard: profile.show_on_leaderboard !== false,
       github: profile.social_links?.github || "",
       twitter: profile.social_links?.twitter || "",
       linkedin: profile.social_links?.linkedin || "",
@@ -176,6 +179,7 @@ export function ProfileEditSheet({
           username: formData.username.trim() || null,
           bio: formData.bio.trim() || null,
           is_public: formData.is_public,
+          show_on_leaderboard: formData.show_on_leaderboard,
           social_links: socialLinks,
         })
         .eq("id", profile.id);
@@ -246,6 +250,34 @@ export function ProfileEditSheet({
                 checked={formData.is_public}
                 onCheckedChange={(checked) =>
                   setFormData({ ...formData, is_public: checked })
+                }
+              />
+            </div>
+          </div>
+
+          {/* Leaderboard Visibility */}
+          <div className="p-3.5 rounded-xl border border-border/60 bg-muted/20 backdrop-blur-sm">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-lg ${formData.show_on_leaderboard ? 'bg-primary/10' : 'bg-muted/50'} transition-colors`}>
+                  <Trophy className={`h-4 w-4 ${formData.show_on_leaderboard ? 'text-primary' : 'text-muted-foreground'}`} />
+                </div>
+                <div>
+                  <Label htmlFor="show_on_leaderboard" className="text-sm font-medium cursor-pointer">
+                    Show on Leaderboard
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {formData.show_on_leaderboard
+                      ? "Your rank is visible to everyone"
+                      : "You're hidden from the leaderboard"}
+                  </p>
+                </div>
+              </div>
+              <Switch
+                id="show_on_leaderboard"
+                checked={formData.show_on_leaderboard}
+                onCheckedChange={(checked) =>
+                  setFormData({ ...formData, show_on_leaderboard: checked })
                 }
               />
             </div>
