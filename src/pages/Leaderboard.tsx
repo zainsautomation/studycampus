@@ -9,6 +9,9 @@ import { LevelBadge } from '@/components/gamification/LevelBadge';
 import { AnimatedCounter } from '@/components/ui/animated-counter';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useAppSettings } from '@/hooks/useAppSettings';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
 
@@ -43,10 +46,12 @@ const rankIcons = [
 
 export default function Leaderboard() {
   const { user } = useAuth();
+  const { leaderboardEnabled, isLoading: settingsLoading } = useAppSettings();
   const [period, setPeriod] = useState<'weekly' | 'all_time'>('all_time');
 
   const { data: leaderboard = [], isLoading } = useQuery({
     queryKey: ['leaderboard', period],
+    enabled: leaderboardEnabled,
     queryFn: async () => {
       const orderColumn = period === 'weekly' ? 'weekly_points' : 'total_points';
       
@@ -83,6 +88,22 @@ export default function Leaderboard() {
   const getPoints = (entry: LeaderboardEntry) => {
     return period === 'weekly' ? entry.weekly_points : entry.total_points;
   };
+
+  if (!settingsLoading && !leaderboardEnabled) {
+    return (
+      <MainLayout>
+        <div className="container px-4 py-6 md:py-8 max-w-4xl mx-auto">
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Leaderboard Disabled</AlertTitle>
+            <AlertDescription>
+              The leaderboard is currently disabled by the administrator. Check back later!
+            </AlertDescription>
+          </Alert>
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>

@@ -21,6 +21,7 @@ import {
   Download,
   EyeOff,
   Shield,
+  Trophy,
   Menu,
   X
 } from 'lucide-react';
@@ -296,6 +297,17 @@ export function AdminSidebar() {
                   id="requests-toggle"
                   checked={settings.requests_enabled}
                   onCheckedChange={(checked) => updateSetting.mutate({ key: 'requests_enabled', value: checked })}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="leaderboard-toggle" className="text-sm flex items-center gap-2 cursor-pointer">
+                  <Trophy className="h-3.5 w-3.5" />
+                  Leaderboard
+                </Label>
+                <Switch
+                  id="leaderboard-toggle"
+                  checked={settings.leaderboard_enabled}
+                  onCheckedChange={(checked) => updateSetting.mutate({ key: 'leaderboard_enabled', value: checked })}
                 />
               </div>
               <Separator className="my-2" />

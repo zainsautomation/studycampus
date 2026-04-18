@@ -15,6 +15,7 @@ interface AppSettings {
   post_images_storage_type: 'supabase' | 'google_drive';
   post_images_google_drive_folder_id: string | null;
   post_creation_enabled: boolean;
+  leaderboard_enabled: boolean;
 }
 
 type SettingValue = boolean | string | null;
@@ -44,6 +45,7 @@ export function useAppSettings() {
         post_images_storage_type: 'supabase',
         post_images_google_drive_folder_id: null,
         post_creation_enabled: true,
+        leaderboard_enabled: true,
       };
       
       data?.forEach((setting: { key: string; value: Json }) => {
@@ -123,6 +125,7 @@ export function useAppSettings() {
     post_images_storage_type: 'supabase',
     post_images_google_drive_folder_id: null,
     post_creation_enabled: true,
+    leaderboard_enabled: true,
   };
 
   return {
@@ -141,5 +144,6 @@ export function useAppSettings() {
     postImagesStorageType: settings?.post_images_storage_type ?? 'supabase',
     postImagesGoogleDriveFolderId: settings?.post_images_google_drive_folder_id ?? null,
     postCreationEnabled: settings?.post_creation_enabled ?? true,
+    leaderboardEnabled: settings?.leaderboard_enabled ?? true,
   };
 }
