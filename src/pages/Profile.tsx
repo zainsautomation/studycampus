@@ -25,6 +25,8 @@ interface ProfileData {
   cover_url: string | null;
   email: string | null;
   created_at: string;
+  is_public?: boolean;
+  show_on_leaderboard?: boolean;
   social_links: {
     github?: string;
     twitter?: string;
@@ -69,6 +71,8 @@ export default function Profile() {
         cover_url: pd.cover_url || null,
         email: pd.email,
         created_at: pd.created_at,
+        is_public: (pd as any).is_public !== false,
+        show_on_leaderboard: (pd as any).show_on_leaderboard !== false,
         social_links: socialLinks || {},
       };
 
