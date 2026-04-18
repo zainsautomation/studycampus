@@ -256,7 +256,16 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
     
     try {
-      const { error } = await supabase.functions.invoke('google-drive-disconnect');
+      const { data: sessionData } = await supabase.auth.getSession();
+      const sessionToken = sessionData.session?.access_token;
+
+      const { error } = await supabase.functions.invoke('google-drive-disconnect', {
+        headers: sessionToken
+          ? {
+              Authorization: `Bearer ${sessionToken}`,
+            }
+          : undefined,
+      });
       
       if (error) {
         console.error('[GoogleDrive] Disconnect error:', error);
