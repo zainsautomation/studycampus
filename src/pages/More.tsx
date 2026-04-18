@@ -15,14 +15,15 @@ import {
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useAuth } from '@/hooks/useAuth';
+import { useAppSettings } from '@/hooks/useAppSettings';
 
-const menuItems = [
-  { href: '/qa', label: 'Q&A', icon: HelpCircle, description: 'Ask and answer questions' },
+const allMenuItems = [
+  { href: '/qa', label: 'Q&A', icon: HelpCircle, description: 'Ask and answer questions', requires: 'qa' as const },
   { href: '/saved-notes', label: 'Saved Notes', icon: Bookmark, description: 'Your bookmarked notes' },
   { href: '/announcements', label: 'Announcements', icon: Megaphone, description: 'Important updates' },
   { href: '/updates', label: 'Schedule', icon: Calendar, description: 'Upcoming events' },
-  { href: '/requests', label: 'Requests', icon: GitPullRequest, description: 'Note & feature requests' },
-  { href: '/leaderboard', label: 'Leaderboard', icon: Trophy, description: 'Top contributors' },
+  { href: '/requests', label: 'Requests', icon: GitPullRequest, description: 'Note & feature requests', requires: 'requests' as const },
+  { href: '/leaderboard', label: 'Leaderboard', icon: Trophy, description: 'Top contributors', requires: 'leaderboard' as const },
   { href: '/profile', label: 'My Profile', icon: User, description: 'View your profile' },
   { href: '/terms', label: 'Terms & Conditions', icon: FileText, description: 'Platform usage terms' },
 ];
