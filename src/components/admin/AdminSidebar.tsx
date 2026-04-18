@@ -21,6 +21,7 @@ import {
   Download,
   EyeOff,
   Shield,
+  Trophy,
   Menu,
   X
 } from 'lucide-react';
