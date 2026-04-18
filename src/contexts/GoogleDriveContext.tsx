@@ -58,6 +58,7 @@ interface GoogleDriveContextValue {
 const GoogleDriveContext = createContext<GoogleDriveContextValue | null>(null);
 
 export function GoogleDriveProvider({ children }: { children: ReactNode }) {
+  const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [isInitialized, setIsInitialized] = useState(false);
   const [isSignedIn, setIsSignedIn] = useState(false);
@@ -103,6 +104,10 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
   // Fetch token from edge function (server-side OAuth)
   const fetchTokenFromServer = useCallback(async (): Promise<ConnectionStatus> => {
     try {
+      if (authLoading || !user) {
+        return { connected: false, email: null, expiresAt: null };
+      }
+
       const { data, error } = await invokeWithSession('google-drive-token');
       
       if (error) {
@@ -124,11 +129,15 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
       console.error('[GoogleDrive] Failed to fetch token:', err);
       return { connected: false, email: null, expiresAt: null };
     }
-  }, []);
+  }, [authLoading, invokeWithSession, user]);
 
   // Get a valid access token (refreshes if needed via edge function)
   const getAccessToken = useCallback(async (): Promise<string | null> => {
     try {
+      if (authLoading || !user) {
+        return null;
+      }
+
       const { data, error } = await invokeWithSession('google-drive-token');
       
       if (error || data?.error || !data?.access_token) {
@@ -146,7 +155,7 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
       console.error('[GoogleDrive] Error getting access token:', err);
       return null;
     }
-  }, [applyTokenToGapi, invokeWithSession]);
+  }, [applyTokenToGapi, authLoading, invokeWithSession, user]);
 
   // Load Google API scripts
   useEffect(() => {
@@ -188,8 +197,7 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
         console.log('[GoogleDrive] GAPI initialized');
 
         // Only check for server-side connection if user is authenticated
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
+        if (!authLoading && user) {
           const status = await fetchTokenFromServer();
           if (status.connected) {
             console.log('[GoogleDrive] Found permanent connection:', status.email);
@@ -210,7 +218,7 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
     };
 
     initializeGoogleApis();
-  }, [clientId, apiKey, fetchTokenFromServer, getAccessToken]);
+  }, [authLoading, clientId, apiKey, fetchTokenFromServer, getAccessToken, user]);
 
   // Refresh connection status
   const refreshConnection = useCallback(async () => {
