@@ -31,6 +31,10 @@ const allMenuItems = [
 export default function More() {
   const location = useLocation();
   const { isAdmin } = useAuth();
+  const { qaEnabled, requestsEnabled, leaderboardEnabled } = useAppSettings();
+
+  const flags = { qa: qaEnabled, requests: requestsEnabled, leaderboard: leaderboardEnabled };
+  const menuItems = allMenuItems.filter(item => !item.requires || flags[item.requires]);
 
   return (
     <MainLayout>
