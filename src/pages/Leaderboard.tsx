@@ -66,15 +66,17 @@ export default function Leaderboard() {
       const userIds = data.map(d => d.user_id);
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('id, full_name, username, avatar_url')
+        .select('id, full_name, username, avatar_url, show_on_leaderboard')
         .in('id', userIds);
 
       const profileMap = new Map(profiles?.map(p => [p.id, p]));
       
-      return data.map(entry => ({
-        ...entry,
-        profile: profileMap.get(entry.user_id) || null
-      })) as LeaderboardEntry[];
+      return data
+        .filter(entry => profileMap.get(entry.user_id)?.show_on_leaderboard !== false)
+        .map(entry => ({
+          ...entry,
+          profile: profileMap.get(entry.user_id) || null
+        })) as LeaderboardEntry[];
     },
   });
 
