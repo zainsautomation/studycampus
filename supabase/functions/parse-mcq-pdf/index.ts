@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -45,21 +46,44 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders });
   }
 
-  try {
-    const { pdfBase64, fileName } = await req.json();
+  let tempStoragePath: string | null = null;
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const admin = createClient(supabaseUrl, serviceKey);
 
-    if (!pdfBase64) {
-      throw new Error('PDF data is required');
+  try {
+    const body = await req.json();
+    const { pdfUrl, storagePath, fileName } = body;
+
+    if (!pdfUrl) {
+      throw new Error('pdfUrl is required');
     }
+
+    tempStoragePath = storagePath || null;
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    console.log('Processing PDF:', fileName);
+    console.log('Processing PDF from URL:', fileName);
 
-    // Use Gemini's native PDF understanding - send base64 directly
+    // Fetch the PDF and convert to base64 (streamed, low memory)
+    const pdfResponse = await fetch(pdfUrl);
+    if (!pdfResponse.ok) {
+      throw new Error(`Failed to fetch PDF: ${pdfResponse.status}`);
+    }
+    const pdfBuffer = await pdfResponse.arrayBuffer();
+    
+    // Convert to base64 in chunks to avoid stack overflow
+    const bytes = new Uint8Array(pdfBuffer);
+    let binary = '';
+    const chunkSize = 0x8000;
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      binary += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + chunkSize)));
+    }
+    const pdfBase64 = btoa(binary);
+
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -118,17 +142,23 @@ serve(async (req) => {
       throw new Error('No response from AI');
     }
 
-    // Parse the JSON response
     let parsed;
     try {
       const cleanContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
       parsed = JSON.parse(cleanContent);
-    } catch (parseError) {
+    } catch {
       console.error('Failed to parse AI response:', content);
       throw new Error('Failed to parse AI response as JSON');
     }
 
     console.log('Parsed questions count:', parsed.questions?.length || 0);
+
+    // Cleanup temp file
+    if (tempStoragePath) {
+      await admin.storage.from('notes').remove([tempStoragePath]).catch((e) => 
+        console.warn('Cleanup failed:', e)
+      );
+    }
 
     return new Response(
       JSON.stringify(parsed),
@@ -137,6 +167,9 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('parse-mcq-pdf error:', error);
+    if (tempStoragePath) {
+      await admin.storage.from('notes').remove([tempStoragePath]).catch(() => {});
+    }
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

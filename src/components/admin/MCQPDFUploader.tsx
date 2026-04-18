@@ -61,19 +61,18 @@ export function MCQPDFUploader({ onParsed }: MCQPDFUploaderProps) {
 
     setIsParsing(true);
     try {
-      // Convert file to base64
-      const reader = new FileReader();
-      const base64 = await new Promise<string>((resolve, reject) => {
-        reader.onload = () => {
-          const result = reader.result as string;
-          resolve(result.split(',')[1]); // Remove data:application/pdf;base64, prefix
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
+      // Upload PDF to storage temporarily, then pass URL to edge function (avoids memory limits)
+      const tempPath = `mcq-temp/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+      const { error: uploadError } = await supabase.storage
+        .from('notes')
+        .upload(tempPath, file, { contentType: 'application/pdf', upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage.from('notes').getPublicUrl(tempPath);
 
       const { data, error } = await supabase.functions.invoke('parse-mcq-pdf', {
-        body: { pdfBase64: base64, fileName: file.name },
+        body: { pdfUrl: urlData.publicUrl, storagePath: tempPath, fileName: file.name },
       });
 
       if (error) throw error;
