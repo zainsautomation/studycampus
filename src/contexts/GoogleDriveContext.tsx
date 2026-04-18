@@ -58,7 +58,7 @@ interface GoogleDriveContextValue {
 const GoogleDriveContext = createContext<GoogleDriveContextValue | null>(null);
 
 export function GoogleDriveProvider({ children }: { children: ReactNode }) {
-  const { user, loading: authLoading } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
   const [isInitialized, setIsInitialized] = useState(false);
   const [isSignedIn, setIsSignedIn] = useState(false);
