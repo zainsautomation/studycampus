@@ -80,7 +80,8 @@ export default function Leaderboard() {
     },
   });
 
-  const userRank = user ? leaderboard.findIndex(e => e.user_id === user.id) + 1 || null : null;
+  const currentUserEntry = user ? leaderboard.find(e => e.user_id === user.id) : null;
+  const userRank = currentUserEntry ? leaderboard.findIndex(e => e.user_id === user!.id) + 1 : null;
 
   const getInitials = (name: string | null | undefined) => {
     if (!name) return '?';

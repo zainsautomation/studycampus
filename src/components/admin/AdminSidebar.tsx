@@ -492,6 +492,14 @@ export function AdminMobileNav() {
                       className="scale-75"
                     />
                   </div>
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
+                    <Label className="text-xs">Leaderboard</Label>
+                    <Switch
+                      checked={settings.leaderboard_enabled}
+                      onCheckedChange={(checked) => updateSetting.mutate({ key: 'leaderboard_enabled', value: checked })}
+                      className="scale-75"
+                    />
+                  </div>
                 </div>
               </div>
             </SheetContent>
