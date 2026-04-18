@@ -79,10 +79,31 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const invokeWithSession = useCallback(
+    async (functionName: string) => {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const sessionToken = sessionData.session?.access_token;
+
+      if (!sessionToken) {
+        return {
+          data: null,
+          error: new Error('No active session'),
+        };
+      }
+
+      return supabase.functions.invoke(functionName, {
+        headers: {
+          Authorization: `Bearer ${sessionToken}`,
+        },
+      });
+    },
+    []
+  );
+
   // Fetch token from edge function (server-side OAuth)
   const fetchTokenFromServer = useCallback(async (): Promise<ConnectionStatus> => {
     try {
-      const { data, error } = await supabase.functions.invoke('google-drive-token');
+      const { data, error } = await invokeWithSession('google-drive-token');
       
       if (error) {
         console.log('[GoogleDrive] Token fetch error:', error.message);
@@ -108,7 +129,7 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
   // Get a valid access token (refreshes if needed via edge function)
   const getAccessToken = useCallback(async (): Promise<string | null> => {
     try {
-      const { data, error } = await supabase.functions.invoke('google-drive-token');
+      const { data, error } = await invokeWithSession('google-drive-token');
       
       if (error || data?.error || !data?.access_token) {
         console.error('[GoogleDrive] Failed to get access token');
@@ -125,7 +146,7 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
       console.error('[GoogleDrive] Error getting access token:', err);
       return null;
     }
-  }, [applyTokenToGapi]);
+  }, [applyTokenToGapi, invokeWithSession]);
 
   // Load Google API scripts
   useEffect(() => {
