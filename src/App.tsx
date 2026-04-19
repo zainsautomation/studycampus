@@ -37,6 +37,8 @@ const MCQTest = lazy(() => import("./pages/MCQTest"));
 const MCQAttempt = lazy(() => import("./pages/MCQAttempt"));
 const MCQResult = lazy(() => import("./pages/MCQResult"));
 const Terms = lazy(() => import("./pages/Terms"));
+const CompleteProfile = lazy(() => import("./pages/CompleteProfile"));
+import { OnboardingGate } from "@/components/OnboardingGate";
  
 // Admin layout + pages - lazy loaded
 import { AdminLayout } from "@/components/admin/AdminLayout";
