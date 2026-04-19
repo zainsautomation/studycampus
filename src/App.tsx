@@ -88,8 +88,10 @@ const App = () => (
               <Sonner />
               <BrowserRouter>
                <Suspense fallback={<PageLoader />}>
+               <OnboardingGate>
               <Routes>
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                <Route path="/complete-profile" element={<CompleteProfile />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/auth/google-drive/callback" element={<ProtectedRoute requireAdmin><GoogleDriveCallback /></ProtectedRoute>} />
                 <Route path="/dashboard" element={<Dashboard />} />
