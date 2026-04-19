@@ -10,6 +10,7 @@ interface AuthContextType {
   role: AppRole | null;
   isLoading: boolean;
   isAdmin: boolean;
+  onboardingComplete: boolean | null;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string, fullName: string, inviteCode: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
