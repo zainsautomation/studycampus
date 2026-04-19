@@ -37,6 +37,8 @@ const MCQTest = lazy(() => import("./pages/MCQTest"));
 const MCQAttempt = lazy(() => import("./pages/MCQAttempt"));
 const MCQResult = lazy(() => import("./pages/MCQResult"));
 const Terms = lazy(() => import("./pages/Terms"));
+const CompleteProfile = lazy(() => import("./pages/CompleteProfile"));
+import { OnboardingGate } from "@/components/OnboardingGate";
  
 // Admin layout + pages - lazy loaded
 import { AdminLayout } from "@/components/admin/AdminLayout";
@@ -86,8 +88,10 @@ const App = () => (
               <Sonner />
               <BrowserRouter>
                <Suspense fallback={<PageLoader />}>
+               <OnboardingGate>
               <Routes>
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                <Route path="/complete-profile" element={<CompleteProfile />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/auth/google-drive/callback" element={<ProtectedRoute requireAdmin><GoogleDriveCallback /></ProtectedRoute>} />
                 <Route path="/dashboard" element={<Dashboard />} />
@@ -127,6 +131,7 @@ const App = () => (
                 </Route>
                 <Route path="*" element={<NotFound />} />
               </Routes>
+               </OnboardingGate>
                </Suspense>
               </BrowserRouter>
             </TooltipProvider>

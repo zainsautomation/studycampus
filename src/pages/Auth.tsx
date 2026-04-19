@@ -2,6 +2,15 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GraduationCap, Mail, Lock, User, KeyRound, Eye, EyeOff, Loader2, ArrowLeft } from 'lucide-react';
+
+const GoogleIcon = () => (
+  <svg viewBox="0 0 24 24" className="w-4 h-4" aria-hidden="true">
+    <path fill="#EA4335" d="M12 10.2v3.92h5.45c-.24 1.42-1.7 4.16-5.45 4.16-3.28 0-5.96-2.72-5.96-6.08s2.68-6.08 5.96-6.08c1.87 0 3.12.8 3.84 1.48l2.62-2.52C16.78 3.6 14.6 2.6 12 2.6 6.96 2.6 2.88 6.68 2.88 12s4.08 9.4 9.12 9.4c5.27 0 8.76-3.7 8.76-8.92 0-.6-.07-1.06-.16-1.52H12z"/>
+    <path fill="#4285F4" d="M21.6 12.48c0-.6-.07-1.06-.16-1.52H12v3.92h5.45c-.24 1.42-1.7 4.16-5.45 4.16v.04c3.27 0 6.16-1.83 7.6-4.7.55-1.1.6-1.62.6-1.9z"/>
+    <path fill="#FBBC05" d="M5.94 14.32a5.96 5.96 0 0 1 0-4.64L3.05 7.4a9.4 9.4 0 0 0 0 9.2l2.89-2.28z"/>
+    <path fill="#34A853" d="M12 21.4c2.6 0 4.78-.86 6.37-2.34l-2.95-2.28c-.81.56-1.93.96-3.42.96-2.66 0-4.92-1.74-5.72-4.16L3.05 16.6A9.4 9.4 0 0 0 12 21.4z"/>
+  </svg>
+);
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -59,6 +68,26 @@ export default function Auth() {
     } catch {
       toast({ title: 'Error', description: 'Something went wrong.', variant: 'destructive' });
     } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`,
+        },
+      });
+      if (error) {
+        toast({ title: 'Google sign-in failed', description: error.message, variant: 'destructive' });
+        setIsLoading(false);
+      }
+      // On success, browser will redirect; loader stays until navigation.
+    } catch {
+      toast({ title: 'Error', description: 'Something went wrong.', variant: 'destructive' });
       setIsLoading(false);
     }
   };
@@ -217,6 +246,26 @@ export default function Auth() {
             >
               Sign Up
             </button>
+          </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full mb-4"
+            onClick={handleGoogleSignIn}
+            disabled={isLoading}
+          >
+            <GoogleIcon />
+            <span className="ml-2">Continue with Google</span>
+          </Button>
+
+          <div className="relative mb-4">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-border" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-card px-2 text-muted-foreground">Or with email</span>
+            </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
