@@ -52,7 +52,8 @@ export default function MCQAttempt() {
   const { data: questions, isLoading: questionsLoading } = useMCQQuestions(
     attempt?.test_id || '',
     test?.shuffle_questions,
-    test?.shuffle_options
+    test?.shuffle_options,
+    attemptId || undefined,
   );
   const { data: savedResponses } = useAttemptResponses(attemptId || '');
   const saveResponse = useSaveResponse();

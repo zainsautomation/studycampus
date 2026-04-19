@@ -72,9 +72,25 @@ export function useMCQTest(testId: string) {
   });
 }
 
-export function useMCQQuestions(testId: string, shuffleQuestions = false, shuffleOptions = false) {
+// Fisher-Yates shuffle — unbiased
+function shuffleArray<T>(array: T[]): T[] {
+  const result = [...array];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
+export function useMCQQuestions(
+  testId: string,
+  shuffleQuestions = false,
+  shuffleOptions = false,
+  attemptId?: string,
+) {
   return useQuery({
-    queryKey: ['mcq-questions', testId],
+    // Include shuffle flags + attemptId so each attempt gets its own stable shuffled order
+    queryKey: ['mcq-questions', testId, shuffleQuestions, shuffleOptions, attemptId ?? 'none'],
     queryFn: async () => {
       const { data: questions, error } = await supabase
         .from('mcq_questions')
@@ -101,22 +117,24 @@ export function useMCQQuestions(testId: string, shuffleQuestions = false, shuffl
         options: (q.mcq_options as MCQOption[]).sort((a, b) => a.order_number - b.order_number),
       }));
 
-      // Shuffle questions if enabled
       if (shuffleQuestions) {
-        result = result.sort(() => Math.random() - 0.5);
+        result = shuffleArray(result);
       }
 
-      // Shuffle options if enabled
       if (shuffleOptions) {
         result = result.map(q => ({
           ...q,
-          options: [...q.options].sort(() => Math.random() - 0.5),
+          options: shuffleArray(q.options),
         }));
       }
 
       return result as MCQQuestion[];
     },
     enabled: !!testId,
+    // Don't re-shuffle on window focus / remount during an active attempt
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 }
 
