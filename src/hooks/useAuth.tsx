@@ -22,6 +22,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
+  const [onboardingComplete, setOnboardingComplete] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchUserRole = async (userId: string) => {
@@ -38,15 +39,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return data?.role as AppRole | null;
   };
 
+  const fetchOnboarding = async (userId: string): Promise<boolean | null> => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('onboarding_complete')
+      .eq('id', userId)
+      .maybeSingle();
+    if (error) {
+      console.error('Error fetching onboarding state:', error);
+      return null;
+    }
+    return data?.onboarding_complete ?? null;
+  };
+
   useEffect(() => {
     let isMounted = true;
 
-    const checkRole = async (userId: string) => {
+    const checkUserMeta = async (userId: string) => {
       try {
-        const fetchedRole = await fetchUserRole(userId);
-        if (isMounted) setRole(fetchedRole);
+        const [fetchedRole, onboarded] = await Promise.all([
+          fetchUserRole(userId),
+          fetchOnboarding(userId),
+        ]);
+        if (!isMounted) return;
+        setRole(fetchedRole);
+        setOnboardingComplete(onboarded);
       } catch {
-        if (isMounted) setRole(null);
+        if (isMounted) {
+          setRole(null);
+          setOnboardingComplete(null);
+        }
       }
     };
 
@@ -59,9 +81,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (session?.user) {
           // Defer to avoid deadlock inside onAuthStateChange
-          setTimeout(() => checkRole(session.user.id), 0);
+          setTimeout(() => checkUserMeta(session.user.id), 0);
         } else {
           setRole(null);
+          setOnboardingComplete(null);
         }
       }
     );
@@ -76,7 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          await checkRole(session.user.id);
+          await checkUserMeta(session.user.id);
         }
       } finally {
         if (isMounted) setIsLoading(false);
@@ -84,6 +107,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     initializeAuth();
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
 
     return () => {
       isMounted = false;
