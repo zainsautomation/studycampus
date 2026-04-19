@@ -256,9 +256,6 @@ export function MCQCreationWizard({ testId, onClose }: MCQCreationWizardProps) {
           .update(testData)
           .eq('id', testId);
         if (error) throw error;
-
-        // Delete existing questions (cascade deletes options)
-        await supabase.from('mcq_questions').delete().eq('test_id', testId);
       } else {
         // Create new test
         const { data: newTest, error } = await supabase
@@ -270,25 +267,62 @@ export function MCQCreationWizard({ testId, onClose }: MCQCreationWizardProps) {
         savedTestId = newTest.id;
       }
 
-      // Insert questions and options
+      // Diff-based question save: preserve existing question IDs so student
+      // attempt responses (mcq_responses) are not cascade-deleted.
+      const keptQuestionIds = questions.filter(q => q.id).map(q => q.id as string);
+
+      if (testId) {
+        // Delete only questions that were removed in the editor
+        const { data: existingQs } = await supabase
+          .from('mcq_questions')
+          .select('id')
+          .eq('test_id', testId);
+        const toDelete = (existingQs || [])
+          .map(q => q.id)
+          .filter(id => !keptQuestionIds.includes(id));
+        if (toDelete.length > 0) {
+          await supabase.from('mcq_questions').delete().in('id', toDelete);
+        }
+      }
+
+      // Upsert questions and their options
       for (let i = 0; i < questions.length; i++) {
         const q = questions[i];
-        const { data: savedQuestion, error: qError } = await supabase
-          .from('mcq_questions')
-          .insert({
-            test_id: savedTestId,
-            question_text: q.question_text,
-            explanation: q.explanation || null,
-            order_number: i,
-          })
-          .select()
-          .single();
+        let questionId = q.id;
 
-        if (qError) throw qError;
+        if (questionId) {
+          // Update existing question (keeps responses intact)
+          const { error: qError } = await supabase
+            .from('mcq_questions')
+            .update({
+              question_text: q.question_text,
+              explanation: q.explanation || null,
+              order_number: i,
+            })
+            .eq('id', questionId);
+          if (qError) throw qError;
 
-        // Insert options
+          // Replace options for this question. Responses reference option IDs
+          // via ON DELETE SET NULL, so historical responses keep their
+          // is_correct value but the selected option text may be lost.
+          await supabase.from('mcq_options').delete().eq('question_id', questionId);
+        } else {
+          const { data: savedQuestion, error: qError } = await supabase
+            .from('mcq_questions')
+            .insert({
+              test_id: savedTestId,
+              question_text: q.question_text,
+              explanation: q.explanation || null,
+              order_number: i,
+            })
+            .select()
+            .single();
+          if (qError) throw qError;
+          questionId = savedQuestion.id;
+        }
+
         const optionsData = q.options.map((o, oIdx) => ({
-          question_id: savedQuestion.id,
+          question_id: questionId,
           option_label: o.option_label,
           option_text: o.option_text,
           is_correct: o.is_correct,

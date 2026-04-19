@@ -24,7 +24,7 @@ export function AttemptDetailSheet({ attempt, open, onOpenChange }: AttemptDetai
         .from('mcq_responses')
         .select(`
           id, is_correct, answered_at,
-          mcq_questions!inner(question_text, order_number, explanation),
+          mcq_questions(question_text, order_number, explanation),
           mcq_options:selected_option_id(option_text, option_label)
         `)
         .eq('attempt_id', attempt!.id)
@@ -33,7 +33,7 @@ export function AttemptDetailSheet({ attempt, open, onOpenChange }: AttemptDetai
       return (data || []).map((r: any) => ({
         id: r.id,
         isCorrect: r.is_correct,
-        questionText: r.mcq_questions?.question_text || '',
+        questionText: r.mcq_questions?.question_text || '(Question removed)',
         orderNumber: r.mcq_questions?.order_number ?? 0,
         explanation: r.mcq_questions?.explanation,
         selectedOption: r.mcq_options ? `${r.mcq_options.option_label}. ${r.mcq_options.option_text}` : 'No answer',
