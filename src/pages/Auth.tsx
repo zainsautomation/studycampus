@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GraduationCap, Mail, Lock, User, KeyRound, Eye, EyeOff, Loader2, ArrowLeft } from 'lucide-react';
+import { FcGoogle } from 'react-icons/fc';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
