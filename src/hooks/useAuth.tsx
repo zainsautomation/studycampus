@@ -174,6 +174,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setSession(null);
     setRole(null);
+    setOnboardingComplete(null);
   };
 
   return (
@@ -184,6 +185,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         role,
         isLoading,
         isAdmin: role === 'admin',
+        onboardingComplete,
         signIn,
         signUp,
         signOut,
