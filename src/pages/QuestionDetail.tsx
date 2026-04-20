@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -291,18 +291,37 @@ export default function QuestionDetail() {
               <div className="flex items-center justify-between flex-wrap gap-4 pt-4 border-t border-border/50">
                 {/* Author info */}
                 <div className="flex items-center gap-3">
-                  <Avatar className="h-9 w-9">
-                    {!isAnonymous && question.profiles?.avatar_url && (
-                      <AvatarImage src={question.profiles.avatar_url} alt={displayName} />
-                    )}
-                    <AvatarFallback className={`text-xs ${isAnonymous ? 'bg-muted' : 'bg-primary/10 text-primary'}`}>
-                      {isAnonymous ? <EyeOff className="h-4 w-4" /> : initials}
-                    </AvatarFallback>
-                  </Avatar>
+                  {isAnonymous ? (
+                    <Avatar className="h-9 w-9">
+                      <AvatarFallback className="text-xs bg-muted">
+                        <EyeOff className="h-4 w-4" />
+                      </AvatarFallback>
+                    </Avatar>
+                  ) : (
+                    <Link to={`/user/${question.profiles?.username || question.user_id}`} className="shrink-0">
+                      <Avatar className="h-9 w-9 cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all">
+                        {question.profiles?.avatar_url && (
+                          <AvatarImage src={question.profiles.avatar_url} alt={displayName} />
+                        )}
+                        <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                          {initials}
+                        </AvatarFallback>
+                      </Avatar>
+                    </Link>
+                  )}
                   <div className="flex flex-col">
-                    <span className={`text-sm font-medium ${isAnonymous ? 'text-muted-foreground italic' : ''}`}>
-                      {displayName}
-                    </span>
+                    {isAnonymous ? (
+                      <span className="text-sm font-medium text-muted-foreground italic">
+                        {displayName}
+                      </span>
+                    ) : (
+                      <Link
+                        to={`/user/${question.profiles?.username || question.user_id}`}
+                        className="text-sm font-medium hover:underline hover:text-primary transition-colors"
+                      >
+                        {displayName}
+                      </Link>
+                    )}
                     <div className="flex items-center gap-1 text-xs text-muted-foreground">
                       <Clock className="h-3 w-3" />
                       <span>Asked {formatDistanceToNow(new Date(question.created_at), { addSuffix: true })}</span>

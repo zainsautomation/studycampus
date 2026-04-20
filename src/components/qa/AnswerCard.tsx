@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ThumbsUp, CheckCircle2, Trash2, Clock } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 import { CommentSection } from "./CommentSection";
 import { RichTextDisplay } from "@/components/ui/rich-text-display";
 import { ReportButton } from "@/components/ui/ReportButton";
@@ -92,16 +93,20 @@ export function AnswerCard({
               <div className="flex items-center justify-between flex-wrap gap-3">
                 {/* Author info */}
                 <div className="flex items-center gap-2.5">
-                  <Avatar className="h-7 w-7">
-                    {answer.profiles?.avatar_url && (
-                      <AvatarImage src={answer.profiles.avatar_url} alt={displayName} />
-                    )}
-                    <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                      {initials}
-                    </AvatarFallback>
-                  </Avatar>
+                  <Link to={`/user/${answer.profiles?.username || answer.user_id}`} className="shrink-0">
+                    <Avatar className="h-7 w-7 cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all">
+                      {answer.profiles?.avatar_url && (
+                        <AvatarImage src={answer.profiles.avatar_url} alt={displayName} />
+                      )}
+                      <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                        {initials}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Link>
                   <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <span className="font-medium">{displayName}</span>
+                    <Link to={`/user/${answer.profiles?.username || answer.user_id}`} className="font-medium hover:underline hover:text-foreground transition-colors">
+                      {displayName}
+                    </Link>
                     <span className="opacity-40">•</span>
                     <Clock className="h-3 w-3 opacity-60" />
                     <span>{formatDistanceToNow(new Date(answer.created_at), { addSuffix: true })}</span>

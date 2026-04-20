@@ -4,6 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MessageSquare, CheckCircle2, Pin, EyeOff, Clock } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 import { ReportButton } from "@/components/ui/ReportButton";
 
 // Strip HTML tags for preview text
@@ -116,18 +117,40 @@ export function QuestionCard({ question, onClick, index = 0 }: QuestionCardProps
           <div className="flex items-center justify-between">
             {/* User info with avatar */}
             <div className="flex items-center gap-2.5">
-              <Avatar className="h-7 w-7">
-                {!isAnonymous && question.profiles?.avatar_url && (
-                  <AvatarImage src={question.profiles.avatar_url} alt={displayName} />
-                )}
-                <AvatarFallback className={`text-xs ${isAnonymous ? 'bg-muted' : 'bg-primary/10 text-primary'}`}>
-                  {isAnonymous ? <EyeOff className="h-3 w-3" /> : initials}
-                </AvatarFallback>
-              </Avatar>
+              {isAnonymous ? (
+                <Avatar className="h-7 w-7">
+                  <AvatarFallback className="text-xs bg-muted">
+                    <EyeOff className="h-3 w-3" />
+                  </AvatarFallback>
+                </Avatar>
+              ) : (
+                <Link
+                  to={`/user/${question.profiles?.username || question.user_id}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="shrink-0"
+                >
+                  <Avatar className="h-7 w-7 cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all">
+                    {question.profiles?.avatar_url && (
+                      <AvatarImage src={question.profiles.avatar_url} alt={displayName} />
+                    )}
+                    <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
+                </Link>
+              )}
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <span className={`font-medium ${isAnonymous ? 'italic' : ''}`}>
-                  {displayName}
-                </span>
+                {isAnonymous ? (
+                  <span className="font-medium italic">{displayName}</span>
+                ) : (
+                  <Link
+                    to={`/user/${question.profiles?.username || question.user_id}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="font-medium hover:underline hover:text-foreground transition-colors"
+                  >
+                    {displayName}
+                  </Link>
+                )}
                 <span className="opacity-40">•</span>
                 <Clock className="h-3 w-3 opacity-60" />
                 <span>{formatDistanceToNow(new Date(question.created_at), { addSuffix: true })}</span>
