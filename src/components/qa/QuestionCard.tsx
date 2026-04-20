@@ -4,6 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MessageSquare, CheckCircle2, Pin, EyeOff, Clock } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 import { ReportButton } from "@/components/ui/ReportButton";
 
 // Strip HTML tags for preview text
