@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ThumbsUp, CheckCircle2, Trash2, Clock } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 import { CommentSection } from "./CommentSection";
 import { RichTextDisplay } from "@/components/ui/rich-text-display";
 import { ReportButton } from "@/components/ui/ReportButton";
