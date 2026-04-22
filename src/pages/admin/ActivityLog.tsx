@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
   FileText,
@@ -11,12 +11,14 @@ import {
   Filter,
   Download,
   Search,
+  User as UserIcon,
 } from 'lucide-react';
 import { AdminPageHeader } from '@/components/admin/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Select,
   SelectContent,
@@ -27,12 +29,21 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 
+interface UserInfo {
+  id: string;
+  full_name: string | null;
+  username: string | null;
+  avatar_url: string | null;
+}
+
 interface ActivityItem {
   id: string;
   type: 'note' | 'announcement' | 'update' | 'question' | 'post' | 'request';
   title: string;
   created_at: string;
   status?: string;
+  user_id: string | null;
+  user?: UserInfo | null;
 }
 
 const containerVariants = {
@@ -47,8 +58,10 @@ const itemVariants = {
 
 export default function ActivityLog() {
   const [activities, setActivities] = useState<ActivityItem[]>([]);
+  const [profilesMap, setProfilesMap] = useState<Record<string, UserInfo>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<string>('all');
+  const [userFilter, setUserFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
@@ -59,34 +72,69 @@ export default function ActivityLog() {
     setIsLoading(true);
 
     const [notes, announcements, updates, questions, posts, requests] = await Promise.all([
-      supabase.from('notes').select('id, title, created_at').order('created_at', { ascending: false }).limit(50),
-      supabase.from('announcements').select('id, title, created_at').order('created_at', { ascending: false }).limit(50),
-      supabase.from('updates').select('id, title, created_at').order('created_at', { ascending: false }).limit(50),
-      supabase.from('questions').select('id, title, created_at').order('created_at', { ascending: false }).limit(50),
-      supabase.from('posts').select('id, content, created_at').order('created_at', { ascending: false }).limit(50),
-      supabase.from('requests').select('id, title, status, created_at').order('created_at', { ascending: false }).limit(50),
+      supabase.from('notes').select('id, title, created_at, created_by').order('created_at', { ascending: false }).limit(50),
+      supabase.from('announcements').select('id, title, created_at, created_by').order('created_at', { ascending: false }).limit(50),
+      supabase.from('updates').select('id, title, created_at, created_by').order('created_at', { ascending: false }).limit(50),
+      supabase.from('questions').select('id, title, created_at, user_id').order('created_at', { ascending: false }).limit(50),
+      supabase.from('posts').select('id, content, created_at, user_id, is_anonymous').order('created_at', { ascending: false }).limit(50),
+      supabase.from('requests').select('id, title, status, created_at, user_id, is_anonymous').order('created_at', { ascending: false }).limit(50),
     ]);
 
     const allActivities: ActivityItem[] = [
-      ...(notes.data || []).map((n) => ({ ...n, type: 'note' as const })),
-      ...(announcements.data || []).map((a) => ({ ...a, type: 'announcement' as const })),
-      ...(updates.data || []).map((u) => ({ ...u, type: 'update' as const })),
-      ...(questions.data || []).map((q) => ({ ...q, type: 'question' as const })),
-      ...(posts.data || []).map((p) => {
+      ...(notes.data || []).map((n: any) => ({ id: n.id, title: n.title, created_at: n.created_at, user_id: n.created_by, type: 'note' as const })),
+      ...(announcements.data || []).map((a: any) => ({ id: a.id, title: a.title, created_at: a.created_at, user_id: a.created_by, type: 'announcement' as const })),
+      ...(updates.data || []).map((u: any) => ({ id: u.id, title: u.title, created_at: u.created_at, user_id: u.created_by, type: 'update' as const })),
+      ...(questions.data || []).map((q: any) => ({ id: q.id, title: q.title, created_at: q.created_at, user_id: q.user_id, type: 'question' as const })),
+      ...(posts.data || []).map((p: any) => {
         const cleanContent = p.content.replace(/<[^>]*>/g, '').trim();
         return {
           id: p.id,
           title: cleanContent.slice(0, 60) + (cleanContent.length > 60 ? '...' : ''),
           created_at: p.created_at,
+          user_id: p.is_anonymous ? null : p.user_id,
           type: 'post' as const,
         };
       }),
-      ...(requests.data || []).map((r) => ({ ...r, type: 'request' as const })),
+      ...(requests.data || []).map((r: any) => ({
+        id: r.id,
+        title: r.title,
+        status: r.status,
+        created_at: r.created_at,
+        user_id: r.is_anonymous ? null : r.user_id,
+        type: 'request' as const,
+      })),
     ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-    setActivities(allActivities);
+    // Fetch profiles for all unique user_ids
+    const uniqueUserIds = Array.from(new Set(allActivities.map((a) => a.user_id).filter(Boolean))) as string[];
+    let profMap: Record<string, UserInfo> = {};
+    if (uniqueUserIds.length > 0) {
+      const { data: profs } = await supabase
+        .from('profiles')
+        .select('id, full_name, username, avatar_url')
+        .in('id', uniqueUserIds);
+      profMap = (profs || []).reduce((acc, p) => {
+        acc[p.id] = p as UserInfo;
+        return acc;
+      }, {} as Record<string, UserInfo>);
+    }
+
+    setProfilesMap(profMap);
+    setActivities(allActivities.map((a) => ({ ...a, user: a.user_id ? profMap[a.user_id] : null })));
     setIsLoading(false);
   };
+
+  const userOptions = useMemo(() => {
+    const map = new Map<string, UserInfo>();
+    activities.forEach((a) => {
+      if (a.user_id && profilesMap[a.user_id]) {
+        map.set(a.user_id, profilesMap[a.user_id]);
+      }
+    });
+    return Array.from(map.values()).sort((a, b) =>
+      (a.full_name || a.username || '').localeCompare(b.full_name || b.username || '')
+    );
+  }, [activities, profilesMap]);
 
   const getActivityIcon = (type: string) => {
     switch (type) {
@@ -129,14 +177,16 @@ export default function ActivityLog() {
   const filteredActivities = activities.filter((activity) => {
     const matchesFilter = filter === 'all' || activity.type === filter;
     const matchesSearch = activity.title.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesFilter && matchesSearch;
+    const matchesUser = userFilter === 'all' || activity.user_id === userFilter;
+    return matchesFilter && matchesSearch && matchesUser;
   });
 
   const exportToCSV = () => {
-    const headers = ['Type', 'Title', 'Status', 'Created At'];
+    const headers = ['Type', 'Title', 'User', 'Status', 'Created At'];
     const rows = filteredActivities.map((a) => [
       a.type,
       a.title.replace(/,/g, ';'),
+      (a.user?.full_name || a.user?.username || (a.user_id ? 'Unknown' : 'Anonymous')).replace(/,/g, ';'),
       a.status || '-',
       format(new Date(a.created_at), 'yyyy-MM-dd HH:mm:ss'),
     ]);
@@ -151,6 +201,11 @@ export default function ActivityLog() {
     URL.revokeObjectURL(url);
   };
 
+  const getInitials = (u?: UserInfo | null) => {
+    const name = u?.full_name || u?.username || '?';
+    return name.slice(0, 2).toUpperCase();
+  };
+
   return (
     <>
       <AdminPageHeader title="Activity Log" description="View all activity across the platform" />
@@ -159,8 +214,8 @@ export default function ActivityLog() {
         <motion.div variants={itemVariants}>
           <Card>
             <CardContent className="p-4">
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="relative flex-1">
+              <div className="flex flex-col gap-3">
+                <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     placeholder="Search activity..."
@@ -169,7 +224,7 @@ export default function ActivityLog() {
                     className="pl-9"
                   />
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <Select value={filter} onValueChange={setFilter}>
                     <SelectTrigger className="w-[150px]">
                       <Filter className="w-4 h-4 mr-2" />
@@ -183,6 +238,20 @@ export default function ActivityLog() {
                       <SelectItem value="question">Questions</SelectItem>
                       <SelectItem value="post">Posts</SelectItem>
                       <SelectItem value="request">Requests</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={userFilter} onValueChange={setUserFilter}>
+                    <SelectTrigger className="w-[200px]">
+                      <UserIcon className="w-4 h-4 mr-2" />
+                      <SelectValue placeholder="All Users" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Users</SelectItem>
+                      {userOptions.map((u) => (
+                        <SelectItem key={u.id} value={u.id}>
+                          {u.full_name || u.username || 'Unknown'}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <Button variant="outline" onClick={exportToCSV} className="gap-2">
@@ -233,7 +302,7 @@ export default function ActivityLog() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{activity.title}</p>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap mt-1">
                           <Badge variant="outline" className="text-xs py-0 h-5 capitalize">
                             {activity.type}
                           </Badge>
@@ -242,10 +311,23 @@ export default function ActivityLog() {
                               {activity.status}
                             </Badge>
                           )}
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <Avatar className="h-4 w-4">
+                              {activity.user?.avatar_url && <AvatarImage src={activity.user.avatar_url} />}
+                              <AvatarFallback className="text-[8px]">
+                                {activity.user_id ? getInitials(activity.user) : 'A'}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="truncate max-w-[120px]">
+                              {activity.user?.full_name ||
+                                activity.user?.username ||
+                                (activity.user_id ? 'Unknown' : 'Anonymous')}
+                            </span>
+                          </div>
                         </div>
                       </div>
                       <span className="text-xs text-muted-foreground whitespace-nowrap">
-                        {format(new Date(activity.created_at), 'MMM dd, yyyy HH:mm')}
+                        {format(new Date(activity.created_at), 'MMM dd, HH:mm')}
                       </span>
                     </motion.div>
                   ))}
