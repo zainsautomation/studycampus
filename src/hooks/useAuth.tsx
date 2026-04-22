@@ -60,6 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const [fetchedRole, onboarded] = await Promise.all([
           fetchUserRole(userId),
           fetchOnboarding(userId),
+          supabase.from('profiles').update({ last_seen_at: new Date().toISOString() }).eq('id', userId),
         ]);
         if (!isMounted) return;
         setRole(fetchedRole);
