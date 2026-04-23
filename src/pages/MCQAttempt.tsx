@@ -106,6 +106,7 @@ export default function MCQAttempt() {
     if (!currentQuestion || !attemptId) return;
 
     const isCorrect = currentQuestion.options.find(o => o.id === optionId)?.is_correct || false;
+    const isAlreadyAnswered = !!answersRef.current[currentQuestion.id];
 
     setAnswers(prev => ({
       ...prev,
@@ -123,7 +124,18 @@ export default function MCQAttempt() {
     } catch (error) {
       console.error('Failed to save response:', error);
     }
-  }, [currentQuestion, attemptId, saveResponse]);
+
+    // Auto-advance to next question (only on first selection, not when changing answer)
+    if (autoAdvance && !isAlreadyAnswered) {
+      const totalQuestions = questionsRef.current?.length ?? 0;
+      setCurrentIndex(idx => {
+        if (idx < totalQuestions - 1) {
+          return idx + 1;
+        }
+        return idx;
+      });
+    }
+  }, [currentQuestion, attemptId, saveResponse, autoAdvance]);
 
   const performSubmit = useCallback(async () => {
     if (!attemptId) return;
