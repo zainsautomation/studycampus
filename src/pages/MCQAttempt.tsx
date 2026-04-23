@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Flag, Clock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Flag, Clock, Zap } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { QuestionDisplay } from '@/components/mcq/QuestionDisplay';
 import { TestTimer } from '@/components/mcq/TestTimer';
@@ -41,6 +43,14 @@ export default function MCQAttempt() {
   const [timerPaused, setTimerPaused] = useState(false);
   const [startTime] = useState(Date.now());
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [autoAdvance, setAutoAdvance] = useState(() => {
+    const saved = localStorage.getItem('mcq-auto-advance');
+    return saved === null ? true : saved === 'true';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('mcq-auto-advance', String(autoAdvance));
+  }, [autoAdvance]);
 
   // Ref to track current answers for stale closure fix
   const answersRef = useRef<Record<string, string>>({});
@@ -96,6 +106,7 @@ export default function MCQAttempt() {
     if (!currentQuestion || !attemptId) return;
 
     const isCorrect = currentQuestion.options.find(o => o.id === optionId)?.is_correct || false;
+    const isAlreadyAnswered = !!answersRef.current[currentQuestion.id];
 
     setAnswers(prev => ({
       ...prev,
@@ -113,7 +124,18 @@ export default function MCQAttempt() {
     } catch (error) {
       console.error('Failed to save response:', error);
     }
-  }, [currentQuestion, attemptId, saveResponse]);
+
+    // Auto-advance to next question (only on first selection, not when changing answer)
+    if (autoAdvance && !isAlreadyAnswered) {
+      const totalQuestions = questionsRef.current?.length ?? 0;
+      setCurrentIndex(idx => {
+        if (idx < totalQuestions - 1) {
+          return idx + 1;
+        }
+        return idx;
+      });
+    }
+  }, [currentQuestion, attemptId, saveResponse, autoAdvance]);
 
   const performSubmit = useCallback(async () => {
     if (!attemptId) return;
@@ -224,8 +246,22 @@ export default function MCQAttempt() {
           current={currentIndex + 1}
           total={questions.length}
           answeredCount={answeredCount}
-          className="mb-6"
+          className="mb-4"
         />
+
+        {/* Auto-advance toggle */}
+        <div className="flex items-center justify-end gap-2 mb-4 px-1">
+          <Zap className={cn("w-3.5 h-3.5", autoAdvance ? "text-primary" : "text-muted-foreground")} />
+          <Label htmlFor="auto-advance" className="text-xs text-muted-foreground cursor-pointer">
+            Auto-advance
+          </Label>
+          <Switch
+            id="auto-advance"
+            checked={autoAdvance}
+            onCheckedChange={setAutoAdvance}
+            aria-label="Toggle auto-advance to next question"
+          />
+        </div>
 
         {/* Question */}
         <AnimatePresence mode="wait">
