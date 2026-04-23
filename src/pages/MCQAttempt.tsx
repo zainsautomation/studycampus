@@ -250,16 +250,24 @@ export default function MCQAttempt() {
         />
 
         {/* Auto-advance toggle */}
-        <div className="flex items-center justify-end gap-2 mb-4 px-1">
-          <Zap className={cn("w-3.5 h-3.5", autoAdvance ? "text-primary" : "text-muted-foreground")} />
-          <Label htmlFor="auto-advance" className="text-xs text-muted-foreground cursor-pointer">
-            Auto-advance
-          </Label>
+        <div className="flex items-center justify-between gap-2 mb-4 px-3 py-2 rounded-lg border border-border/50 bg-card/30">
+          <div className="flex items-center gap-2 min-w-0">
+            <Zap className={cn("w-4 h-4 shrink-0", autoAdvance ? "text-primary" : "text-muted-foreground")} />
+            <div className="min-w-0">
+              <Label htmlFor="auto-advance" className="text-sm font-medium cursor-pointer block leading-tight">
+                Auto Next
+              </Label>
+              <p className="text-[11px] text-muted-foreground leading-tight">
+                Automatically move to next question after selecting an answer
+              </p>
+            </div>
+          </div>
           <Switch
             id="auto-advance"
             checked={autoAdvance}
             onCheckedChange={setAutoAdvance}
             aria-label="Toggle auto-advance to next question"
+            className="shrink-0"
           />
         </div>
 
