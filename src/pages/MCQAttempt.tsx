@@ -260,18 +260,16 @@ export default function MCQAttempt() {
           <Label htmlFor="auto-advance" className="text-xs text-muted-foreground cursor-pointer">
             Auto Next
           </Label>
-          <TooltipProvider delayDuration={150}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button type="button" aria-label="What is Auto Next?" className="text-muted-foreground hover:text-foreground transition-colors">
-                  <Info className="w-3.5 h-3.5" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="top" className="max-w-[220px] text-xs">
-                Automatically moves to the next question after you select an answer.
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <Popover>
+            <PopoverTrigger asChild>
+              <button type="button" aria-label="What is Auto Next?" className="text-muted-foreground hover:text-foreground transition-colors">
+                <Info className="w-3.5 h-3.5" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent side="top" className="max-w-[240px] text-xs p-3">
+              Automatically moves to the next question after you select an answer.
+            </PopoverContent>
+          </Popover>
           <Switch
             id="auto-advance"
             checked={autoAdvance}
