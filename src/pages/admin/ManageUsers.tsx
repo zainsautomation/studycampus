@@ -273,11 +273,11 @@ export default function ManageUsers() {
                 </div>
                 <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
                   <DialogTrigger asChild>
-                    <Button className="gap-2 shrink-0"><Plus className="w-4 h-4" />Generate Code</Button>
+                    <Button className="gap-2 shrink-0" onClick={() => resetForm()}><Plus className="w-4 h-4" />Generate Code</Button>
                   </DialogTrigger>
                   <DialogContent>
-                    <DialogHeader><DialogTitle>Generate Invite Code</DialogTitle></DialogHeader>
-                    <form onSubmit={handleCreateCode} className="space-y-4">
+                    <DialogHeader><DialogTitle>{editingCodeId ? 'Edit Invite Code' : 'Generate Invite Code'}</DialogTitle></DialogHeader>
+                    <form onSubmit={handleSubmitCode} className="space-y-4">
                       <div>
                         <Label htmlFor="code">Code</Label>
                         <div className="flex gap-2">
@@ -301,7 +301,7 @@ export default function ManageUsers() {
                       </div>
                       <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-2">
                         <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-                        <Button type="submit">Create</Button>
+                        <Button type="submit">{editingCodeId ? 'Save Changes' : 'Create'}</Button>
                       </div>
                     </form>
                   </DialogContent>
