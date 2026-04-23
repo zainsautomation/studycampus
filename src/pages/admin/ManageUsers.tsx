@@ -114,7 +114,21 @@ export default function ManageUsers() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const resetForm = () => setFormData({ code: generateCode(), description: '', max_uses: 50, expires_at: '' });
+  const resetForm = () => {
+    setEditingCodeId(null);
+    setFormData({ code: generateCode(), description: '', max_uses: 50, expires_at: '' });
+  };
+
+  const openEditDialog = (code: InviteCode) => {
+    setEditingCodeId(code.id);
+    setFormData({
+      code: code.code,
+      description: code.description || '',
+      max_uses: code.max_uses || 50,
+      expires_at: code.expires_at ? code.expires_at.split('T')[0] : '',
+    });
+    setIsDialogOpen(true);
+  };
 
   // Computed stats
   const activeCodes = useMemo(() => inviteCodes.filter(c => c.is_active).length, [inviteCodes]);
