@@ -43,6 +43,14 @@ export default function MCQAttempt() {
   const [timerPaused, setTimerPaused] = useState(false);
   const [startTime] = useState(Date.now());
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [autoAdvance, setAutoAdvance] = useState(() => {
+    const saved = localStorage.getItem('mcq-auto-advance');
+    return saved === null ? true : saved === 'true';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('mcq-auto-advance', String(autoAdvance));
+  }, [autoAdvance]);
 
   // Ref to track current answers for stale closure fix
   const answersRef = useRef<Record<string, string>>({});
