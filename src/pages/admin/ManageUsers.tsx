@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Copy, Trash2, Users, Ticket, CheckCircle, XCircle, Eye, EyeOff, Search, Calendar } from 'lucide-react';
+import { Plus, Copy, Trash2, Users, Ticket, CheckCircle, XCircle, Eye, EyeOff, Search, Calendar, Pencil } from 'lucide-react';
 import { AdminPageHeader } from '@/components/admin/AdminLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
