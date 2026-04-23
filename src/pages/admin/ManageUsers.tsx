@@ -84,6 +84,7 @@ export default function ManageUsers() {
   const [students, setStudents] = useState<UserWithRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingCodeId, setEditingCodeId] = useState<string | null>(null);
   const [formData, setFormData] = useState({ code: generateCode(), description: '', max_uses: 50, expires_at: '' });
   const [showCode, setShowCode] = useState<Record<string, boolean>>({});
   const [codeSearch, setCodeSearch] = useState('');
