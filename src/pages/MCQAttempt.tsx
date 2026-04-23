@@ -246,8 +246,22 @@ export default function MCQAttempt() {
           current={currentIndex + 1}
           total={questions.length}
           answeredCount={answeredCount}
-          className="mb-6"
+          className="mb-4"
         />
+
+        {/* Auto-advance toggle */}
+        <div className="flex items-center justify-end gap-2 mb-4 px-1">
+          <Zap className={cn("w-3.5 h-3.5", autoAdvance ? "text-primary" : "text-muted-foreground")} />
+          <Label htmlFor="auto-advance" className="text-xs text-muted-foreground cursor-pointer">
+            Auto-advance
+          </Label>
+          <Switch
+            id="auto-advance"
+            checked={autoAdvance}
+            onCheckedChange={setAutoAdvance}
+            aria-label="Toggle auto-advance to next question"
+          />
+        </div>
 
         {/* Question */}
         <AnimatePresence mode="wait">
