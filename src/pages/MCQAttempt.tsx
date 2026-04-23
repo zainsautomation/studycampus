@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Flag, Clock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Flag, Clock, Zap } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { QuestionDisplay } from '@/components/mcq/QuestionDisplay';
 import { TestTimer } from '@/components/mcq/TestTimer';
