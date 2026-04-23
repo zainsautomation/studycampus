@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Copy, Trash2, Users, Ticket, CheckCircle, XCircle, Eye, EyeOff, Search, Calendar } from 'lucide-react';
+import { Plus, Copy, Trash2, Users, Ticket, CheckCircle, XCircle, Eye, EyeOff, Search, Calendar, Pencil } from 'lucide-react';
 import { AdminPageHeader } from '@/components/admin/AdminLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -84,6 +84,7 @@ export default function ManageUsers() {
   const [students, setStudents] = useState<UserWithRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingCodeId, setEditingCodeId] = useState<string | null>(null);
   const [formData, setFormData] = useState({ code: generateCode(), description: '', max_uses: 50, expires_at: '' });
   const [showCode, setShowCode] = useState<Record<string, boolean>>({});
   const [codeSearch, setCodeSearch] = useState('');
@@ -113,7 +114,21 @@ export default function ManageUsers() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const resetForm = () => setFormData({ code: generateCode(), description: '', max_uses: 50, expires_at: '' });
+  const resetForm = () => {
+    setEditingCodeId(null);
+    setFormData({ code: generateCode(), description: '', max_uses: 50, expires_at: '' });
+  };
+
+  const openEditDialog = (code: InviteCode) => {
+    setEditingCodeId(code.id);
+    setFormData({
+      code: code.code,
+      description: code.description || '',
+      max_uses: code.max_uses || 50,
+      expires_at: code.expires_at ? code.expires_at.split('T')[0] : '',
+    });
+    setIsDialogOpen(true);
+  };
 
   // Computed stats
   const activeCodes = useMemo(() => inviteCodes.filter(c => c.is_active).length, [inviteCodes]);
@@ -132,18 +147,29 @@ export default function ManageUsers() {
     return students.filter(s => s.full_name?.toLowerCase().includes(q) || s.email?.toLowerCase().includes(q));
   }, [students, studentSearch]);
 
-  const handleCreateCode = async (e: React.FormEvent) => {
+  const handleSubmitCode = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const { error } = await supabase.from('invite_codes').insert({
-        code: formData.code.toUpperCase(),
-        description: formData.description || null,
-        max_uses: formData.max_uses || null,
-        expires_at: formData.expires_at || null,
-        created_by: user?.id,
-      });
-      if (error) throw error;
-      toast({ title: 'Invite code created' });
+      if (editingCodeId) {
+        const { error } = await supabase.from('invite_codes').update({
+          code: formData.code.toUpperCase(),
+          description: formData.description || null,
+          max_uses: formData.max_uses || null,
+          expires_at: formData.expires_at || null,
+        }).eq('id', editingCodeId);
+        if (error) throw error;
+        toast({ title: 'Invite code updated' });
+      } else {
+        const { error } = await supabase.from('invite_codes').insert({
+          code: formData.code.toUpperCase(),
+          description: formData.description || null,
+          max_uses: formData.max_uses || null,
+          expires_at: formData.expires_at || null,
+          created_by: user?.id,
+        });
+        if (error) throw error;
+        toast({ title: 'Invite code created' });
+      }
       setIsDialogOpen(false);
       resetForm();
       fetchData();
@@ -247,11 +273,11 @@ export default function ManageUsers() {
                 </div>
                 <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
                   <DialogTrigger asChild>
-                    <Button className="gap-2 shrink-0"><Plus className="w-4 h-4" />Generate Code</Button>
+                    <Button className="gap-2 shrink-0" onClick={() => resetForm()}><Plus className="w-4 h-4" />Generate Code</Button>
                   </DialogTrigger>
                   <DialogContent>
-                    <DialogHeader><DialogTitle>Generate Invite Code</DialogTitle></DialogHeader>
-                    <form onSubmit={handleCreateCode} className="space-y-4">
+                    <DialogHeader><DialogTitle>{editingCodeId ? 'Edit Invite Code' : 'Generate Invite Code'}</DialogTitle></DialogHeader>
+                    <form onSubmit={handleSubmitCode} className="space-y-4">
                       <div>
                         <Label htmlFor="code">Code</Label>
                         <div className="flex gap-2">
@@ -275,7 +301,7 @@ export default function ManageUsers() {
                       </div>
                       <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-2">
                         <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-                        <Button type="submit">Create</Button>
+                        <Button type="submit">{editingCodeId ? 'Save Changes' : 'Create'}</Button>
                       </div>
                     </form>
                   </DialogContent>
@@ -323,6 +349,9 @@ export default function ManageUsers() {
                                 }
                                 <Switch checked={code.is_active || false} onCheckedChange={() => toggleCodeActive(code.id, code.is_active || false)} className="scale-90" />
                               </div>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditDialog(code)} aria-label="Edit invite code">
+                                <Pencil className="w-4 h-4" />
+                              </Button>
                               <AlertDialog>
                                 <AlertDialogTrigger asChild>
                                   <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10">
