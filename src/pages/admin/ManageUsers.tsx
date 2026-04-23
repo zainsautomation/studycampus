@@ -147,18 +147,29 @@ export default function ManageUsers() {
     return students.filter(s => s.full_name?.toLowerCase().includes(q) || s.email?.toLowerCase().includes(q));
   }, [students, studentSearch]);
 
-  const handleCreateCode = async (e: React.FormEvent) => {
+  const handleSubmitCode = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const { error } = await supabase.from('invite_codes').insert({
-        code: formData.code.toUpperCase(),
-        description: formData.description || null,
-        max_uses: formData.max_uses || null,
-        expires_at: formData.expires_at || null,
-        created_by: user?.id,
-      });
-      if (error) throw error;
-      toast({ title: 'Invite code created' });
+      if (editingCodeId) {
+        const { error } = await supabase.from('invite_codes').update({
+          code: formData.code.toUpperCase(),
+          description: formData.description || null,
+          max_uses: formData.max_uses || null,
+          expires_at: formData.expires_at || null,
+        }).eq('id', editingCodeId);
+        if (error) throw error;
+        toast({ title: 'Invite code updated' });
+      } else {
+        const { error } = await supabase.from('invite_codes').insert({
+          code: formData.code.toUpperCase(),
+          description: formData.description || null,
+          max_uses: formData.max_uses || null,
+          expires_at: formData.expires_at || null,
+          created_by: user?.id,
+        });
+        if (error) throw error;
+        toast({ title: 'Invite code created' });
+      }
       setIsDialogOpen(false);
       resetForm();
       fetchData();
