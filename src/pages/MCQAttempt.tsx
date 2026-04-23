@@ -1,7 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Flag, Clock, Zap } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Flag, Clock, Zap, Info } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -250,24 +256,28 @@ export default function MCQAttempt() {
         />
 
         {/* Auto-advance toggle */}
-        <div className="flex items-center justify-between gap-2 mb-4 px-3 py-2 rounded-lg border border-border/50 bg-card/30">
-          <div className="flex items-center gap-2 min-w-0">
-            <Zap className={cn("w-4 h-4 shrink-0", autoAdvance ? "text-primary" : "text-muted-foreground")} />
-            <div className="min-w-0">
-              <Label htmlFor="auto-advance" className="text-sm font-medium cursor-pointer block leading-tight">
-                Auto Next
-              </Label>
-              <p className="text-[11px] text-muted-foreground leading-tight">
-                Automatically move to next question after selecting an answer
-              </p>
-            </div>
-          </div>
+        <div className="flex items-center justify-end gap-2 mb-4 px-1">
+          <Zap className={cn("w-3.5 h-3.5", autoAdvance ? "text-primary" : "text-muted-foreground")} />
+          <Label htmlFor="auto-advance" className="text-xs text-muted-foreground cursor-pointer">
+            Auto Next
+          </Label>
+          <TooltipProvider delayDuration={150}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button type="button" aria-label="What is Auto Next?" className="text-muted-foreground hover:text-foreground transition-colors">
+                  <Info className="w-3.5 h-3.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-[220px] text-xs">
+                Automatically moves to the next question after you select an answer.
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <Switch
             id="auto-advance"
             checked={autoAdvance}
             onCheckedChange={setAutoAdvance}
             aria-label="Toggle auto-advance to next question"
-            className="shrink-0"
           />
         </div>
 
