@@ -349,6 +349,9 @@ export default function ManageUsers() {
                                 }
                                 <Switch checked={code.is_active || false} onCheckedChange={() => toggleCodeActive(code.id, code.is_active || false)} className="scale-90" />
                               </div>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditDialog(code)} aria-label="Edit invite code">
+                                <Pencil className="w-4 h-4" />
+                              </Button>
                               <AlertDialog>
                                 <AlertDialogTrigger asChild>
                                   <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10">
