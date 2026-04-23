@@ -968,7 +968,6 @@ export type Database = {
           full_name: string | null
           id: string
           is_public: boolean | null
-          last_seen_at: string | null
           onboarding_complete: boolean
           show_on_leaderboard: boolean
           social_links: Json | null
@@ -984,7 +983,6 @@ export type Database = {
           full_name?: string | null
           id: string
           is_public?: boolean | null
-          last_seen_at?: string | null
           onboarding_complete?: boolean
           show_on_leaderboard?: boolean
           social_links?: Json | null
@@ -1000,7 +998,6 @@ export type Database = {
           full_name?: string | null
           id?: string
           is_public?: boolean | null
-          last_seen_at?: string | null
           onboarding_complete?: boolean
           show_on_leaderboard?: boolean
           social_links?: Json | null
