@@ -18,6 +18,7 @@ interface AIKey {
   id: string;
   label: string;
   api_key: string;
+  provider: 'lovable' | 'gemini';
   is_active: boolean;
   priority: number;
   last_used_at: string | null;
