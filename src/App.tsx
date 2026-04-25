@@ -56,6 +56,7 @@ const ManageRequests = lazy(() => import("./pages/admin/ManageRequests"));
 const ManageMCQ = lazy(() => import("./pages/admin/ManageMCQ"));
 const Moderation = lazy(() => import("./pages/admin/Moderation"));
 const MCQResults = lazy(() => import("./pages/admin/MCQResults"));
+const ManageAIKeys = lazy(() => import("./pages/admin/ManageAIKeys"));
  
  // Loading fallback component
  const PageLoader = () => (
@@ -128,6 +129,7 @@ const App = () => (
                   <Route path="requests" element={<ManageRequests />} />
                   <Route path="moderation" element={<Moderation />} />
                   <Route path="mcq-results" element={<MCQResults />} />
+                  <Route path="ai-keys" element={<ManageAIKeys />} />
                 </Route>
                 <Route path="*" element={<NotFound />} />
               </Routes>
