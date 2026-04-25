@@ -55,7 +55,7 @@ export default function ManageAIKeys() {
     loadKeys();
   }, []);
 
-  const resetForm = () => setFormData({ label: '', api_key: '', priority: 0 });
+  const resetForm = () => setFormData({ label: '', api_key: '', priority: 0, provider: 'lovable' });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,14 +63,20 @@ export default function ManageAIKeys() {
       toast.error('Label and API key are required');
       return;
     }
-    if (!formData.api_key.trim().startsWith('sk_')) {
-      toast.error('Invalid key format. Lovable AI Gateway keys must start with "sk_".');
+    const trimmed = formData.api_key.trim();
+    if (formData.provider === 'lovable' && !trimmed.startsWith('sk_')) {
+      toast.error('Lovable AI Gateway keys must start with "sk_".');
+      return;
+    }
+    if (formData.provider === 'gemini' && !trimmed.startsWith('AIza')) {
+      toast.error('Google Gemini keys must start with "AIza".');
       return;
     }
     setSubmitting(true);
     const { error } = await supabase.from('ai_api_keys').insert({
       label: formData.label.trim(),
-      api_key: formData.api_key.trim(),
+      api_key: trimmed,
+      provider: formData.provider,
       priority: formData.priority,
       created_by: user?.id,
     });
