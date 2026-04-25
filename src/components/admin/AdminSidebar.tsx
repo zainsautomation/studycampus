@@ -23,7 +23,8 @@ import {
   Shield,
   Trophy,
   Menu,
-  X
+  X,
+  KeyRound
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -70,6 +71,7 @@ const adminNavGroups = [
     items: [
       { href: '/admin/users', label: 'Users', icon: Users },
       { href: '/admin/moderation', label: 'Moderation', icon: Shield, showPendingBadge: true },
+      { href: '/admin/ai-keys', label: 'AI Keys', icon: KeyRound },
     ]
   },
 ];

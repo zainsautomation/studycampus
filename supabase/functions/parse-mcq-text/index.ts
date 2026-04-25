@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { callAIGateway } from "../_shared/aiKeyPool.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -51,48 +52,38 @@ serve(async (req) => {
       throw new Error('Text is required');
     }
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY is not configured');
-    }
-
     console.log('Parsing MCQ text, length:', text.length);
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-3-flash-preview',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Parse these MCQs:\n\n${text}` },
-        ],
-        temperature: 0.1,
-      }),
+    const { response, usedKeyLabel, exhausted } = await callAIGateway({
+      model: 'google/gemini-3-flash-preview',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: `Parse these MCQs:\n\n${text}` },
+      ],
+      temperature: 0.1,
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('AI API error:', response.status, errorText);
-      
+      console.error(`AI API error (key: ${usedKeyLabel}):`, response.status, errorText);
+
       if (response.status === 429) {
         return new Response(
-          JSON.stringify({ error: 'Rate limit exceeded. Please try again in a moment.' }),
+          JSON.stringify({ error: exhausted ? 'All API keys are rate limited. Please try again later.' : 'Rate limit exceeded. Please try again in a moment.' }),
           { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
       if (response.status === 402) {
         return new Response(
-          JSON.stringify({ error: 'API credits exhausted. Please contact support.' }),
+          JSON.stringify({ error: 'All AI API keys are out of credits. Add a new key in Admin → AI Keys.' }),
           { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      
+
       throw new Error('Failed to parse MCQs');
     }
+
+    console.log(`Parsed successfully using key: ${usedKeyLabel}`);
 
     const result = await response.json();
     const content = result.choices?.[0]?.message?.content;
