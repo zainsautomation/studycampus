@@ -46,7 +46,7 @@ export default function ManageAIKeys() {
     if (error) {
       toast.error('Failed to load keys');
     } else {
-      setKeys(data || []);
+      setKeys((data || []) as AIKey[]);
     }
     setLoading(false);
   };
