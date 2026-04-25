@@ -1,11 +1,14 @@
-// Shared helper to call the Lovable AI Gateway with automatic failover
-// across an admin-managed pool of API keys stored in `ai_api_keys`.
+// Shared helper to call AI providers (Lovable Gateway or Google Gemini direct)
+// with automatic failover across an admin-managed pool of API keys.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+
+export type AIProvider = "lovable" | "gemini";
 
 export interface AIKey {
   id: string;
   label: string;
   api_key: string;
+  provider: AIProvider;
 }
 
 export async function loadKeyPool(): Promise<AIKey[]> {
@@ -15,7 +18,7 @@ export async function loadKeyPool(): Promise<AIKey[]> {
 
   const { data, error } = await admin
     .from("ai_api_keys")
-    .select("id, label, api_key")
+    .select("id, label, api_key, provider")
     .eq("is_active", true)
     .order("priority", { ascending: true })
     .order("created_at", { ascending: true });
@@ -28,12 +31,18 @@ export async function loadKeyPool(): Promise<AIKey[]> {
     id: k.id,
     label: k.label,
     api_key: k.api_key,
+    provider: (k.provider as AIProvider) ?? "lovable",
   }));
 
-  // Always append the system fallback last so existing setups keep working
+  // Append the system fallback last so existing setups keep working
   const systemKey = Deno.env.get("LOVABLE_API_KEY");
   if (systemKey) {
-    pool.push({ id: "system", label: "System (LOVABLE_API_KEY)", api_key: systemKey });
+    pool.push({
+      id: "system",
+      label: "System (LOVABLE_API_KEY)",
+      api_key: systemKey,
+      provider: "lovable",
+    });
   }
 
   return pool;
@@ -42,9 +51,10 @@ export async function loadKeyPool(): Promise<AIKey[]> {
 async function markKeyFailed(keyId: string) {
   if (keyId === "system") return;
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const admin = createClient(supabaseUrl, serviceKey);
+    const admin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
     await admin
       .from("ai_api_keys")
       .update({ last_failed_at: new Date().toISOString() })
@@ -57,9 +67,10 @@ async function markKeyFailed(keyId: string) {
 async function markKeyUsed(keyId: string) {
   if (keyId === "system") return;
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const admin = createClient(supabaseUrl, serviceKey);
+    const admin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
     await admin
       .from("ai_api_keys")
       .update({ last_used_at: new Date().toISOString() })
@@ -69,14 +80,91 @@ async function markKeyUsed(keyId: string) {
   }
 }
 
+interface CallBody {
+  model: string;
+  messages: Array<{ role: string; content: string }>;
+  temperature?: number;
+}
+
+// Map Lovable model IDs to Gemini API model names
+function toGeminiModel(model: string): string {
+  // Strip "google/" prefix if present
+  const stripped = model.replace(/^google\//, "");
+  // Gemini API uses model names like "gemini-2.5-flash", "gemini-1.5-flash"
+  // Map preview names to stable equivalents
+  const map: Record<string, string> = {
+    "gemini-3-flash-preview": "gemini-2.5-flash",
+    "gemini-3-pro-preview": "gemini-2.5-pro",
+    "gemini-3.1-pro-preview": "gemini-2.5-pro",
+  };
+  return map[stripped] ?? stripped;
+}
+
+async function callLovable(key: AIKey, body: CallBody): Promise<Response> {
+  return fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${key.api_key}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+}
+
+async function callGemini(key: AIKey, body: CallBody): Promise<Response> {
+  const model = toGeminiModel(body.model);
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key.api_key}`;
+
+  // Convert OpenAI-style messages → Gemini format
+  const systemMsgs = body.messages.filter((m) => m.role === "system");
+  const convMsgs = body.messages.filter((m) => m.role !== "system");
+
+  const geminiBody: Record<string, unknown> = {
+    contents: convMsgs.map((m) => ({
+      role: m.role === "assistant" ? "model" : "user",
+      parts: [{ text: m.content }],
+    })),
+    generationConfig: {
+      temperature: body.temperature ?? 0.1,
+      maxOutputTokens: 8192,
+    },
+  };
+
+  if (systemMsgs.length > 0) {
+    geminiBody.systemInstruction = {
+      parts: [{ text: systemMsgs.map((m) => m.content).join("\n\n") }],
+    };
+  }
+
+  const resp = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(geminiBody),
+  });
+
+  if (!resp.ok) return resp;
+
+  // Reshape Gemini response to OpenAI-compatible shape so callers stay unchanged
+  const data = await resp.json();
+  const text =
+    data?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text ?? "").join("") ??
+    "";
+
+  const openAiShape = {
+    choices: [{ message: { role: "assistant", content: text } }],
+  };
+
+  return new Response(JSON.stringify(openAiShape), {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
 /**
- * POST to the Lovable AI Gateway, failing over to the next key in the pool
- * when the current one returns 402 (out of credits) or 429 (rate limited).
- *
- * Returns the first successful Response. If every key fails, returns the
- * last failing Response so the caller can surface the appropriate status.
+ * Try each active key in priority order. Falls over to the next key on
+ * 401/402/403/429. Returns the first successful response.
  */
-export async function callAIGateway(body: unknown): Promise<{
+export async function callAIGateway(body: CallBody): Promise<{
   response: Response;
   usedKeyLabel: string;
   exhausted: boolean;
@@ -90,15 +178,9 @@ export async function callAIGateway(body: unknown): Promise<{
   let lastKeyLabel = "";
 
   for (const key of pool) {
-    console.log(`Trying AI key: ${key.label}`);
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${key.api_key}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
+    console.log(`Trying AI key: ${key.label} (${key.provider})`);
+    const response =
+      key.provider === "gemini" ? await callGemini(key, body) : await callLovable(key, body);
 
     lastResponse = response;
     lastKeyLabel = key.label;
@@ -108,19 +190,21 @@ export async function callAIGateway(body: unknown): Promise<{
       return { response, usedKeyLabel: key.label, exhausted: false };
     }
 
-    // Failover on credits, rate-limit, or auth errors (invalid/expired keys).
-    if (response.status === 402 || response.status === 429 || response.status === 401 || response.status === 403) {
+    // Failover on credits, rate-limit, or auth errors
+    if ([401, 402, 403, 429].includes(response.status)) {
       console.warn(`Key "${key.label}" returned ${response.status}, trying next key`);
       await markKeyFailed(key.id);
-      // Drain body to free the connection
-      try { await response.text(); } catch { /* noop */ }
+      try {
+        await response.text();
+      } catch {
+        /* noop */
+      }
       continue;
     }
 
-    // Non-retryable error — stop and return it
+    // Non-retryable error — stop
     return { response, usedKeyLabel: key.label, exhausted: false };
   }
 
-  // All keys exhausted
   return { response: lastResponse!, usedKeyLabel: lastKeyLabel, exhausted: true };
 }
