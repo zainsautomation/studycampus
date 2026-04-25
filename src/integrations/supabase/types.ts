@@ -94,6 +94,7 @@ export type Database = {
           last_failed_at: string | null
           last_used_at: string | null
           priority: number
+          provider: string
           updated_at: string
         }
         Insert: {
@@ -106,6 +107,7 @@ export type Database = {
           last_failed_at?: string | null
           last_used_at?: string | null
           priority?: number
+          provider?: string
           updated_at?: string
         }
         Update: {
@@ -118,6 +120,7 @@ export type Database = {
           last_failed_at?: string | null
           last_used_at?: string | null
           priority?: number
+          provider?: string
           updated_at?: string
         }
         Relationships: []
