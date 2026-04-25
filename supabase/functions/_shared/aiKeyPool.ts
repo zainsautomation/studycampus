@@ -82,7 +82,8 @@ async function markKeyUsed(keyId: string) {
 
 interface CallBody {
   model: string;
-  messages: Array<{ role: string; content: string }>;
+  // content can be a string or a multimodal array (text + file parts)
+  messages: Array<{ role: string; content: unknown }>;
   temperature?: number;
 }
 
