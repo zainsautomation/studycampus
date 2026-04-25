@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
@@ -17,6 +18,7 @@ interface AIKey {
   id: string;
   label: string;
   api_key: string;
+  provider: 'lovable' | 'gemini';
   is_active: boolean;
   priority: number;
   last_used_at: string | null;
@@ -31,7 +33,7 @@ export default function ManageAIKeys() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [revealedIds, setRevealedIds] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
-  const [formData, setFormData] = useState({ label: '', api_key: '', priority: 0 });
+  const [formData, setFormData] = useState<{ label: string; api_key: string; priority: number; provider: 'lovable' | 'gemini' }>({ label: '', api_key: '', priority: 0, provider: 'lovable' });
 
   const loadKeys = async () => {
     setLoading(true);
@@ -44,7 +46,7 @@ export default function ManageAIKeys() {
     if (error) {
       toast.error('Failed to load keys');
     } else {
-      setKeys(data || []);
+      setKeys((data || []) as AIKey[]);
     }
     setLoading(false);
   };
@@ -53,7 +55,7 @@ export default function ManageAIKeys() {
     loadKeys();
   }, []);
 
-  const resetForm = () => setFormData({ label: '', api_key: '', priority: 0 });
+  const resetForm = () => setFormData({ label: '', api_key: '', priority: 0, provider: 'lovable' });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,14 +63,20 @@ export default function ManageAIKeys() {
       toast.error('Label and API key are required');
       return;
     }
-    if (!formData.api_key.trim().startsWith('sk_')) {
-      toast.error('Invalid key format. Lovable AI Gateway keys must start with "sk_".');
+    const trimmed = formData.api_key.trim();
+    if (formData.provider === 'lovable' && !trimmed.startsWith('sk_')) {
+      toast.error('Lovable AI Gateway keys must start with "sk_".');
+      return;
+    }
+    if (formData.provider === 'gemini' && !trimmed.startsWith('AIza')) {
+      toast.error('Google Gemini keys must start with "AIza".');
       return;
     }
     setSubmitting(true);
     const { error } = await supabase.from('ai_api_keys').insert({
       label: formData.label.trim(),
-      api_key: formData.api_key.trim(),
+      api_key: trimmed,
+      provider: formData.provider,
       priority: formData.priority,
       created_by: user?.id,
     });
@@ -163,6 +171,7 @@ export default function ManageAIKeys() {
                     <CardTitle className="text-base flex items-center gap-2 flex-wrap">
                       {key.label}
                       <Badge variant="outline" className="text-xs">Priority {key.priority}</Badge>
+                      <Badge variant="outline" className="text-xs capitalize">{key.provider}</Badge>
                       {key.is_active ? (
                         <Badge variant="secondary" className="text-xs gap-1">
                           <CheckCircle2 className="w-3 h-3" /> Active
@@ -229,11 +238,26 @@ export default function ManageAIKeys() {
               />
             </div>
             <div className="space-y-2">
+              <Label htmlFor="provider">Provider</Label>
+              <Select
+                value={formData.provider}
+                onValueChange={(v) => setFormData({ ...formData, provider: v as 'lovable' | 'gemini' })}
+              >
+                <SelectTrigger id="provider">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="lovable">Lovable AI Gateway (sk_...)</SelectItem>
+                  <SelectItem value="gemini">Google Gemini Direct (AIza...)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="api_key">API Key</Label>
               <Input
                 id="api_key"
                 type="password"
-                placeholder="sk-..."
+                placeholder={formData.provider === 'gemini' ? 'AIza...' : 'sk_...'}
                 value={formData.api_key}
                 onChange={(e) => setFormData({ ...formData, api_key: e.target.value })}
                 className="font-mono"
