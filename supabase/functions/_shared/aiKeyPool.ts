@@ -116,14 +116,22 @@ async function callGemini(key: AIKey, body: CallBody): Promise<Response> {
   const model = toGeminiModel(body.model);
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key.api_key}`;
 
-  // Convert OpenAI-style messages → Gemini format
+  // Gemini fallback only supports plain string content. Skip if multimodal.
+  const hasMultimodal = body.messages.some((m) => typeof m.content !== "string");
+  if (hasMultimodal) {
+    return new Response(
+      JSON.stringify({ error: "Gemini direct provider does not support multimodal input here" }),
+      { status: 415, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
   const systemMsgs = body.messages.filter((m) => m.role === "system");
   const convMsgs = body.messages.filter((m) => m.role !== "system");
 
   const geminiBody: Record<string, unknown> = {
     contents: convMsgs.map((m) => ({
       role: m.role === "assistant" ? "model" : "user",
-      parts: [{ text: m.content }],
+      parts: [{ text: m.content as string }],
     })),
     generationConfig: {
       temperature: body.temperature ?? 0.1,
@@ -133,7 +141,7 @@ async function callGemini(key: AIKey, body: CallBody): Promise<Response> {
 
   if (systemMsgs.length > 0) {
     geminiBody.systemInstruction = {
-      parts: [{ text: systemMsgs.map((m) => m.content).join("\n\n") }],
+      parts: [{ text: systemMsgs.map((m) => m.content as string).join("\n\n") }],
     };
   }
 
