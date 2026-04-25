@@ -61,6 +61,10 @@ export default function ManageAIKeys() {
       toast.error('Label and API key are required');
       return;
     }
+    if (!formData.api_key.trim().startsWith('sk_')) {
+      toast.error('Invalid key format. Lovable AI Gateway keys must start with "sk_".');
+      return;
+    }
     setSubmitting(true);
     const { error } = await supabase.from('ai_api_keys').insert({
       label: formData.label.trim(),
