@@ -108,10 +108,12 @@ export async function callAIGateway(body: unknown): Promise<{
       return { response, usedKeyLabel: key.label, exhausted: false };
     }
 
-    // Failover only on credits/rate-limit errors. Other errors are real failures.
-    if (response.status === 402 || response.status === 429) {
+    // Failover on credits, rate-limit, or auth errors (invalid/expired keys).
+    if (response.status === 402 || response.status === 429 || response.status === 401 || response.status === 403) {
       console.warn(`Key "${key.label}" returned ${response.status}, trying next key`);
       await markKeyFailed(key.id);
+      // Drain body to free the connection
+      try { await response.text(); } catch { /* noop */ }
       continue;
     }
 
