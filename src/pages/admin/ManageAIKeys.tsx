@@ -238,11 +238,26 @@ export default function ManageAIKeys() {
               />
             </div>
             <div className="space-y-2">
+              <Label htmlFor="provider">Provider</Label>
+              <Select
+                value={formData.provider}
+                onValueChange={(v) => setFormData({ ...formData, provider: v as 'lovable' | 'gemini' })}
+              >
+                <SelectTrigger id="provider">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="lovable">Lovable AI Gateway (sk_...)</SelectItem>
+                  <SelectItem value="gemini">Google Gemini Direct (AIza...)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="api_key">API Key</Label>
               <Input
                 id="api_key"
                 type="password"
-                placeholder="sk-..."
+                placeholder={formData.provider === 'gemini' ? 'AIza...' : 'sk_...'}
                 value={formData.api_key}
                 onChange={(e) => setFormData({ ...formData, api_key: e.target.value })}
                 className="font-mono"
