@@ -33,7 +33,7 @@ export default function ManageAIKeys() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [revealedIds, setRevealedIds] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
-  const [formData, setFormData] = useState({ label: '', api_key: '', priority: 0 });
+  const [formData, setFormData] = useState<{ label: string; api_key: string; priority: number; provider: 'lovable' | 'gemini' }>({ label: '', api_key: '', priority: 0, provider: 'lovable' });
 
   const loadKeys = async () => {
     setLoading(true);
