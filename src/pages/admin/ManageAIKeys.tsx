@@ -186,13 +186,13 @@ export default function ManageAIKeys() {
                 <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                   <span>Added {formatDistanceToNow(new Date(key.created_at), { addSuffix: true })}</span>
                   {key.last_used_at && (
-                    <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                    <span className="flex items-center gap-1 text-primary">
                       <CheckCircle2 className="w-3 h-3" />
                       Used {formatDistanceToNow(new Date(key.last_used_at), { addSuffix: true })}
                     </span>
                   )}
                   {key.last_failed_at && (
-                    <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
+                    <span className="flex items-center gap-1 text-destructive">
                       <AlertCircle className="w-3 h-3" />
                       Failed {formatDistanceToNow(new Date(key.last_failed_at), { addSuffix: true })}
                     </span>
