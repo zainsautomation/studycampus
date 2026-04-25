@@ -171,6 +171,7 @@ export default function ManageAIKeys() {
                     <CardTitle className="text-base flex items-center gap-2 flex-wrap">
                       {key.label}
                       <Badge variant="outline" className="text-xs">Priority {key.priority}</Badge>
+                      <Badge variant="outline" className="text-xs capitalize">{key.provider}</Badge>
                       {key.is_active ? (
                         <Badge variant="secondary" className="text-xs gap-1">
                           <CheckCircle2 className="w-3 h-3" /> Active
