@@ -34,6 +34,8 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { MCQTextParser } from './MCQTextParser';
 import { MCQPDFUploader } from './MCQPDFUploader';
+import { MCQTemplateParser } from './MCQTemplateParser';
+import { MCQJSONImporter } from './MCQJSONImporter';
 
 interface Question {
   id?: string;
