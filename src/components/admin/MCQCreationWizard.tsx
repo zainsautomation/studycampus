@@ -289,54 +289,75 @@ export function MCQCreationWizard({ testId, onClose }: MCQCreationWizardProps) {
         }
       }
 
-      // Upsert questions and their options
-      for (let i = 0; i < questions.length; i++) {
-        const q = questions[i];
-        let questionId = q.id;
+      // Split into existing (update) vs new (bulk insert)
+      const existingQs = questions
+        .map((q, i) => ({ q, i }))
+        .filter(x => x.q.id);
+      const newQs = questions
+        .map((q, i) => ({ q, i }))
+        .filter(x => !x.q.id);
 
-        if (questionId) {
-          // Update existing question (keeps responses intact)
-          const { error: qError } = await supabase
+      // 1) Update existing questions in parallel
+      await Promise.all(
+        existingQs.map(({ q, i }) =>
+          supabase
             .from('mcq_questions')
             .update({
               question_text: q.question_text,
               explanation: q.explanation || null,
               order_number: i,
             })
-            .eq('id', questionId);
-          if (qError) throw qError;
+            .eq('id', q.id as string)
+        )
+      );
 
-          // Replace options for this question. Responses reference option IDs
-          // via ON DELETE SET NULL, so historical responses keep their
-          // is_correct value but the selected option text may be lost.
-          await supabase.from('mcq_options').delete().eq('question_id', questionId);
-        } else {
-          const { data: savedQuestion, error: qError } = await supabase
-            .from('mcq_questions')
-            .insert({
+      // 2) Bulk insert new questions in one round trip
+      const questionIdByIndex = new Map<number, string>();
+      existingQs.forEach(({ q, i }) => questionIdByIndex.set(i, q.id as string));
+
+      if (newQs.length > 0) {
+        const { data: inserted, error: insErr } = await supabase
+          .from('mcq_questions')
+          .insert(
+            newQs.map(({ q, i }) => ({
               test_id: savedTestId,
               question_text: q.question_text,
               explanation: q.explanation || null,
               order_number: i,
-            })
-            .select()
-            .single();
-          if (qError) throw qError;
-          questionId = savedQuestion.id;
-        }
+            }))
+          )
+          .select('id, order_number');
+        if (insErr) throw insErr;
+        (inserted || []).forEach(row => {
+          questionIdByIndex.set(row.order_number, row.id);
+        });
+      }
 
-        const optionsData = q.options.map((o, oIdx) => ({
-          question_id: questionId,
+      // 3) Delete old options for existing questions in parallel
+      if (existingQs.length > 0) {
+        await supabase
+          .from('mcq_options')
+          .delete()
+          .in('question_id', existingQs.map(({ q }) => q.id as string));
+      }
+
+      // 4) Bulk insert ALL options in one round trip
+      const allOptions = questions.flatMap((q, qIdx) => {
+        const qid = questionIdByIndex.get(qIdx);
+        if (!qid) return [];
+        return q.options.map((o, oIdx) => ({
+          question_id: qid,
           option_label: o.option_label,
           option_text: o.option_text,
           is_correct: o.is_correct,
           order_number: oIdx,
         }));
+      });
 
+      if (allOptions.length > 0) {
         const { error: oError } = await supabase
           .from('mcq_options')
-          .insert(optionsData);
-
+          .insert(allOptions);
         if (oError) throw oError;
       }
 
