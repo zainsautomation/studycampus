@@ -40,6 +40,71 @@ OUTPUT FORMAT (strict JSON):
 
 Return ONLY valid JSON, no markdown or explanation.`;
 
+function extractJson(raw: string): any | null {
+  if (!raw) return null;
+  // Strip markdown fences anywhere in the string
+  let s = raw.replace(/```json/gi, '').replace(/```/g, '').trim();
+
+  // Try direct parse first
+  try { return JSON.parse(s); } catch { /* fall through */ }
+
+  // Find the first { or [ and the matching last } or ]
+  const firstBrace = s.indexOf('{');
+  const firstBracket = s.indexOf('[');
+  let start = -1;
+  let openChar = '';
+  if (firstBrace !== -1 && (firstBracket === -1 || firstBrace < firstBracket)) {
+    start = firstBrace; openChar = '{';
+  } else if (firstBracket !== -1) {
+    start = firstBracket; openChar = '[';
+  }
+  if (start === -1) return null;
+
+  const closeChar = openChar === '{' ? '}' : ']';
+  const lastClose = s.lastIndexOf(closeChar);
+  if (lastClose > start) {
+    const slice = s.slice(start, lastClose + 1);
+    try { return JSON.parse(slice); } catch { /* try repair */ }
+  }
+
+  // Repair likely-truncated JSON by walking and balancing brackets
+  const sub = s.slice(start);
+  const stack: string[] = [];
+  let inStr = false;
+  let escape = false;
+  let lastSafe = -1;
+  for (let i = 0; i < sub.length; i++) {
+    const ch = sub[i];
+    if (escape) { escape = false; continue; }
+    if (ch === '\\') { escape = true; continue; }
+    if (ch === '"') { inStr = !inStr; continue; }
+    if (inStr) continue;
+    if (ch === '{' || ch === '[') stack.push(ch);
+    else if (ch === '}' || ch === ']') {
+      stack.pop();
+      if (stack.length === 0) lastSafe = i;
+    }
+  }
+
+  // If still inside a structure, close it
+  let candidate = sub;
+  if (stack.length > 0) {
+    // Trim trailing partial token (incomplete string/number/key)
+    let cut = candidate.length;
+    // remove trailing comma+whitespace+partial
+    candidate = candidate.replace(/,\s*("[^"]*"?\s*:?\s*[^,}\]]*)?$/, '');
+    // close remaining open brackets
+    while (stack.length) {
+      const open = stack.pop()!;
+      candidate += open === '{' ? '}' : ']';
+    }
+  } else if (lastSafe !== -1) {
+    candidate = sub.slice(0, lastSafe + 1);
+  }
+
+  try { return JSON.parse(candidate); } catch { return null; }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -96,14 +161,11 @@ serve(async (req) => {
       throw new Error('No response from AI');
     }
 
-    // Parse the JSON response
-    let parsed;
-    try {
-      // Remove any markdown code blocks if present
-      const cleanContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      parsed = JSON.parse(cleanContent);
-    } catch (parseError) {
-      console.error('Failed to parse AI response:', content);
+    // Parse the JSON response — robust against markdown fences, prefixes, and trailing junk
+    const parsed = extractJson(content);
+    if (!parsed) {
+      console.error('Failed to parse AI response (first 500 chars):', content.slice(0, 500));
+      console.error('Last 500 chars:', content.slice(-500));
       throw new Error('Failed to parse AI response as JSON');
     }
 

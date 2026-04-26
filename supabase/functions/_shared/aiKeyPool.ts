@@ -135,7 +135,7 @@ async function callGemini(key: AIKey, body: CallBody): Promise<Response> {
     })),
     generationConfig: {
       temperature: body.temperature ?? 0.1,
-      maxOutputTokens: 8192,
+      maxOutputTokens: 32768,
     },
   };
 
