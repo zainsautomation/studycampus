@@ -6,7 +6,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-const systemPrompt = `You are an MCQ parser. Given raw text containing multiple choice questions, extract each question with its options and correct answer.
+const baseSystemPrompt = `You are an MCQ parser. Given raw text containing multiple choice questions, extract each question with its options and correct answer.
 
 RULES:
 1. Identify questions by patterns like "Q1.", "1.", "1)", or just numbered questions
@@ -46,13 +46,17 @@ serve(async (req) => {
   }
 
   try {
-    const { text } = await req.json();
+    const { text, template } = await req.json();
 
     if (!text || typeof text !== 'string') {
       throw new Error('Text is required');
     }
 
-    console.log('Parsing MCQ text, length:', text.length);
+    console.log('Parsing MCQ text, length:', text.length, 'template provided:', !!template);
+
+    const systemPrompt = template && typeof template === 'string' && template.trim()
+      ? `${baseSystemPrompt}\n\nIMPORTANT: The user has provided a TEMPLATE showing their exact MCQ format. Use this template to understand the structure, then parse the input text following the same pattern.\n\nTEMPLATE:\n${template.trim()}`
+      : baseSystemPrompt;
 
     const { response, usedKeyLabel, exhausted } = await callAIGateway({
       model: 'google/gemini-3-flash-preview',

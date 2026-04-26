@@ -10,7 +10,9 @@ import {
   GripVertical,
   Sparkles,
   FileUp,
-  X
+  X,
+  Wand2,
+  FileJson
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,6 +36,8 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { MCQTextParser } from './MCQTextParser';
 import { MCQPDFUploader } from './MCQPDFUploader';
+import { MCQTemplateParser } from './MCQTemplateParser';
+import { MCQJSONImporter } from './MCQJSONImporter';
 
 interface Question {
   id?: string;
@@ -539,12 +543,18 @@ export function MCQCreationWizard({ testId, onClose }: MCQCreationWizardProps) {
               >
                 {/* Input Method Tabs */}
                 <Tabs value={questionInput} onValueChange={(v) => setQuestionInput(v as any)}>
-                  <TabsList className="grid grid-cols-3 w-full">
-                    <TabsTrigger value="add">Manual</TabsTrigger>
-                    <TabsTrigger value="paste" className="gap-1">
-                      <Sparkles className="w-3 h-3" /> Paste
+                  <TabsList className="grid grid-cols-5 w-full h-auto">
+                    <TabsTrigger value="add" className="text-xs">Manual</TabsTrigger>
+                    <TabsTrigger value="paste" className="gap-1 text-xs">
+                      <Sparkles className="w-3 h-3" /> Smart
                     </TabsTrigger>
-                    <TabsTrigger value="pdf" className="gap-1">
+                    <TabsTrigger value="template" className="gap-1 text-xs">
+                      <Wand2 className="w-3 h-3" /> Template
+                    </TabsTrigger>
+                    <TabsTrigger value="json" className="gap-1 text-xs">
+                      <FileJson className="w-3 h-3" /> JSON
+                    </TabsTrigger>
+                    <TabsTrigger value="pdf" className="gap-1 text-xs">
                       <FileUp className="w-3 h-3" /> PDF
                     </TabsTrigger>
                   </TabsList>
@@ -644,6 +654,14 @@ export function MCQCreationWizard({ testId, onClose }: MCQCreationWizardProps) {
 
                   <TabsContent value="paste" className="mt-4">
                     <MCQTextParser onParsed={handleParsedQuestions} />
+                  </TabsContent>
+
+                  <TabsContent value="template" className="mt-4">
+                    <MCQTemplateParser onParsed={handleParsedQuestions} />
+                  </TabsContent>
+
+                  <TabsContent value="json" className="mt-4">
+                    <MCQJSONImporter onParsed={handleParsedQuestions} />
                   </TabsContent>
 
                   <TabsContent value="pdf" className="mt-4">
