@@ -96,14 +96,11 @@ serve(async (req) => {
       throw new Error('No response from AI');
     }
 
-    // Parse the JSON response
-    let parsed;
-    try {
-      // Remove any markdown code blocks if present
-      const cleanContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      parsed = JSON.parse(cleanContent);
-    } catch (parseError) {
-      console.error('Failed to parse AI response:', content);
+    // Parse the JSON response — robust against markdown fences, prefixes, and trailing junk
+    const parsed = extractJson(content);
+    if (!parsed) {
+      console.error('Failed to parse AI response (first 500 chars):', content.slice(0, 500));
+      console.error('Last 500 chars:', content.slice(-500));
       throw new Error('Failed to parse AI response as JSON');
     }
 
