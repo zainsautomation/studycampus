@@ -46,13 +46,17 @@ serve(async (req) => {
   }
 
   try {
-    const { text } = await req.json();
+    const { text, template } = await req.json();
 
     if (!text || typeof text !== 'string') {
       throw new Error('Text is required');
     }
 
-    console.log('Parsing MCQ text, length:', text.length);
+    console.log('Parsing MCQ text, length:', text.length, 'template provided:', !!template);
+
+    const systemPrompt = template && typeof template === 'string' && template.trim()
+      ? `${baseSystemPrompt}\n\nIMPORTANT: The user has provided a TEMPLATE showing their exact MCQ format. Use this template to understand the structure, then parse the input text following the same pattern.\n\nTEMPLATE:\n${template.trim()}`
+      : baseSystemPrompt;
 
     const { response, usedKeyLabel, exhausted } = await callAIGateway({
       model: 'google/gemini-3-flash-preview',
