@@ -10,7 +10,9 @@ import {
   GripVertical,
   Sparkles,
   FileUp,
-  X
+  X,
+  Wand2,
+  FileJson
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
