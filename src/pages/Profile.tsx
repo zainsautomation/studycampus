@@ -50,12 +50,13 @@ export default function Profile() {
   const { data: profileData, isLoading, isPending } = useQuery({
     queryKey: ['profile', user?.id],
     queryFn: async () => {
-      const [profileRes, questionsRes, answersRes, postsRes, requestsRes] = await Promise.all([
-        supabase.from('profiles').select('*').eq('id', user!.id).single(),
+      const [profileRes, questionsRes, answersRes, postsRes, requestsRes, emailRes] = await Promise.all([
+        supabase.from('profiles').select('id, full_name, username, bio, avatar_url, cover_url, created_at, is_public, show_on_leaderboard, social_links').eq('id', user!.id).single(),
         supabase.from('questions').select('id', { count: 'exact', head: true }).eq('user_id', user!.id),
         supabase.from('answers').select('id', { count: 'exact', head: true }).eq('user_id', user!.id),
         supabase.from('posts').select('id', { count: 'exact', head: true }).eq('user_id', user!.id),
         supabase.from('requests').select('id', { count: 'exact', head: true }).eq('user_id', user!.id),
+        supabase.rpc('get_my_email'),
       ]);
 
       const pd = profileRes.data;
@@ -69,7 +70,7 @@ export default function Profile() {
         bio: pd.bio,
         avatar_url: pd.avatar_url,
         cover_url: pd.cover_url || null,
-        email: pd.email,
+        email: (emailRes.data as string | null) ?? null,
         created_at: pd.created_at,
         is_public: (pd as any).is_public !== false,
         show_on_leaderboard: (pd as any).show_on_leaderboard !== false,
