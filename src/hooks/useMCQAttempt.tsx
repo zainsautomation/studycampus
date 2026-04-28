@@ -269,6 +269,14 @@ export function useCompleteAttempt() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['mcq-attempt', data.id] });
       queryClient.invalidateQueries({ queryKey: ['mcq-user-attempts', data.test_id] });
+      import('@/lib/analytics').then(({ trackEvent }) => {
+        trackEvent('mcq_attempt_complete', {
+          test_id: data.test_id,
+          score: data.score,
+          correct: data.correct_answers,
+          total: data.total_questions,
+        });
+      });
     },
   });
 }

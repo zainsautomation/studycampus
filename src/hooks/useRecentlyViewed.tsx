@@ -53,6 +53,9 @@ export function useRecentlyViewed(limit = 4) {
           { onConflict: 'user_id,note_id' }
         );
       if (error) throw error;
+
+      const { trackEvent } = await import('@/lib/analytics');
+      trackEvent('note_view', { note_id: noteId });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['recently-viewed', user?.id] });
