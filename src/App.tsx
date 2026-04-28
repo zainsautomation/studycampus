@@ -147,4 +147,4 @@ const App = () => (
   </QueryClientProvider>
 );
 
-export default App;
+export default isSentryEnabled() ? Sentry.withErrorBoundary(App, { fallback: <div className="min-h-screen flex items-center justify-center text-foreground">Something went wrong.</div> }) : App;
