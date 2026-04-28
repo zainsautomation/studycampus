@@ -69,11 +69,12 @@ export function useMCQResults() {
         // Fetch in batches of 50 to avoid query limits
         for (let i = 0; i < userIds.length; i += 50) {
           const batch = userIds.slice(i, i + 50);
-          const { data: profiles } = await supabase
-            .from('profiles')
-            .select('id, full_name, avatar_url, email')
-            .in('id', batch);
-          (profiles || []).forEach((p: any) => { profilesMap[p.id] = p; });
+          const [{ data: profiles }, { data: emails }] = await Promise.all([
+            supabase.from('profiles').select('id, full_name, avatar_url').in('id', batch),
+            supabase.rpc('get_user_emails_admin', { _user_ids: batch }),
+          ]);
+          const emailMap = new Map((emails as Array<{ id: string; email: string | null }> | null)?.map(e => [e.id, e.email]) || []);
+          (profiles || []).forEach((p: any) => { profilesMap[p.id] = { ...p, email: emailMap.get(p.id) || null }; });
         }
       }
 
