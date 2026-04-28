@@ -1404,8 +1404,17 @@ export type Database = {
           points_reward: number
         }[]
       }
+      get_my_email: { Args: never; Returns: string }
       get_public_profile: { Args: { lookup_value: string }; Returns: Json }
       get_rank_title: { Args: { level: number }; Returns: string }
+      get_user_email_admin: { Args: { _user_id: string }; Returns: string }
+      get_user_emails_admin: {
+        Args: { _user_ids: string[] }
+        Returns: {
+          email: string
+          id: string
+        }[]
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
