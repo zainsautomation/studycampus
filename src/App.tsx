@@ -9,8 +9,10 @@
  import { ThemeProvider } from "@/hooks/useTheme";
  import { GoogleDriveProvider } from "@/contexts/GoogleDriveContext";
  import { KeyboardProvider } from "@/contexts/KeyboardContext";
- import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
  import { Loader2 } from "lucide-react";
+ import { AnalyticsTracker } from "@/components/AnalyticsTracker";
+ import { Sentry, isSentryEnabled } from "@/lib/sentry";
  
 // Eagerly import main tab pages for instant navigation
 import Dashboard from "./pages/Dashboard";
@@ -88,6 +90,7 @@ const App = () => (
               <Toaster />
               <Sonner />
               <BrowserRouter>
+               <AnalyticsTracker />
                <Suspense fallback={<PageLoader />}>
                <OnboardingGate>
               <Routes>
