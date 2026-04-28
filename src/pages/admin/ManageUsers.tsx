@@ -99,12 +99,16 @@ export default function ManageUsers() {
 
     if (rolesRes.data && rolesRes.data.length > 0) {
       const userIds = rolesRes.data.map(r => r.user_id);
-      const { data: profilesData } = await supabase.from('profiles').select('id, full_name, email').in('id', userIds);
+      const [{ data: profilesData }, { data: emailsData }] = await Promise.all([
+        supabase.from('profiles').select('id, full_name').in('id', userIds),
+        supabase.rpc('get_user_emails_admin', { _user_ids: userIds }),
+      ]);
       const profilesMap = new Map(profilesData?.map(p => [p.id, p]) || []);
+      const emailsMap = new Map((emailsData as Array<{ id: string; email: string | null }> | null)?.map(e => [e.id, e.email]) || []);
       setStudents(rolesRes.data.map(r => ({
         ...r,
         full_name: profilesMap.get(r.user_id)?.full_name || null,
-        email: profilesMap.get(r.user_id)?.email || null,
+        email: emailsMap.get(r.user_id) || null,
       })));
     } else {
       setStudents([]);
