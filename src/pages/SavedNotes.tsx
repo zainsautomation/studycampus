@@ -134,6 +134,9 @@ export default function SavedNotes() {
           .from('notes')
           .update({ download_count: (note.download_count || 0) + 1 })
           .eq('id', note.id);
+
+        const { trackEvent } = await import('@/lib/analytics');
+        trackEvent('note_download', { note_id: note.id, note_title: note.title });
       } catch (error) {
         console.error('Download failed:', error);
         window.open(note.file_url, '_blank');
