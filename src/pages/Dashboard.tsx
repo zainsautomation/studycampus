@@ -210,19 +210,19 @@ export default function Dashboard() {
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
+                            <div className="flex items-start gap-2 mb-1">
                               {announcement.is_pinned && (
-                                <AlertCircle className="w-3 h-3 text-warning flex-shrink-0" />
+                                <AlertCircle className="w-3 h-3 text-warning flex-shrink-0 mt-1" />
                               )}
-                              <h4 className="font-medium text-sm truncate">{announcement.title}</h4>
+                              <h4 className="font-medium text-sm line-clamp-2 break-words min-w-0 flex-1">{announcement.title}</h4>
+                              <Badge className={`${getPriorityColor(announcement.priority)} text-[10px] px-1.5 py-0 h-5 flex-shrink-0 whitespace-nowrap`}>
+                                {announcement.priority}
+                              </Badge>
                             </div>
                             <p className="text-xs text-muted-foreground line-clamp-2">
                               {announcement.content}
                             </p>
                           </div>
-                          <Badge className={`${getPriorityColor(announcement.priority)} text-xs flex-shrink-0`}>
-                            {announcement.priority}
-                          </Badge>
                         </div>
                       </div>
                     ))
