@@ -112,6 +112,15 @@ export default function PublicProfile() {
           posts: postsRes.count || 0,
           requests: requestsRes.count || 0,
         });
+
+        // Track profile view (don't track viewing own profile)
+        const { data: { user: viewer } } = await supabase.auth.getUser();
+        if (viewer && viewer.id !== profileData.id) {
+          await supabase.from('profile_views').upsert(
+            { viewer_id: viewer.id, viewed_profile_id: profileData.id, viewed_at: new Date().toISOString() },
+            { onConflict: 'viewer_id,viewed_profile_id' }
+          );
+        }
       } catch (err) {
         console.error('Error:', err);
       } finally {
