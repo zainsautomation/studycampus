@@ -336,7 +336,7 @@ export function MCQCreationWizard({ testId, onClose }: MCQCreationWizardProps) {
       // 3) Diff options per existing question: update existing options in place
       //    (preserve IDs so mcq_responses.selected_option_id stays valid),
       //    insert new ones, delete removed ones.
-      const optionUpdatePromises: Promise<any>[] = [];
+      const optionUpdatePromises: any[] = [];
       const optionsToInsert: any[] = [];
       const optionIdsToDelete: string[] = [];
 
