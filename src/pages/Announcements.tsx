@@ -94,12 +94,12 @@ export default function Announcements() {
                   <motion.div key={announcement.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
                     <Card className={`border-l-4 ${styles.border}`}>
                       <CardContent className="p-4 md:p-6">
-                        <div className="flex items-start justify-between gap-4 mb-3">
-                          <div className="flex items-center gap-2">
-                            {announcement.is_pinned && <Pin className="w-4 h-4 text-warning" />}
-                            <h3 className="font-semibold text-lg">{announcement.title}</h3>
+                        <div className="flex items-start justify-between gap-3 mb-3">
+                          <div className="flex items-start gap-2 min-w-0 flex-1">
+                            {announcement.is_pinned && <Pin className="w-4 h-4 text-warning flex-shrink-0 mt-1" />}
+                            <h3 className="font-semibold text-base md:text-lg break-words min-w-0">{announcement.title}</h3>
                           </div>
-                          <Badge className={styles.badge}>{announcement.priority}</Badge>
+                          <Badge className={`${styles.badge} flex-shrink-0 whitespace-nowrap text-[10px] md:text-xs`}>{announcement.priority}</Badge>
                         </div>
                         <p className="text-muted-foreground whitespace-pre-wrap">{announcement.content}</p>
                         <p className="text-xs text-muted-foreground mt-4">{format(new Date(announcement.created_at), 'MMMM dd, yyyy • hh:mm a')}</p>
