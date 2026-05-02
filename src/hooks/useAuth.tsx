@@ -81,7 +81,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (session?.user) {
           // Defer to avoid deadlock inside onAuthStateChange
-          setTimeout(() => checkUserMeta(session.user.id), 0);
+          setTimeout(() => {
+            checkUserMeta(session.user.id);
+            supabase.rpc('touch_last_seen').then(() => {});
+          }, 0);
         } else {
           setRole(null);
           setOnboardingComplete(null);
@@ -108,9 +111,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     initializeAuth();
 
+    // Heartbeat: bump last_seen_at every 60s while signed in
+    const heartbeat = setInterval(() => {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session?.user) {
+          supabase.rpc('touch_last_seen').then(() => {});
+        }
+      });
+    }, 60_000);
+
     return () => {
       isMounted = false;
       subscription.unsubscribe();
+      clearInterval(heartbeat);
     };
   }, []);
 
