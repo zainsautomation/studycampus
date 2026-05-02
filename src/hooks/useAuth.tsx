@@ -108,9 +108,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     initializeAuth();
 
+    // Heartbeat: bump last_seen_at every 60s while signed in
+    const heartbeat = setInterval(() => {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session?.user) {
+          supabase.rpc('touch_last_seen').then(() => {});
+        }
+      });
+    }, 60_000);
+
     return () => {
       isMounted = false;
       subscription.unsubscribe();
+      clearInterval(heartbeat);
     };
   }, []);
 
