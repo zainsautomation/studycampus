@@ -116,10 +116,11 @@ export default function PublicProfile() {
         // Track profile view (don't track viewing own profile)
         const { data: { user: viewer } } = await supabase.auth.getUser();
         if (viewer && viewer.id !== profileData.id) {
-          await supabase.from('profile_views').upsert(
+          const { error: viewError } = await supabase.from('profile_views').upsert(
             { viewer_id: viewer.id, viewed_profile_id: profileData.id, viewed_at: new Date().toISOString() },
             { onConflict: 'viewer_id,viewed_profile_id' }
           );
+          if (viewError) console.error('Failed to track profile view:', viewError);
         }
       } catch (err) {
         console.error('Error:', err);
