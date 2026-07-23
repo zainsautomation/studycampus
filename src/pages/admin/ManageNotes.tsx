@@ -824,6 +824,7 @@ export default function ManageNotes() {
                           <th className="p-4 font-medium">Subject</th>
                           <th className="p-4 font-medium hidden lg:table-cell">Storage</th>
                           <th className="p-4 font-medium">Downloads</th>
+                          <th className="p-4 font-medium">Views</th>
                           <th className="p-4 font-medium hidden lg:table-cell">Date</th>
                           <th className="p-4 font-medium text-center">DL</th>
                           <th className="p-4 font-medium text-right">Actions</th>
@@ -872,6 +873,16 @@ export default function ManageNotes() {
                               </Badge>
                             </td>
                             <td className="p-4">{note.download_count || 0}</td>
+                            <td className="p-4">
+                              <button
+                                type="button"
+                                onClick={() => setViewersNote(note)}
+                                className="inline-flex items-center gap-1 text-sm hover:text-primary transition-colors"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                                {viewStats?.get(note.id) || 0}
+                              </button>
+                            </td>
                             <td className="p-4 hidden lg:table-cell text-sm text-muted-foreground">{format(new Date(note.created_at), 'MMM dd, yyyy')}</td>
                             <td className="p-4 text-center">
                               <Switch
