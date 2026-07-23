@@ -775,6 +775,15 @@ export default function ManageNotes() {
                                 )}
                               </Badge>
                               <span className="text-muted-foreground">{note.download_count || 0} downloads</span>
+                              <button
+                                type="button"
+                                onClick={() => setViewersNote(note)}
+                                className="inline-flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors"
+                                aria-label="View viewers"
+                              >
+                                <Eye className="w-3 h-3" />
+                                {viewStats?.get(note.id) || 0} views
+                              </button>
                             </div>
                             <div className="flex items-center justify-between pt-1">
                               <span className="text-xs text-muted-foreground">
