@@ -105,6 +105,8 @@ export default function ManageNotes() {
   const [bulkDeleteFromStorage, setBulkDeleteFromStorage] = useState(true);
   const [noteToDelete, setNoteToDelete] = useState<Note | null>(null);
   const [deleteFromStorage, setDeleteFromStorage] = useState(true);
+  const [viewersNote, setViewersNote] = useState<Note | null>(null);
+  const { data: viewStats } = useNoteViewStats();
   const handleToggleDownloads = () => {
     updateSetting.mutate({ key: 'downloads_enabled', value: !downloadsEnabled });
   };
