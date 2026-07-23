@@ -33,6 +33,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { GlobalSearch } from '@/components/search/GlobalSearch';
+import { WhatsNewButton } from '@/components/whats-new/WhatsNewButton';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -173,6 +174,9 @@ export function Header() {
             >
               <Search className="w-5 h-5" />
             </motion.button>
+
+            {/* What's New */}
+            <WhatsNewButton />
 
             {/* Theme Toggle */}
             <motion.button

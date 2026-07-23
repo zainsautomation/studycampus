@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Pencil, Trash2, Upload, FileText, X, Link, Download, Cloud, Database, Settings2, FolderOpen, Tag } from 'lucide-react';
+import { Plus, Pencil, Trash2, Upload, FileText, X, Link, Download, Cloud, Database, Settings2, FolderOpen, Tag, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AdminPageHeader } from '@/components/admin/AdminLayout';
 import { Card, CardContent } from '@/components/ui/card';
@@ -27,6 +27,8 @@ import { FolderPicker } from '@/components/admin/FolderPicker';
 import { TagManager } from '@/components/notes/TagManager';
 import { TagSelector } from '@/components/notes/TagSelector';
 import { BulkActionBar } from '@/components/admin/BulkActionBar';
+import { NoteViewersSheet } from '@/components/admin/NoteViewersSheet';
+import { useNoteViewStats } from '@/hooks/useNoteViewStats';
 
 interface Subject { id: string; name: string; color: string; }
 interface Note { 
@@ -103,6 +105,8 @@ export default function ManageNotes() {
   const [bulkDeleteFromStorage, setBulkDeleteFromStorage] = useState(true);
   const [noteToDelete, setNoteToDelete] = useState<Note | null>(null);
   const [deleteFromStorage, setDeleteFromStorage] = useState(true);
+  const [viewersNote, setViewersNote] = useState<Note | null>(null);
+  const { data: viewStats } = useNoteViewStats();
   const handleToggleDownloads = () => {
     updateSetting.mutate({ key: 'downloads_enabled', value: !downloadsEnabled });
   };
@@ -771,6 +775,15 @@ export default function ManageNotes() {
                                 )}
                               </Badge>
                               <span className="text-muted-foreground">{note.download_count || 0} downloads</span>
+                              <button
+                                type="button"
+                                onClick={() => setViewersNote(note)}
+                                className="inline-flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors"
+                                aria-label="View viewers"
+                              >
+                                <Eye className="w-3 h-3" />
+                                {viewStats?.get(note.id) || 0} views
+                              </button>
                             </div>
                             <div className="flex items-center justify-between pt-1">
                               <span className="text-xs text-muted-foreground">
@@ -811,6 +824,7 @@ export default function ManageNotes() {
                           <th className="p-4 font-medium">Subject</th>
                           <th className="p-4 font-medium hidden lg:table-cell">Storage</th>
                           <th className="p-4 font-medium">Downloads</th>
+                          <th className="p-4 font-medium">Views</th>
                           <th className="p-4 font-medium hidden lg:table-cell">Date</th>
                           <th className="p-4 font-medium text-center">DL</th>
                           <th className="p-4 font-medium text-right">Actions</th>
@@ -859,6 +873,16 @@ export default function ManageNotes() {
                               </Badge>
                             </td>
                             <td className="p-4">{note.download_count || 0}</td>
+                            <td className="p-4">
+                              <button
+                                type="button"
+                                onClick={() => setViewersNote(note)}
+                                className="inline-flex items-center gap-1 text-sm hover:text-primary transition-colors"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                                {viewStats?.get(note.id) || 0}
+                              </button>
+                            </td>
                             <td className="p-4 hidden lg:table-cell text-sm text-muted-foreground">{format(new Date(note.created_at), 'MMM dd, yyyy')}</td>
                             <td className="p-4 text-center">
                               <Switch
@@ -885,7 +909,7 @@ export default function ManageNotes() {
                         ))}
                         {notes.length === 0 && (
                           <tr>
-                            <td colSpan={8} className="p-12 text-center text-muted-foreground">
+                            <td colSpan={9} className="p-12 text-center text-muted-foreground">
                               <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
                               <p>No notes yet. Click "Add Note" to create one.</p>
                             </td>
@@ -1057,6 +1081,13 @@ export default function ManageNotes() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        <NoteViewersSheet
+          noteId={viewersNote?.id ?? null}
+          noteTitle={viewersNote?.title}
+          open={!!viewersNote}
+          onOpenChange={(o) => !o && setViewersNote(null)}
+        />
       </motion.div>
     </>
   );
