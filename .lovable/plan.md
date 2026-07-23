@@ -1,94 +1,87 @@
-# Plan: MCQ Student Results Explorer + Terms & Conditions Page
+# Plan: "What's New" for Students + Note View Analytics for Admin
 
-## Part 1: MCQ Student Results in Analytics
-
-### What exists today
-
-The Analytics page has an MCQ Performance card with an "Info" dialog showing aggregated stats (score distribution, per-test breakdown, top performers). However, there is no way to drill into **individual student results per test** -- e.g., "Which students attempted Test X, what did they score, when did they attempt it?"
-
-### What we will build
-
-**A new "MCQ Results" admin page** (`/admin/mcq-results`) accessible from the admin sidebar, providing a full student-by-test results explorer.
-
-#### UI Flow (Mobile-first)
-
-1. **Filter Bar** (sticky top):
-  - Test selector dropdown (all published tests)
-  - Student search input (by name)
-  - Status filter chips: All / Completed / In Progress
-2. **Results List** (card-based on mobile, table on desktop):
-  - Each row/card shows: Student avatar + name, Test title, Score (color-coded), Status badge, Time taken, Date attempted
-  - Tap a row to expand inline details: per-question responses (correct/incorrect), time breakdown
-  - Sort by: Score (asc/desc), Date, Student name
-3. **Summary Header**:
-  - Total attempts shown, average score, completion rate for current filter
-4. **Export** (stretch): CSV download button for filtered results
-
-#### Data Source
-
-All data already exists in `mcq_attempts`, `mcq_responses`, `mcq_tests`, `mcq_questions`, `mcq_options`, and `profiles`. Admin RLS policies already grant full SELECT access. No database changes needed.
-
-#### Files to create/modify
-
-
-| File                                                      | Action                                                                          |
-| --------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| `src/pages/admin/MCQResults.tsx`                          | **Create** - Main page with filters, summary, results list                      |
-| `src/components/admin/mcq-results/ResultsFilterBar.tsx`   | **Create** - Test selector, search, status filters                              |
-| `src/components/admin/mcq-results/ResultCard.tsx`         | **Create** - Mobile card / desktop table row for each attempt                   |
-| `src/components/admin/mcq-results/AttemptDetailSheet.tsx` | **Create** - Expandable detail view showing per-question responses              |
-| `src/components/admin/mcq-results/ResultsSummary.tsx`     | **Create** - Summary stats for current filter                                   |
-| `src/hooks/useMCQResults.tsx`                             | **Create** - Data fetching hook with filters, joins attempts + profiles + tests |
-| `src/components/admin/AdminSidebar.tsx`                   | **Modify** - Add "MCQ Results" nav link under existing MCQ entry                |
-| `src/App.tsx`                                             | **Modify** - Add `/admin/mcq-results` route                                     |
-
+Two related features:
+1. **Students** get a "What's New" badge/panel showing recently added content (notes, MCQs, announcements, updates) since their last check. Icon shows a dot when there's new stuff; opening it clears the badge.
+2. **Admins** can see how many students viewed each note (unique viewers + total views).
 
 ---
 
-## Part 2: Terms & Conditions Page
+## Part 1 — Student "What's New" Feed
 
-### What we will build
+### UX
 
-A professional, modern Terms & Conditions page at `/terms` accessible to all users (no auth required).
+- New **bell/sparkle icon** in the top Header (desktop) and next to the profile in mobile Header — shows a red dot + count when new items exist since `last_checked_at`.
+- Clicking the icon opens a **Popover / Sheet** (Sheet on mobile, Popover on desktop) listing new items grouped by type:
+  - 📚 New Notes (title, subject, date)
+  - 🧠 New MCQ Tests (title, subject)
+  - 📢 New Announcements (title, priority)
+  - 📅 New Events (title, event_date)
+- Each item is a link to its detail page.
+- Opening the panel automatically updates the user's `last_checked_at` → badge clears.
+- Empty state: "You're all caught up ✨".
+- Guests: icon hidden (feature requires auth).
 
-#### Content Sections
+### Data source
 
-1. Acceptance of Terms
-2. User Accounts & Eligibility
-3. Acceptable Use Policy
-4. Intellectual Property (notes, MCQs, posts)
-5. User-Generated Content
-6. Privacy & Data Collection
-7. Limitation of Liability
-8. Termination
-9. Changes to Terms
-10. Contact Information
-11. While sign up show user by create account you agrees term and conditions
+No new items table needed — query the existing tables filtered by `created_at > last_checked_at`, limit 20 per type.
 
-#### UI Design (Mobile-first)
+### Storage of `last_checked_at`
 
-- Clean, readable layout with a sticky table of contents sidebar on desktop, collapsible accordion on mobile
-- Section headings with anchor links for easy navigation
-- "Last updated" date at the top
-- Subtle card-based sections with proper typography hierarchy
-- Back-to-top floating button on mobile
+Add a single column `whats_new_checked_at timestamptz` on `profiles`. Default `now()` for existing users so the badge doesn't explode on first load.
 
-#### Files to create/modify
+### Files
 
+| File | Action |
+|---|---|
+| `src/components/whats-new/WhatsNewButton.tsx` | Create — icon + badge + popover trigger |
+| `src/components/whats-new/WhatsNewPanel.tsx` | Create — grouped list of new items |
+| `src/hooks/useWhatsNew.tsx` | Create — fetch counts + items, mark as read mutation |
+| `src/components/layout/Header.tsx` | Modify — mount button next to theme toggle |
+| DB migration | Add `whats_new_checked_at` column + backfill |
 
-| File                                                | Action                                                          |
-| --------------------------------------------------- | --------------------------------------------------------------- |
-| `src/pages/Terms.tsx`                               | **Create** - Full Terms & Conditions page                       |
-| `src/App.tsx`                                       | **Modify** - Add `/terms` public route                          |
-| `src/components/layout/BottomNav.tsx` or `More.tsx` | **Modify** - Add link to Terms page from the More/Settings area |
+---
 
+## Part 2 — Admin Note View Analytics
+
+### UX
+
+- On **Admin → Manage Notes**, each note row/card gets a small **"👁 N views · M unique"** badge.
+- Clicking it opens a Sheet listing viewers (avatar, name, viewed_at) — paginated / limited to 50.
+- On **Admin → Analytics**, add a "Top Viewed Notes" chart (already partially exists via `TopNotesCharts.tsx` — extend with unique viewer count).
+
+### Data source
+
+`note_views` table already exists and tracks per-user views. Just need to aggregate.
+
+- **Total views** per note = `count(*)` from `note_views` grouped by `note_id`.
+- **Unique viewers** = already unique because of the `(user_id, note_id)` upsert conflict target — so `count(*)` == unique viewers. Total impressions would need a separate approach; we'll surface **unique viewers** as the primary metric and label it clearly ("N students viewed").
+
+Admin RLS on `note_views` already permits admin SELECT (confirmed in existing Activity Log usage). If not, add an admin SELECT policy.
+
+### Files
+
+| File | Action |
+|---|---|
+| `src/hooks/useNoteViewStats.tsx` | Create — fetch aggregated view counts per note |
+| `src/components/admin/NoteViewersSheet.tsx` | Create — list of students who viewed a note |
+| `src/pages/admin/ManageNotes.tsx` | Modify — show view count badge on each note, open sheet |
+| DB migration (conditional) | Add admin SELECT policy on `note_views` if missing |
 
 ---
 
 ## Technical Notes
 
-- No database migrations required -- all MCQ data is already available via existing tables and admin RLS policies
-- The MCQ Results page fetches from `mcq_attempts` joined with `profiles` and `mcq_tests`, with client-side filtering for responsiveness
-- Terms page is purely static content, no backend dependency
-- All components use existing UI primitives (Card, Badge, Avatar, Select, Sheet, Accordion, ScrollArea)
-- Mobile-first: card layouts, bottom sheets for details, horizontal scroll where needed; desktop gets table views and sidebar navigation
+- `WhatsNewPanel` fetches with React Query, keyed by `user.id + whats_new_checked_at`. Mutation to mark-as-read sets `whats_new_checked_at = now()` and invalidates the query.
+- Badge count = sum of the four categories, capped at "9+" for display.
+- View-stats query uses a single grouped query per page (LEFT JOIN + count) rather than per-note fetches to avoid N+1.
+- Mobile: WhatsNew opens as a bottom Sheet; desktop uses Popover anchored to the icon.
+- No new dependencies.
+
+---
+
+## Rollout order
+
+1. DB migration (add `whats_new_checked_at`; ensure admin policy on `note_views`).
+2. Build `useWhatsNew` + button + panel; wire into Header.
+3. Build `useNoteViewStats` + viewers sheet; wire into `ManageNotes`.
+4. Verify with Playwright as `test@gmail.com` on desktop + mobile.
