@@ -909,7 +909,7 @@ export default function ManageNotes() {
                         ))}
                         {notes.length === 0 && (
                           <tr>
-                            <td colSpan={8} className="p-12 text-center text-muted-foreground">
+                            <td colSpan={9} className="p-12 text-center text-muted-foreground">
                               <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
                               <p>No notes yet. Click "Add Note" to create one.</p>
                             </td>
@@ -1081,6 +1081,13 @@ export default function ManageNotes() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        <NoteViewersSheet
+          noteId={viewersNote?.id ?? null}
+          noteTitle={viewersNote?.title}
+          open={!!viewersNote}
+          onOpenChange={(o) => !o && setViewersNote(null)}
+        />
       </motion.div>
     </>
   );
