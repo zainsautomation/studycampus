@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Pencil, Trash2, Upload, FileText, X, Link, Download, Cloud, Database, Settings2, FolderOpen, Tag } from 'lucide-react';
+import { Plus, Pencil, Trash2, Upload, FileText, X, Link, Download, Cloud, Database, Settings2, FolderOpen, Tag, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AdminPageHeader } from '@/components/admin/AdminLayout';
 import { Card, CardContent } from '@/components/ui/card';
@@ -27,6 +27,8 @@ import { FolderPicker } from '@/components/admin/FolderPicker';
 import { TagManager } from '@/components/notes/TagManager';
 import { TagSelector } from '@/components/notes/TagSelector';
 import { BulkActionBar } from '@/components/admin/BulkActionBar';
+import { NoteViewersSheet } from '@/components/admin/NoteViewersSheet';
+import { useNoteViewStats } from '@/hooks/useNoteViewStats';
 
 interface Subject { id: string; name: string; color: string; }
 interface Note { 
