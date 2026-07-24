@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, BookOpen, FileQuestion, Megaphone, Calendar } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -37,15 +37,31 @@ export function WhatsNewButton() {
   const { user } = useAuth();
   const { items, count, markAsRead } = useWhatsNew();
   const [open, setOpen] = useState(false);
+  const unreadSeenWhileOpenRef = useRef(false);
 
   if (!user) return null;
 
-  const handleOpenChange = (next: boolean) => {
-    setOpen(next);
-    if (next && count > 0) {
-      // Mark as read a moment later so user can see the list before it clears
-      setTimeout(() => markAsRead(), 800);
+  useEffect(() => {
+    if (open && count > 0) {
+      unreadSeenWhileOpenRef.current = true;
     }
+  }, [open, count]);
+
+  const markUnreadSeenAsRead = () => {
+    if (!unreadSeenWhileOpenRef.current) return;
+    unreadSeenWhileOpenRef.current = false;
+    markAsRead();
+  };
+
+  const handleOpenChange = (next: boolean) => {
+    if (next) {
+      if (count > 0) unreadSeenWhileOpenRef.current = true;
+      setOpen(true);
+      return;
+    }
+
+    setOpen(false);
+    markUnreadSeenAsRead();
   };
 
   const displayCount = count > 9 ? '9+' : String(count);
@@ -98,7 +114,10 @@ export function WhatsNewButton() {
                   <Link
                     key={`${item.type}-${item.id}`}
                     to={typeHref(item)}
-                    onClick={() => setOpen(false)}
+                    onClick={() => {
+                      markUnreadSeenAsRead();
+                      setOpen(false);
+                    }}
                     className="flex items-start gap-3 px-3 py-2.5 hover:bg-accent/50 transition-colors"
                   >
                     <div className="p-1.5 rounded-md bg-primary/10 text-primary shrink-0 mt-0.5">
@@ -134,7 +153,11 @@ export function WhatsNewButton() {
               variant="ghost"
               size="sm"
               className="w-full text-xs"
-              onClick={() => { markAsRead(); setOpen(false); }}
+              onClick={() => {
+                unreadSeenWhileOpenRef.current = false;
+                markAsRead();
+                setOpen(false);
+              }}
             >
               Mark all as read
             </Button>
