@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.award_points(uuid, text, integer, text, uuid) FROM PUBLIC, anon, authenticated;
