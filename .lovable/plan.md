@@ -1,87 +1,36 @@
-# Plan: "What's New" for Students + Note View Analytics for Admin
+## Plan: Fix What's New disappearing too quickly
 
-Two related features:
-1. **Students** get a "What's New" badge/panel showing recently added content (notes, MCQs, announcements, updates) since their last check. Icon shows a dot when there's new stuff; opening it clears the badge.
-2. **Admins** can see how many students viewed each note (unique viewers + total views).
+### Goal
+Make the What's New list stay visible while the user is reading it. New content should only disappear after the user closes/leaves the What's New popover or clicks a listed item.
 
----
+### Current confirmed behavior
+In `src/components/whats-new/WhatsNewButton.tsx`, opening the popover starts an 800ms timer that calls `markAsRead()`. Because `useWhatsNew.tsx` refetches using the updated `whats_new_checked_at`, the list becomes empty while the popover is still open.
 
-## Part 1 — Student "What's New" Feed
+### Changes to make
+1. **Remove the auto-clear timer on open**
+   - Delete the `setTimeout(() => markAsRead(), 800)` behavior.
+   - Opening the popover will no longer mark anything as read.
 
-### UX
+2. **Mark as read when the popover closes**
+   - Track whether the popover had unread items while open.
+   - When `onOpenChange(false)` runs because the user clicks elsewhere, presses Escape, or leaves/closes the popover, call `markAsRead()`.
+   - The badge will clear after closing, not during reading.
 
-- New **bell/sparkle icon** in the top Header (desktop) and next to the profile in mobile Header — shows a red dot + count when new items exist since `last_checked_at`.
-- Clicking the icon opens a **Popover / Sheet** (Sheet on mobile, Popover on desktop) listing new items grouped by type:
-  - 📚 New Notes (title, subject, date)
-  - 🧠 New MCQ Tests (title, subject)
-  - 📢 New Announcements (title, priority)
-  - 📅 New Events (title, event_date)
-- Each item is a link to its detail page.
-- Opening the panel automatically updates the user's `last_checked_at` → badge clears.
-- Empty state: "You're all caught up ✨".
-- Guests: icon hidden (feature requires auth).
+3. **Mark as read when clicking a What's New item**
+   - If the user clicks a note/MCQ/announcement/update from the list, call `markAsRead()` before closing/navigating.
+   - This matches the expectation that leaving What's New clears it.
 
-### Data source
+4. **Keep manual “Mark all as read” behavior**
+   - The existing button will still immediately mark items read and close the popover.
 
-No new items table needed — query the existing tables filtered by `created_at > last_checked_at`, limit 20 per type.
+5. **Add a small safety guard**
+   - Avoid repeated `markAsRead()` calls if there are no unread items or if the popover closes after already being manually marked.
 
-### Storage of `last_checked_at`
+### Files to update
+- `src/components/whats-new/WhatsNewButton.tsx`
 
-Add a single column `whats_new_checked_at timestamptz` on `profiles`. Default `now()` for existing users so the badge doesn't explode on first load.
-
-### Files
-
-| File | Action |
-|---|---|
-| `src/components/whats-new/WhatsNewButton.tsx` | Create — icon + badge + popover trigger |
-| `src/components/whats-new/WhatsNewPanel.tsx` | Create — grouped list of new items |
-| `src/hooks/useWhatsNew.tsx` | Create — fetch counts + items, mark as read mutation |
-| `src/components/layout/Header.tsx` | Modify — mount button next to theme toggle |
-| DB migration | Add `whats_new_checked_at` column + backfill |
-
----
-
-## Part 2 — Admin Note View Analytics
-
-### UX
-
-- On **Admin → Manage Notes**, each note row/card gets a small **"👁 N views · M unique"** badge.
-- Clicking it opens a Sheet listing viewers (avatar, name, viewed_at) — paginated / limited to 50.
-- On **Admin → Analytics**, add a "Top Viewed Notes" chart (already partially exists via `TopNotesCharts.tsx` — extend with unique viewer count).
-
-### Data source
-
-`note_views` table already exists and tracks per-user views. Just need to aggregate.
-
-- **Total views** per note = `count(*)` from `note_views` grouped by `note_id`.
-- **Unique viewers** = already unique because of the `(user_id, note_id)` upsert conflict target — so `count(*)` == unique viewers. Total impressions would need a separate approach; we'll surface **unique viewers** as the primary metric and label it clearly ("N students viewed").
-
-Admin RLS on `note_views` already permits admin SELECT (confirmed in existing Activity Log usage). If not, add an admin SELECT policy.
-
-### Files
-
-| File | Action |
-|---|---|
-| `src/hooks/useNoteViewStats.tsx` | Create — fetch aggregated view counts per note |
-| `src/components/admin/NoteViewersSheet.tsx` | Create — list of students who viewed a note |
-| `src/pages/admin/ManageNotes.tsx` | Modify — show view count badge on each note, open sheet |
-| DB migration (conditional) | Add admin SELECT policy on `note_views` if missing |
-
----
-
-## Technical Notes
-
-- `WhatsNewPanel` fetches with React Query, keyed by `user.id + whats_new_checked_at`. Mutation to mark-as-read sets `whats_new_checked_at = now()` and invalidates the query.
-- Badge count = sum of the four categories, capped at "9+" for display.
-- View-stats query uses a single grouped query per page (LEFT JOIN + count) rather than per-note fetches to avoid N+1.
-- Mobile: WhatsNew opens as a bottom Sheet; desktop uses Popover anchored to the icon.
-- No new dependencies.
-
----
-
-## Rollout order
-
-1. DB migration (add `whats_new_checked_at`; ensure admin policy on `note_views`).
-2. Build `useWhatsNew` + button + panel; wire into Header.
-3. Build `useNoteViewStats` + viewers sheet; wire into `ManageNotes`.
-4. Verify with Playwright as `test@gmail.com` on desktop + mobile.
+### Validation
+- Open What's New with unread content: list remains visible while open.
+- Click outside / close popover: unread badge clears afterward.
+- Reopen after closing: empty/caught-up state appears.
+- Click a listed item: popover closes and unread state is cleared.
