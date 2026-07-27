@@ -6,54 +6,52 @@ const corsHeaders = {
 }
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { codeId, currentUses } = await req.json();
+    const { codeId } = await req.json();
 
     if (!codeId || typeof codeId !== 'string') {
-      console.log('Invalid request: missing codeId');
       return new Response(
         JSON.stringify({ success: false, error: 'Code ID is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('Incrementing invite code usage for:', codeId);
-
-    // Create Supabase client with service role to bypass RLS
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Increment the usage count
-    const newUsageCount = (currentUses || 0) + 1;
-    const { error: updateError } = await supabaseAdmin
-      .from('invite_codes')
-      .update({ current_uses: newUsageCount })
-      .eq('id', codeId)
-      .eq('is_active', true);
+    // Atomic increment via SECURITY DEFINER RPC — prevents race conditions
+    // where two concurrent redemptions both pass the max_uses check.
+    const { data: ok, error } = await supabaseAdmin.rpc('increment_invite_code_usage', {
+      _code_id: codeId,
+    });
 
-    if (updateError) {
-      console.error('Failed to increment usage:', updateError);
+    if (error) {
+      console.error('increment_invite_code_usage failed:', error);
       return new Response(
         JSON.stringify({ success: false, error: 'Failed to use invite code' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('Successfully incremented invite code usage');
+    if (!ok) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invite code is no longer valid' }),
+        { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     return new Response(
       JSON.stringify({ success: true }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-
   } catch (error) {
-    console.error('Error processing request:', error);
+    console.error('use-invite-code error:', error);
     return new Response(
       JSON.stringify({ success: false, error: 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
