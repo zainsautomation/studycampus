@@ -228,10 +228,10 @@ export function NotePreviewDialog({
 
         {/* Content */}
         <div className="flex-1 overflow-hidden relative">
-          {(isPDF || (isGoogleDrive && !isImage)) && note.file_url && (
-            <PDFViewer fileUrl={note.file_url} className="h-full" />
+          {(isPDF || (isGoogleDrive && !isImage)) && resolvedUrl && (
+            <PDFViewer fileUrl={resolvedUrl} className="h-full" />
           )}
-          {isImage && note.file_url && (
+          {isImage && resolvedUrl && (
             <div className="h-full overflow-auto flex items-center justify-center p-4 bg-muted/10">
               {!imageLoaded && (
                 <div className="absolute inset-0 flex items-center justify-center">
@@ -245,7 +245,7 @@ export function NotePreviewDialog({
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: imageLoaded ? 1 : 0, scale: imageLoaded ? 1 : 0.95 }}
                 transition={{ duration: 0.3 }}
-                src={note.file_url}
+                src={resolvedUrl}
                 alt={note.title}
                 className="max-w-full max-h-full object-contain rounded-lg shadow-lg"
                 onLoad={() => setImageLoaded(true)}
