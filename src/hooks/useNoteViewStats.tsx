@@ -34,18 +34,33 @@ export function useNoteViewers(noteId: string | null) {
       if (!noteId) return [] as NoteViewer[];
       const { data, error } = await supabase
         .from('note_views')
-        .select('user_id, viewed_at, profiles(full_name, username, avatar_url)')
+        .select('user_id, viewed_at')
         .eq('note_id', noteId)
         .order('viewed_at', { ascending: false })
         .limit(100);
       if (error) throw error;
-      return (data || []).map((row: any) => ({
-        user_id: row.user_id,
-        viewed_at: row.viewed_at,
-        full_name: row.profiles?.full_name ?? null,
-        username: row.profiles?.username ?? null,
-        avatar_url: row.profiles?.avatar_url ?? null,
-      })) as NoteViewer[];
+      const rows = data || [];
+      if (rows.length === 0) return [] as NoteViewer[];
+
+      const userIds = Array.from(new Set(rows.map((r: any) => r.user_id)));
+      const { data: profs, error: pErr } = await supabase
+        .from('profiles')
+        .select('id, full_name, username, avatar_url')
+        .in('id', userIds);
+      if (pErr) throw pErr;
+      const map = new Map<string, any>();
+      (profs || []).forEach((p: any) => map.set(p.id, p));
+
+      return rows.map((row: any) => {
+        const p = map.get(row.user_id);
+        return {
+          user_id: row.user_id,
+          viewed_at: row.viewed_at,
+          full_name: p?.full_name ?? null,
+          username: p?.username ?? null,
+          avatar_url: p?.avatar_url ?? null,
+        };
+      }) as NoteViewer[];
     },
     enabled: !!noteId,
   });
