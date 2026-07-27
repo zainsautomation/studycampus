@@ -83,7 +83,10 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
     const searchContent = async () => {
       setIsLoading(true);
       const searchResults: SearchResult[] = [];
-      const searchTerm = `%${debouncedQuery}%`;
+      const { sanitizeSearchTerm } = await import('@/lib/searchSanitize');
+      const safe = sanitizeSearchTerm(debouncedQuery);
+      if (!safe) { setResults([]); setIsLoading(false); return; }
+      const searchTerm = `%${safe}%`;
 
       try {
         // Search notes
