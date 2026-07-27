@@ -1450,6 +1450,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_invite_code_usage: {
+        Args: { _code_id: string }
+        Returns: boolean
+      }
       touch_last_seen: { Args: never; Returns: undefined }
     }
     Enums: {
