@@ -51,6 +51,14 @@ export function NotePreviewDialog({
 }: NotePreviewDialogProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [resolvedUrl, setResolvedUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open || !note?.file_url) { setResolvedUrl(null); return; }
+    let cancelled = false;
+    resolveNoteUrl(note.file_url).then((u) => { if (!cancelled) setResolvedUrl(u); });
+    return () => { cancelled = true; };
+  }, [open, note?.file_url]);
 
   if (!note) return null;
 
