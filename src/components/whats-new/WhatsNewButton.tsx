@@ -39,13 +39,13 @@ export function WhatsNewButton() {
   const [open, setOpen] = useState(false);
   const unreadSeenWhileOpenRef = useRef(false);
 
-  if (!user) return null;
-
   useEffect(() => {
     if (open && count > 0) {
       unreadSeenWhileOpenRef.current = true;
     }
   }, [open, count]);
+
+  if (!user) return null;
 
   const markUnreadSeenAsRead = () => {
     if (!unreadSeenWhileOpenRef.current) return;
