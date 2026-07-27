@@ -69,10 +69,13 @@ export function MCQPDFUploader({ onParsed }: MCQPDFUploaderProps) {
 
       if (uploadError) throw uploadError;
 
-      const { data: urlData } = supabase.storage.from('notes').getPublicUrl(tempPath);
+      const { data: signed, error: signErr } = await supabase.storage
+        .from('notes')
+        .createSignedUrl(tempPath, 600);
+      if (signErr || !signed?.signedUrl) throw signErr || new Error('Failed to sign PDF URL');
 
       const { data, error } = await supabase.functions.invoke('parse-mcq-pdf', {
-        body: { pdfUrl: urlData.publicUrl, storagePath: tempPath, fileName: file.name },
+        body: { pdfUrl: signed.signedUrl, storagePath: tempPath, fileName: file.name },
       });
 
       if (error) throw error;

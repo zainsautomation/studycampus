@@ -52,7 +52,11 @@ export default function QandA() {
         .range(pageParam, pageParam + PAGE_SIZE - 1);
 
       if (search) {
-        query = query.or(`title.ilike.%${search}%,content.ilike.%${search}%`);
+        const { sanitizeSearchTerm } = await import('@/lib/searchSanitize');
+        const safe = sanitizeSearchTerm(search);
+        if (safe) {
+          query = query.or(`title.ilike.%${safe}%,content.ilike.%${safe}%`);
+        }
       }
       if (subjectFilter !== "all") {
         query = query.eq('subject_id', subjectFilter);
