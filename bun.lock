@@ -89,6 +89,9 @@
     },
   },
   "overrides": {
+    "@tiptap/core": "3.29.2",
+    "@tiptap/extension-link": "3.29.2",
+    "@tiptap/pm": "3.29.2",
     "linkify-it": "^5.0.2",
     "markdown-it": "^14.3.0",
   },
