@@ -386,6 +386,42 @@ export type Database = {
           },
         ]
       }
+      gpa_results: {
+        Row: {
+          cgpa: number
+          created_at: string
+          id: string
+          semesters: Json
+          student_details: Json
+          title: string
+          total_credits: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cgpa?: number
+          created_at?: string
+          id?: string
+          semesters?: Json
+          student_details?: Json
+          title?: string
+          total_credits?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cgpa?: number
+          created_at?: string
+          id?: string
+          semesters?: Json
+          student_details?: Json
+          title?: string
+          total_credits?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       invite_codes: {
         Row: {
           code: string
