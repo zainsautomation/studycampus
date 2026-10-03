@@ -40,6 +40,7 @@ const MCQAttempt = lazy(() => import("./pages/MCQAttempt"));
 const MCQResult = lazy(() => import("./pages/MCQResult"));
 const Terms = lazy(() => import("./pages/Terms"));
 const ResultCalculator = lazy(() => import("./pages/ResultCalculator"));
+const MarksCalculator = lazy(() => import("./pages/MarksCalculator"));
 const CompleteProfile = lazy(() => import("./pages/CompleteProfile"));
 import { OnboardingGate } from "@/components/OnboardingGate";
  
@@ -119,6 +120,7 @@ const App = () => (
                 <Route path="/user/:userId" element={<PublicProfile />} />
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/result-calculator" element={<ProtectedRoute><ResultCalculator /></ProtectedRoute>} />
+                <Route path="/marks-calculator" element={<ProtectedRoute><MarksCalculator /></ProtectedRoute>} />
                 <Route path="/admin" element={<ProtectedRoute requireAdmin><AdminLayout /></ProtectedRoute>}>
                   <Route index element={<AdminDashboard />} />
                   <Route path="notes" element={<ManageNotes />} />

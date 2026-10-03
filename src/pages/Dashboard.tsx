@@ -9,7 +9,9 @@ import {
   AlertCircle,
   FileText,
   LogIn,
-  Sparkles
+  Sparkles,
+  Calculator,
+  ClipboardList
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -123,6 +125,27 @@ export default function Dashboard() {
                   </div>
                 </CardContent>
               </Card>
+            </motion.div>
+          )}
+
+          {user && (
+            <motion.div variants={itemVariants} className="grid grid-cols-2 gap-3">
+              <Link to="/marks-calculator" className="block">
+                <Card className="glass hover:border-primary/40 transition-colors h-full">
+                  <CardContent className="p-4 flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-primary/10"><ClipboardList className="w-5 h-5 text-primary" /></div>
+                    <div className="min-w-0"><p className="font-medium text-sm truncate">Marks Calculator</p><p className="text-xs text-muted-foreground truncate">Mid, sessional, final</p></div>
+                  </CardContent>
+                </Card>
+              </Link>
+              <Link to="/result-calculator" className="block">
+                <Card className="glass hover:border-primary/40 transition-colors h-full">
+                  <CardContent className="p-4 flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-primary/10"><Calculator className="w-5 h-5 text-primary" /></div>
+                    <div className="min-w-0"><p className="font-medium text-sm truncate">GPA / CGPA</p><p className="text-xs text-muted-foreground truncate">Transcript PDF</p></div>
+                  </CardContent>
+                </Card>
+              </Link>
             </motion.div>
           )}
 
