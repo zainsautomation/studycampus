@@ -21,6 +21,7 @@ import { useAppSettings } from '@/hooks/useAppSettings';
 const allMenuItems = [
   { href: '/qa', label: 'Q&A', icon: HelpCircle, description: 'Ask and answer questions', requires: 'qa' as const },
   { href: '/result-calculator', label: 'Result Calculator', icon: Calculator, description: 'GPA / CGPA & PDF transcript' },
+  { href: '/marks-calculator', label: 'Marks Calculator', icon: ClipboardList, description: 'Mid, sessional, final & practical' },
   { href: '/saved-notes', label: 'Saved Notes', icon: Bookmark, description: 'Your bookmarked notes' },
   { href: '/announcements', label: 'Announcements', icon: Megaphone, description: 'Important updates' },
   { href: '/updates', label: 'Schedule', icon: Calendar, description: 'Upcoming events' },

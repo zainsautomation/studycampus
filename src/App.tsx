@@ -119,6 +119,7 @@ const App = () => (
                 <Route path="/user/:userId" element={<PublicProfile />} />
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/result-calculator" element={<ProtectedRoute><ResultCalculator /></ProtectedRoute>} />
+                <Route path="/marks-calculator" element={<ProtectedRoute><MarksCalculator /></ProtectedRoute>} />
                 <Route path="/admin" element={<ProtectedRoute requireAdmin><AdminLayout /></ProtectedRoute>}>
                   <Route index element={<AdminDashboard />} />
                   <Route path="notes" element={<ManageNotes />} />
