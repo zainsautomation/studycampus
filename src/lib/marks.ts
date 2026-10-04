@@ -1,6 +1,8 @@
 // University-style marks breakdown (Mid / Sessional / Final / Practical).
-// Theory is out of 100. With a practical, theory is weighted 75% and practical (out of 25) is added.
+// Theory is out of 100. Practical subjects use 70% theory and 30% practical (entered out of 25).
 export const MAX = { mid: 20, sessional: 20, final: 60, practical: 25 } as const;
+export const THEORY_WEIGHT = 0.7;
+export const PRACTICAL_WEIGHT = 0.3;
 
 export interface MarksSubject {
   id: string;
@@ -51,16 +53,19 @@ export function letterFromGpa(g: number): string {
 export function invalidField(s: MarksSubject): string | null {
   for (const k of ['mid', 'sessional', 'final', 'practical'] as const) {
     if (k === 'practical' && !s.hasPractical) continue;
-    const v = num(s[k]);
-    if (v < 0 || v > MAX[k]) return `${k} must be 0–${MAX[k]}`;
+    if (s[k].trim() === '') return `Enter ${k} marks (use 0 if none)`;
+    const v = Number(s[k]);
+    if (!Number.isFinite(v) || v < 0 || v > MAX[k]) return `${k} must be 0–${MAX[k]}`;
   }
+  if (!s.name.trim()) return 'Enter a subject name';
+  if (!Number.isInteger(s.credits) || s.credits < 1 || s.credits > 6) return 'Credits must be 1–6';
   return null;
 }
 
 export function computeSubject(s: MarksSubject) {
   const theory = num(s.mid) + num(s.sessional) + num(s.final);
   const prac = s.hasPractical ? num(s.practical) : 0;
-  const total = s.hasPractical ? Math.ceil(theory * 0.75 + prac) : Math.ceil(theory);
+  const total = s.hasPractical ? Math.ceil(theory * THEORY_WEIGHT + (prac / MAX.practical) * PRACTICAL_WEIGHT * 100) : Math.ceil(theory);
   const gp = gradePoint(Math.min(total, 100));
   const qp = Math.round(gp * s.credits * 100) / 100;
   return { theory, prac, total, gp, qp, grade: letter(total), passed: total >= 50 };
@@ -138,7 +143,7 @@ export async function downloadMarksPdf(
   });
 
   doc.setFontSize(8); doc.setTextColor(100, 116, 139);
-  doc.text(`Scheme: Mid ${MAX.mid} + Sessional ${MAX.sessional} + Final ${MAX.final} = 100. With practical: 75% theory + practical (${MAX.practical}).`, 40, H - 34);
+  doc.text(`Scheme: Mid ${MAX.mid} + Sessional ${MAX.sessional} + Final ${MAX.final} = 100. With practical: 70% theory + 30% practical (out of ${MAX.practical}).`, 40, H - 34);
   doc.text('Self-calculated result — not an official university document.', 40, H - 22);
   doc.save(`${(info.name || 'result').replace(/\s+/g, '_')}_result_sheet.pdf`);
 }
