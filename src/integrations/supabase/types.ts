@@ -1074,7 +1074,6 @@ export type Database = {
           updated_at: string
           username: string | null
           whats_new_checked_at: string
-          whats_new_enabled: boolean
         }
         Insert: {
           avatar_url?: string | null
@@ -1092,7 +1091,6 @@ export type Database = {
           updated_at?: string
           username?: string | null
           whats_new_checked_at?: string
-          whats_new_enabled?: boolean
         }
         Update: {
           avatar_url?: string | null
@@ -1110,7 +1108,6 @@ export type Database = {
           updated_at?: string
           username?: string | null
           whats_new_checked_at?: string
-          whats_new_enabled?: boolean
         }
         Relationships: []
       }
