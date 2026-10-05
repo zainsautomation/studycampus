@@ -16,6 +16,8 @@ interface AppSettings {
   post_images_google_drive_folder_id: string | null;
   post_creation_enabled: boolean;
   leaderboard_enabled: boolean;
+  whats_new_enabled: boolean;
+  marks_scheme_visible: boolean;
 }
 
 type SettingValue = boolean | string | null;
@@ -46,6 +48,8 @@ export function useAppSettings() {
         post_images_google_drive_folder_id: null,
         post_creation_enabled: true,
         leaderboard_enabled: true,
+        whats_new_enabled: true,
+        marks_scheme_visible: true,
       };
       
       data?.forEach((setting: { key: string; value: Json }) => {
@@ -126,6 +130,8 @@ export function useAppSettings() {
     post_images_google_drive_folder_id: null,
     post_creation_enabled: true,
     leaderboard_enabled: true,
+    whats_new_enabled: true,
+    marks_scheme_visible: true,
   };
 
   return {

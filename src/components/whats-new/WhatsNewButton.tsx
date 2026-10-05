@@ -1,3 +1,4 @@
+import { useAppSettings } from '@/hooks/useAppSettings';
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, BookOpen, FileQuestion, Megaphone, Calendar } from 'lucide-react';
