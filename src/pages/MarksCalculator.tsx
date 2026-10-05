@@ -72,8 +72,12 @@ export default function MarksCalculator() {
   return (
     <MainLayout>
       <div className="max-w-6xl mx-auto px-4 py-6 space-y-6" onKeyDown={onEnterNext}>
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold">Marks Calculator</h1>
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" aria-label="Go back" onClick={() => navigate(-1)}>
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold">Marks Calculator</h1>
           <p className="text-muted-foreground text-sm mt-1">
             Enter Mid, Sessional, Final and Practical marks to get your subject grades, SGPA and result sheet.
           </p>
