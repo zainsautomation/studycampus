@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Plus, Trash2, Download, RotateCcw, FlaskConical, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Trash2, Download, RotateCcw, FlaskConical, AlertTriangle, CheckCircle2, ArrowLeft, Pencil } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,8 +8,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useAuth } from '@/hooks/useAuth';
-import { useAppSettings } from '@/hooks/useAppSettings';
+import { useAppSettings, DEFAULT_SCHEME_TEXT } from '@/hooks/useAppSettings';
 import { toast } from 'sonner';
 import { MAX, computeAll, computeSubject, downloadMarksPdf, invalidField, newSubject, type MarksSubject } from '@/lib/marks';
 import { trackEvent } from '@/lib/analytics';
@@ -17,9 +20,13 @@ const KEY = 'marks-draft-v1';
 type Info = { name: string; rollNo: string; program: string; session: string; institute: string };
 
 export default function MarksCalculator() {
-  const { user } = useAuth();
-  const { settings: appSettings } = useAppSettings();
+  const { user, isAdmin } = useAuth();
+  const navigate = useNavigate();
+  const { settings: appSettings, updateSetting } = useAppSettings();
   const schemeVisible = appSettings.marks_scheme_visible;
+  const schemeText = appSettings.marks_scheme_text || DEFAULT_SCHEME_TEXT;
+  const [editOpen, setEditOpen] = useState(false);
+  const [draftScheme, setDraftScheme] = useState('');
   const onEnterNext = (e: React.KeyboardEvent<HTMLDivElement>) => {
     const t = e.target as HTMLElement;
     if (e.key !== 'Enter' || t.tagName !== 'INPUT') return;
@@ -65,11 +72,16 @@ export default function MarksCalculator() {
   return (
     <MainLayout>
       <div className="max-w-6xl mx-auto px-4 py-6 space-y-6" onKeyDown={onEnterNext}>
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold">Marks Calculator</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Enter Mid, Sessional, Final and Practical marks to get your subject grades, SGPA and result sheet.
-          </p>
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" aria-label="Go back" onClick={() => navigate(-1)}>
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold">Marks Calculator</h1>
+            <p className="text-muted-foreground text-sm mt-1">
+              Enter Mid, Sessional, Final and Practical marks to get your subject grades, SGPA and result sheet.
+            </p>
+          </div>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
@@ -164,16 +176,41 @@ export default function MarksCalculator() {
               </CardContent>
             </Card>
             {schemeVisible && <Card>
-              <CardContent className="p-4 text-xs text-muted-foreground space-y-1">
-                <p><b>Scheme:</b> Mid {MAX.mid} + Sessional {MAX.sessional} + Final {MAX.final} = 100.</p>
-                <p>With practical: 75% of theory + Practical (/{MAX.practical}).</p>
-                <p>A ≥85 (4.0) · B+ 80–84 · B 70–79 · C 60–69 · D 50–59 · F &lt;50.</p>
+              <CardContent className="p-4 text-xs text-muted-foreground space-y-1 relative">
+                {isAdmin && (
+                  <Button variant="ghost" size="icon" aria-label="Edit scheme text"
+                    className="absolute top-2 right-2 h-7 w-7"
+                    onClick={() => { setDraftScheme(schemeText); setEditOpen(true); }}>
+                    <Pencil className="w-3.5 h-3.5" />
+                  </Button>
+                )}
+                {schemeText.split('\n').map((line, i) => (
+                  <p key={i}>{line}</p>
+                ))}
                 <p>Your entries are saved on this device automatically.</p>
               </CardContent>
             </Card>}
           </div>
         </div>
       </div>
+
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Edit scheme text</DialogTitle></DialogHeader>
+          <Textarea value={draftScheme} onChange={(e) => setDraftScheme(e.target.value)}
+            rows={6} maxLength={500} aria-label="Scheme text" />
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setDraftScheme(DEFAULT_SCHEME_TEXT)}>Reset to default</Button>
+            <Button disabled={updateSetting.isPending || !draftScheme.trim()}
+              onClick={() => updateSetting.mutate({ key: 'marks_scheme_text', value: draftScheme.trim() }, {
+                onSuccess: () => { setEditOpen(false); toast.success('Scheme text updated'); },
+                onError: () => toast.error('Could not save'),
+              })}>
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }
