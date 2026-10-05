@@ -18,9 +18,13 @@ interface AppSettings {
   leaderboard_enabled: boolean;
   whats_new_enabled: boolean;
   marks_scheme_visible: boolean;
+  marks_scheme_text: string;
 }
 
 type SettingValue = boolean | string | null;
+
+export const DEFAULT_SCHEME_TEXT =
+  'Scheme: Mid 20 + Sessional 20 + Final 60 = 100.\nWith practical: 75% of theory + Practical (/25).\nA ≥85 (4.0) · B+ 80–84 · B 70–79 · C 60–69 · D 50–59 · F <50.';
 
 export function useAppSettings() {
   const queryClient = useQueryClient();
@@ -50,6 +54,7 @@ export function useAppSettings() {
         leaderboard_enabled: true,
         whats_new_enabled: true,
         marks_scheme_visible: true,
+        marks_scheme_text: DEFAULT_SCHEME_TEXT,
       };
       
       data?.forEach((setting: { key: string; value: Json }) => {
@@ -132,6 +137,7 @@ export function useAppSettings() {
     leaderboard_enabled: true,
     whats_new_enabled: true,
     marks_scheme_visible: true,
+    marks_scheme_text: DEFAULT_SCHEME_TEXT,
   };
 
   return {
