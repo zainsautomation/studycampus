@@ -20,9 +20,13 @@ const KEY = 'marks-draft-v1';
 type Info = { name: string; rollNo: string; program: string; session: string; institute: string };
 
 export default function MarksCalculator() {
-  const { user } = useAuth();
-  const { settings: appSettings } = useAppSettings();
+  const { user, isAdmin } = useAuth();
+  const navigate = useNavigate();
+  const { settings: appSettings, updateSetting } = useAppSettings();
   const schemeVisible = appSettings.marks_scheme_visible;
+  const schemeText = appSettings.marks_scheme_text || DEFAULT_SCHEME_TEXT;
+  const [editOpen, setEditOpen] = useState(false);
+  const [draftScheme, setDraftScheme] = useState('');
   const onEnterNext = (e: React.KeyboardEvent<HTMLDivElement>) => {
     const t = e.target as HTMLElement;
     if (e.key !== 'Enter' || t.tagName !== 'INPUT') return;
