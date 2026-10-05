@@ -176,10 +176,17 @@ export default function MarksCalculator() {
               </CardContent>
             </Card>
             {schemeVisible && <Card>
-              <CardContent className="p-4 text-xs text-muted-foreground space-y-1">
-                <p><b>Scheme:</b> Mid {MAX.mid} + Sessional {MAX.sessional} + Final {MAX.final} = 100.</p>
-                <p>With practical: 75% of theory + Practical (/{MAX.practical}).</p>
-                <p>A ≥85 (4.0) · B+ 80–84 · B 70–79 · C 60–69 · D 50–59 · F &lt;50.</p>
+              <CardContent className="p-4 text-xs text-muted-foreground space-y-1 relative">
+                {isAdmin && (
+                  <Button variant="ghost" size="icon" aria-label="Edit scheme text"
+                    className="absolute top-2 right-2 h-7 w-7"
+                    onClick={() => { setDraftScheme(schemeText); setEditOpen(true); }}>
+                    <Pencil className="w-3.5 h-3.5" />
+                  </Button>
+                )}
+                {schemeText.split('\n').map((line, i) => (
+                  <p key={i}>{line}</p>
+                ))}
                 <p>Your entries are saved on this device automatically.</p>
               </CardContent>
             </Card>}
