@@ -312,6 +312,22 @@ export function AdminSidebar() {
                   onCheckedChange={(checked) => updateSetting.mutate({ key: 'leaderboard_enabled', value: checked })}
                 />
               </div>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="whatsnew-toggle" className="text-sm cursor-pointer">What's New alerts</Label>
+                <Switch
+                  id="whatsnew-toggle"
+                  checked={settings.whats_new_enabled}
+                  onCheckedChange={(checked) => updateSetting.mutate({ key: 'whats_new_enabled', value: checked })}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="scheme-toggle" className="text-sm cursor-pointer">Marks scheme info</Label>
+                <Switch
+                  id="scheme-toggle"
+                  checked={settings.marks_scheme_visible}
+                  onCheckedChange={(checked) => updateSetting.mutate({ key: 'marks_scheme_visible', value: checked })}
+                />
+              </div>
               <Separator className="my-2" />
               <div className="flex items-center justify-between">
                 <Label htmlFor="downloads-toggle" className="text-sm flex items-center gap-2 cursor-pointer">
@@ -499,6 +515,22 @@ export function AdminMobileNav() {
                     <Switch
                       checked={settings.leaderboard_enabled}
                       onCheckedChange={(checked) => updateSetting.mutate({ key: 'leaderboard_enabled', value: checked })}
+                      className="scale-75"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
+                    <Label className="text-xs">What's New alerts</Label>
+                    <Switch
+                      checked={settings.whats_new_enabled}
+                      onCheckedChange={(checked) => updateSetting.mutate({ key: 'whats_new_enabled', value: checked })}
+                      className="scale-75"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
+                    <Label className="text-xs">Marks scheme info</Label>
+                    <Switch
+                      checked={settings.marks_scheme_visible}
+                      onCheckedChange={(checked) => updateSetting.mutate({ key: 'marks_scheme_visible', value: checked })}
                       className="scale-75"
                     />
                   </div>
