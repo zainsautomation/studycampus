@@ -193,6 +193,24 @@ export default function MarksCalculator() {
           </div>
         </div>
       </div>
+
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Edit scheme text</DialogTitle></DialogHeader>
+          <Textarea value={draftScheme} onChange={(e) => setDraftScheme(e.target.value)}
+            rows={6} maxLength={500} aria-label="Scheme text" />
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setDraftScheme(DEFAULT_SCHEME_TEXT)}>Reset to default</Button>
+            <Button disabled={updateSetting.isPending || !draftScheme.trim()}
+              onClick={() => updateSetting.mutate({ key: 'marks_scheme_text', value: draftScheme.trim() }, {
+                onSuccess: () => { setEditOpen(false); toast.success('Scheme text updated'); },
+                onError: () => toast.error('Could not save'),
+              })}>
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }
