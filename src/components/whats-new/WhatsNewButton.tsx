@@ -1,3 +1,4 @@
+import { useAppSettings } from '@/hooks/useAppSettings';
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, BookOpen, FileQuestion, Megaphone, Calendar } from 'lucide-react';
@@ -35,6 +36,8 @@ const typeHref = (item: WhatsNewItem) => {
 
 export function WhatsNewButton() {
   const { user } = useAuth();
+  const { settings: appSettings } = useAppSettings();
+  const whatsNewEnabled = appSettings.whats_new_enabled;
   const { items, count, markAsRead } = useWhatsNew();
   const [open, setOpen] = useState(false);
   const unreadSeenWhileOpenRef = useRef(false);
@@ -45,7 +48,7 @@ export function WhatsNewButton() {
     }
   }, [open, count]);
 
-  if (!user) return null;
+  if (!user || !whatsNewEnabled) return null;
 
   const markUnreadSeenAsRead = () => {
     if (!unreadSeenWhileOpenRef.current) return;

@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
+import { useAppSettings } from '@/hooks/useAppSettings';
 import { toast } from 'sonner';
 import { MAX, computeAll, computeSubject, downloadMarksPdf, invalidField, newSubject, type MarksSubject } from '@/lib/marks';
 import { trackEvent } from '@/lib/analytics';
@@ -17,6 +18,16 @@ type Info = { name: string; rollNo: string; program: string; session: string; in
 
 export default function MarksCalculator() {
   const { user } = useAuth();
+  const { settings: appSettings } = useAppSettings();
+  const schemeVisible = appSettings.marks_scheme_visible;
+  const onEnterNext = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const t = e.target as HTMLElement;
+    if (e.key !== 'Enter' || t.tagName !== 'INPUT') return;
+    e.preventDefault();
+    const inputs = Array.from(e.currentTarget.querySelectorAll<HTMLInputElement>('input:not([disabled]):not([type=hidden])'));
+    const next = inputs[inputs.indexOf(t as HTMLInputElement) + 1];
+    if (next) { next.focus(); next.select?.(); } else (t as HTMLInputElement).blur();
+  };
   const saved = (() => { try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch { return null; } })();
   const [info, setInfo] = useState<Info>(saved?.info ?? {
     name: (user?.user_metadata?.full_name as string) || '', rollNo: '', program: '', session: '', institute: '',
@@ -53,7 +64,7 @@ export default function MarksCalculator() {
 
   return (
     <MainLayout>
-      <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
+      <div className="max-w-6xl mx-auto px-4 py-6 space-y-6" onKeyDown={onEnterNext}>
         <div>
           <h1 className="text-2xl md:text-3xl font-bold">Marks Calculator</h1>
           <p className="text-muted-foreground text-sm mt-1">
@@ -152,14 +163,14 @@ export default function MarksCalculator() {
                 <Button className="w-full" onClick={download}><Download className="w-4 h-4 mr-1" /> Download result sheet</Button>
               </CardContent>
             </Card>
-            <Card>
+            {schemeVisible && <Card>
               <CardContent className="p-4 text-xs text-muted-foreground space-y-1">
                 <p><b>Scheme:</b> Mid {MAX.mid} + Sessional {MAX.sessional} + Final {MAX.final} = 100.</p>
                 <p>With practical: 75% of theory + Practical (/{MAX.practical}).</p>
                 <p>A ≥85 (4.0) · B+ 80–84 · B 70–79 · C 60–69 · D 50–59 · F &lt;50.</p>
                 <p>Your entries are saved on this device automatically.</p>
               </CardContent>
-            </Card>
+            </Card>}
           </div>
         </div>
       </div>

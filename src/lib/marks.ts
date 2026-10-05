@@ -138,7 +138,6 @@ export async function downloadMarksPdf(
   });
 
   doc.setFontSize(8); doc.setTextColor(100, 116, 139);
-  doc.text(`Scheme: Mid ${MAX.mid} + Sessional ${MAX.sessional} + Final ${MAX.final} = 100. With practical: 75% theory + practical (${MAX.practical}).`, 40, H - 34);
   doc.text('Self-calculated result — not an official university document.', 40, H - 22);
   doc.save(`${(info.name || 'result').replace(/\s+/g, '_')}_result_sheet.pdf`);
 }
