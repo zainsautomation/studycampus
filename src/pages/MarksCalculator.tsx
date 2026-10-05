@@ -78,9 +78,10 @@ export default function MarksCalculator() {
           </Button>
           <div>
             <h1 className="text-2xl md:text-3xl font-bold">Marks Calculator</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Enter Mid, Sessional, Final and Practical marks to get your subject grades, SGPA and result sheet.
-          </p>
+            <p className="text-muted-foreground text-sm mt-1">
+              Enter Mid, Sessional, Final and Practical marks to get your subject grades, SGPA and result sheet.
+            </p>
+          </div>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
