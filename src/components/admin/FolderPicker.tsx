@@ -37,6 +37,8 @@ interface BreadcrumbItem {
   name: string;
 }
 
+const TRAIL_KEY = 'gdrive-folder-trail-v1';
+
 export function FolderPicker({
   open,
   onOpenChange,
@@ -57,12 +59,24 @@ export function FolderPicker({
 
   useEffect(() => {
     if (open) {
-      loadFolders('root');
-      setBreadcrumbs([{ id: 'root', name: 'My Drive' }]);
-      setCurrentParentId('root');
+      // Reopen where the admin last browsed instead of starting at the root
+      let trail: BreadcrumbItem[] = [{ id: 'root', name: 'My Drive' }];
+      try {
+        const saved = JSON.parse(localStorage.getItem(TRAIL_KEY) || 'null');
+        if (Array.isArray(saved) && saved.length && saved[0]?.id === 'root') trail = saved;
+      } catch { /* ignore */ }
+      const last = trail[trail.length - 1].id;
+      setBreadcrumbs(trail);
+      setCurrentParentId(last);
+      loadFolders(last);
       setSelectedFolder(null);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  useEffect(() => {
+    if (open) localStorage.setItem(TRAIL_KEY, JSON.stringify(breadcrumbs));
+  }, [breadcrumbs, open]);
 
   const loadFolders = async (parentId: string) => {
     setIsLoading(true);

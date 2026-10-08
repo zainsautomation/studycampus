@@ -59,6 +59,8 @@ const itemVariants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.3 } }
 };
 
+const LAST_FOLDER_KEY = 'notes-last-upload-folder-v1';
+
 export default function ManageNotes() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -96,6 +98,7 @@ export default function ManageNotes() {
   const [dragActive, setDragActive] = useState(false);
   const [keepExistingFile, setKeepExistingFile] = useState(true);
   const [folderPickerOpen, setFolderPickerOpen] = useState(false);
+  const [useDriveLink, setUseDriveLink] = useState(false);
   const [activeTab, setActiveTab] = useState<'notes' | 'settings'>('notes');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
@@ -129,18 +132,25 @@ export default function ManageNotes() {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   // Set default storage type when opening dialog
+  // Last folder the admin uploaded to (remembered across uploads)
+  const getLastFolder = (): { id: string; name: string } | null => {
+    try { return JSON.parse(localStorage.getItem(LAST_FOLDER_KEY) || 'null'); } catch { return null; }
+  };
+
   useEffect(() => {
     if (isDialogOpen && !editingNote) {
+      const last = getLastFolder();
       setFormData(prev => ({
         ...prev,
         storage_type: defaultStorageType,
-        custom_folder_id: googleDriveDefaultFolderId,
-        custom_folder_name: googleDriveDefaultFolderName,
+        custom_folder_id: last?.id ?? googleDriveDefaultFolderId,
+        custom_folder_name: last?.name ?? googleDriveDefaultFolderName,
       }));
     }
   }, [isDialogOpen, editingNote, defaultStorageType, googleDriveDefaultFolderId, googleDriveDefaultFolderName]);
 
   const resetForm = () => {
+    const last = getLastFolder();
     setFormData({ 
       title: '', 
       description: '', 
@@ -149,13 +159,26 @@ export default function ManageNotes() {
       file_name: '', 
       is_downloadable: true,
       storage_type: defaultStorageType,
-      custom_folder_id: googleDriveDefaultFolderId,
-      custom_folder_name: googleDriveDefaultFolderName,
+      custom_folder_id: last?.id ?? googleDriveDefaultFolderId,
+      custom_folder_name: last?.name ?? googleDriveDefaultFolderName,
     });
     setSelectedFile(null);
     setEditingNote(null);
     setKeepExistingFile(true);
     setSelectedTagIds([]);
+  };
+
+  const titleFromFileName = (name: string) =>
+    name
+      .replace(/\.[^.]+$/, '')
+      .replace(/[_\-.]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+
+  const pickFile = (file: File) => {
+    setSelectedFile(file);
+    setFormData(prev => prev.title.trim() ? prev : { ...prev, title: titleFromFileName(file.name) });
   };
 
   const handleOpenDialog = (note?: Note) => {
@@ -191,7 +214,7 @@ export default function ManageNotes() {
     e.stopPropagation();
     setDragActive(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      setSelectedFile(e.dataTransfer.files[0]);
+      pickFile(e.dataTransfer.files[0]);
     }
   };
 
@@ -205,6 +228,7 @@ export default function ManageNotes() {
     let fileType = (editingNote && keepExistingFile) ? editingNote.file_type : null;
     let fileSize = (editingNote && keepExistingFile) ? editingNote.file_size : null;
     let googleDriveFolderId = formData.custom_folder_id;
+    let driveLink: string | null = null;
 
     try {
       if (selectedFile) {
@@ -223,6 +247,7 @@ export default function ManageNotes() {
 
           if (result) {
             fileUrl = result.webViewLink;
+            if (useDriveLink) driveLink = result.webViewLink;
             fileName = formData.file_name?.trim() || selectedFile.name;
             fileType = selectedFile.type;
             fileSize = selectedFile.size;
@@ -255,7 +280,7 @@ export default function ManageNotes() {
         file_name: fileName,
         file_type: fileType,
         file_size: fileSize,
-        link_url: formData.link_url || null,
+        link_url: driveLink || formData.link_url || null,
         created_by: user?.id,
         is_downloadable: formData.is_downloadable,
         storage_type: formData.storage_type,
@@ -566,7 +591,7 @@ export default function ManageNotes() {
                             Upload Folder
                           </Label>
                           <div className="flex items-center gap-2">
-                            <div className="flex-1 p-3 rounded-lg bg-muted/50 border border-border text-sm">
+                            <div className="flex-1 min-w-0 truncate p-3 rounded-lg bg-muted/50 border border-border text-sm">
                               {formData.custom_folder_name || googleDriveDefaultFolderName || 'Default folder (My Drive)'}
                             </div>
                             <Button
@@ -577,6 +602,19 @@ export default function ManageNotes() {
                             >
                               Change
                             </Button>
+                            {formData.custom_folder_id && formData.custom_folder_id !== googleDriveDefaultFolderId && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  localStorage.removeItem(LAST_FOLDER_KEY);
+                                  setFormData(prev => ({ ...prev, custom_folder_id: googleDriveDefaultFolderId, custom_folder_name: googleDriveDefaultFolderName }));
+                                }}
+                              >
+                                Default
+                              </Button>
+                            )}
                           </div>
                           <p className="text-xs text-muted-foreground">
                             {googleDriveAutoOrganize 
@@ -668,26 +706,47 @@ export default function ManageNotes() {
                               <>
                                 <Upload className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
                                 <p className="text-sm text-muted-foreground">Drag & drop or click to upload</p>
-                                <input type="file" accept=".pdf,.doc,.docx,.ppt,.pptx" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={(e) => e.target.files?.[0] && setSelectedFile(e.target.files[0])} />
+                                <input type="file" accept=".pdf,.doc,.docx,.ppt,.pptx" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={(e) => e.target.files?.[0] && pickFile(e.target.files[0])} />
                               </>
                             )}
                           </div>
                         )}
                       </div>
                       <div>
-                        <Label htmlFor="link_url">External Link (Optional)</Label>
+                        <div className="flex items-center justify-between gap-2">
+                          <Label htmlFor="link_url">External Link (Optional)</Label>
+                          {editingNote?.storage_type === 'google_drive' && editingNote.file_url && keepExistingFile && !selectedFile && formData.link_url !== editingNote.file_url && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 text-xs gap-1"
+                              onClick={() => setFormData({ ...formData, link_url: editingNote.file_url || '' })}
+                            >
+                              <Cloud className="w-3 h-3" /> Use Drive file link
+                            </Button>
+                          )}
+                        </div>
                         <div className="relative mt-1">
                           <Link className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                           <Input 
                             id="link_url" 
                             type="url"
-                            placeholder="https://example.com/resource" 
+                            placeholder={useDriveLink && selectedFile && formData.storage_type === 'google_drive' ? 'Will use the Drive link after upload' : 'https://example.com/resource'}
                             value={formData.link_url} 
                             onChange={(e) => setFormData({ ...formData, link_url: e.target.value })} 
                             className="pl-10"
+                            disabled={useDriveLink && !!selectedFile && formData.storage_type === 'google_drive'}
                           />
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1">Add a link to external resources like Google Drive, YouTube, etc.</p>
+                        {selectedFile && formData.storage_type === 'google_drive' ? (
+                          <label className="mt-2 flex items-center gap-2 text-xs cursor-pointer">
+                            <Switch checked={useDriveLink} onCheckedChange={setUseDriveLink} />
+                            <span>Use this file's Google Drive link as the external link</span>
+                          </label>
+                        ) : (
+                          <p className="text-xs text-muted-foreground mt-1">Add a link to external resources like Google Drive, YouTube, etc.</p>
+                        )}
                       </div>
                       <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-muted/30">
                         <Switch
@@ -967,6 +1026,7 @@ export default function ManageNotes() {
           open={folderPickerOpen}
           onOpenChange={setFolderPickerOpen}
           onSelect={(folder) => {
+            localStorage.setItem(LAST_FOLDER_KEY, JSON.stringify({ id: folder.id, name: folder.name }));
             setFormData(prev => ({
               ...prev,
               custom_folder_id: folder.id,
