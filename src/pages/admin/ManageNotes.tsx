@@ -96,6 +96,7 @@ export default function ManageNotes() {
   const [dragActive, setDragActive] = useState(false);
   const [keepExistingFile, setKeepExistingFile] = useState(true);
   const [folderPickerOpen, setFolderPickerOpen] = useState(false);
+  const [useDriveLink, setUseDriveLink] = useState(false);
   const [activeTab, setActiveTab] = useState<'notes' | 'settings'>('notes');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
@@ -129,18 +130,25 @@ export default function ManageNotes() {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   // Set default storage type when opening dialog
+  // Last folder the admin uploaded to (remembered across uploads)
+  const getLastFolder = (): { id: string; name: string } | null => {
+    try { return JSON.parse(localStorage.getItem(LAST_FOLDER_KEY) || 'null'); } catch { return null; }
+  };
+
   useEffect(() => {
     if (isDialogOpen && !editingNote) {
+      const last = getLastFolder();
       setFormData(prev => ({
         ...prev,
         storage_type: defaultStorageType,
-        custom_folder_id: googleDriveDefaultFolderId,
-        custom_folder_name: googleDriveDefaultFolderName,
+        custom_folder_id: last?.id ?? googleDriveDefaultFolderId,
+        custom_folder_name: last?.name ?? googleDriveDefaultFolderName,
       }));
     }
   }, [isDialogOpen, editingNote, defaultStorageType, googleDriveDefaultFolderId, googleDriveDefaultFolderName]);
 
   const resetForm = () => {
+    const last = getLastFolder();
     setFormData({ 
       title: '', 
       description: '', 
@@ -149,13 +157,26 @@ export default function ManageNotes() {
       file_name: '', 
       is_downloadable: true,
       storage_type: defaultStorageType,
-      custom_folder_id: googleDriveDefaultFolderId,
-      custom_folder_name: googleDriveDefaultFolderName,
+      custom_folder_id: last?.id ?? googleDriveDefaultFolderId,
+      custom_folder_name: last?.name ?? googleDriveDefaultFolderName,
     });
     setSelectedFile(null);
     setEditingNote(null);
     setKeepExistingFile(true);
     setSelectedTagIds([]);
+  };
+
+  const titleFromFileName = (name: string) =>
+    name
+      .replace(/\.[^.]+$/, '')
+      .replace(/[_\-.]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+
+  const pickFile = (file: File) => {
+    setSelectedFile(file);
+    setFormData(prev => prev.title.trim() ? prev : { ...prev, title: titleFromFileName(file.name) });
   };
 
   const handleOpenDialog = (note?: Note) => {
@@ -191,7 +212,7 @@ export default function ManageNotes() {
     e.stopPropagation();
     setDragActive(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      setSelectedFile(e.dataTransfer.files[0]);
+      pickFile(e.dataTransfer.files[0]);
     }
   };
 
@@ -205,6 +226,7 @@ export default function ManageNotes() {
     let fileType = (editingNote && keepExistingFile) ? editingNote.file_type : null;
     let fileSize = (editingNote && keepExistingFile) ? editingNote.file_size : null;
     let googleDriveFolderId = formData.custom_folder_id;
+    let driveLink: string | null = null;
 
     try {
       if (selectedFile) {
@@ -223,6 +245,7 @@ export default function ManageNotes() {
 
           if (result) {
             fileUrl = result.webViewLink;
+            if (useDriveLink) driveLink = result.webViewLink;
             fileName = formData.file_name?.trim() || selectedFile.name;
             fileType = selectedFile.type;
             fileSize = selectedFile.size;
@@ -255,7 +278,7 @@ export default function ManageNotes() {
         file_name: fileName,
         file_type: fileType,
         file_size: fileSize,
-        link_url: formData.link_url || null,
+        link_url: driveLink || formData.link_url || null,
         created_by: user?.id,
         is_downloadable: formData.is_downloadable,
         storage_type: formData.storage_type,
