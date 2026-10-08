@@ -59,6 +59,8 @@ const itemVariants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.3 } }
 };
 
+const LAST_FOLDER_KEY = 'notes-last-upload-folder-v1';
+
 export default function ManageNotes() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -1024,6 +1026,7 @@ export default function ManageNotes() {
           open={folderPickerOpen}
           onOpenChange={setFolderPickerOpen}
           onSelect={(folder) => {
+            localStorage.setItem(LAST_FOLDER_KEY, JSON.stringify({ id: folder.id, name: folder.name }));
             setFormData(prev => ({
               ...prev,
               custom_folder_id: folder.id,
