@@ -129,7 +129,7 @@ export function NotePreviewDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
-        className={`p-0 gap-0 overflow-hidden flex flex-col [&>button.absolute]:hidden ${
+        className={`p-0 gap-0 overflow-hidden flex flex-col [&>button.absolute]:hidden [&>div:first-child]:hidden ${
           isFullscreen 
             ? 'w-screen h-[100dvh] max-w-none sm:max-w-none max-h-none rounded-none sm:rounded-none' 
             : 'w-full h-[92dvh] max-h-[92dvh] sm:w-[calc(100%-3rem)] sm:max-w-5xl sm:h-[88vh] sm:max-h-[88vh]'
