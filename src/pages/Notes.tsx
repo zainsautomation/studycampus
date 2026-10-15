@@ -168,9 +168,11 @@ export default function Notes() {
     setSearchParams({}, { replace: true });
   }, [subjectsData, searchParams, setSearchParams]);
 
+  // Cards open the reader directly; it shows details alongside the file.
   const openDetails = (note: Note) => {
     setActiveNote(note);
-    setDetailsOpen(true);
+    setDetailsOpen(false);
+    setPreviewOpen(true);
     trackView(note.id);
   };
 
