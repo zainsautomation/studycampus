@@ -70,7 +70,7 @@ export function NoteDetailsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[calc(100%-2rem)] max-w-lg mx-auto p-0 gap-0 overflow-hidden">
+      <DialogContent className="w-full sm:w-[calc(100%-2rem)] max-w-full sm:max-w-lg p-0 gap-0 overflow-hidden">
         {/* Subject-colored header strip */}
         <div 
           className="h-1.5 w-full"

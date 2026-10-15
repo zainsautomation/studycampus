@@ -76,8 +76,8 @@ export function PDFViewer({ fileUrl, className = '' }: PDFViewerProps) {
 
   return (
     <div className={`flex flex-col h-full ${className}`}>
-      {/* Modern toolbar */}
-      <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/30">
+      {/* Modern toolbar (zoom only works for direct PDFs) */}
+      {!isGoogleDrive && (<div className="flex items-center justify-between px-3 py-2 border-b bg-muted/30">
         <div className="flex items-center gap-1">
           <div className="flex items-center bg-background border border-border rounded-full p-0.5">
             <Button 
@@ -127,7 +127,7 @@ export function PDFViewer({ fileUrl, className = '' }: PDFViewerProps) {
           <ExternalLink className="h-3.5 w-3.5" />
           <span className="hidden sm:inline">Open</span>
         </Button>
-      </div>
+      </div>)}
 
       {/* Content area */}
       <div className="flex-1 overflow-auto bg-muted/10 relative">
