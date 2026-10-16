@@ -11,7 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
-import { NoteDetailsDialog } from '@/components/notes/NoteDetailsDialog';
+import { NotePreviewDialog } from '@/components/notes/NotePreviewDialog';
 import { useSavedNotes } from '@/hooks/useSavedNotes';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppSettings } from '@/hooks/useAppSettings';
@@ -366,17 +366,24 @@ export default function SavedNotes() {
         </motion.div>
       </div>
 
-      <NoteDetailsDialog
-        note={activeNote}
-        subject={activeNote?.subjects || null}
-        open={detailsOpen}
-        onOpenChange={setDetailsOpen}
-        onDownload={handleDownload}
-        onCopyLink={handleCopyLink}
-        onOpenLink={handleOpenLink}
-        copiedLinkId={copiedLinkId}
-        downloadsEnabled={downloadsEnabled && activeNote?.is_downloadable !== false}
-      />
+      {(() => {
+        const i = activeNote ? notes.findIndex((n) => n.id === activeNote.id) : -1;
+        return (
+          <NotePreviewDialog
+            note={activeNote}
+            subject={activeNote?.subjects || null}
+            open={detailsOpen}
+            onOpenChange={setDetailsOpen}
+            onDownload={handleDownload}
+            downloadsEnabled={downloadsEnabled && activeNote?.is_downloadable !== false}
+            position={i >= 0 ? { index: i, total: notes.length } : undefined}
+            onPrev={i > 0 ? () => setActiveNote(notes[i - 1]) : undefined}
+            onNext={i >= 0 && i < notes.length - 1 ? () => setActiveNote(notes[i + 1]) : undefined}
+            isSaved={activeNote ? isNoteSaved(activeNote.id) : false}
+            onToggleSave={activeNote ? () => toggleSaveNote(activeNote.id) : undefined}
+          />
+        );
+      })()}
     </MainLayout>
   );
 }
