@@ -617,6 +617,16 @@ export default function Notes() {
                 subject={selectedSubject}
                 onDownload={handleDownload}
                 downloadsEnabled={downloadsEnabled && activeNote?.is_downloadable !== false}
+                {...(() => {
+                  const i = activeNote ? filteredNotes.findIndex((n) => n.id === activeNote.id) : -1;
+                  return {
+                    position: i >= 0 ? { index: i, total: filteredNotes.length } : undefined,
+                    onPrev: i > 0 ? () => setActiveNote(filteredNotes[i - 1]) : undefined,
+                    onNext: i >= 0 && i < filteredNotes.length - 1 ? () => setActiveNote(filteredNotes[i + 1]) : undefined,
+                  };
+                })()}
+                isSaved={activeNote ? isNoteSaved(activeNote.id) : false}
+                onToggleSave={activeNote ? () => toggleSaveNote(activeNote.id) : undefined}
               />
             </motion.div>
           )}
