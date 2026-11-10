@@ -1,0 +1,2 @@
+- [ ] Implement private student verification requests, profile roll number/status UI, admin review, and verified-only Posts interactions.
+- [ ] Verify RLS enforcement, approval/resubmission behavior, and affected app pages.
