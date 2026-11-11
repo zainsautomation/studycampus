@@ -11,7 +11,7 @@
 1. Add a private verification-request table with owner/admin-only reads, student-only submissions, admin-only decisions, and a rule preventing multiple pending requests for one student.
 2. Enforce verified-only posting and post interactions in Supabase row-level security, not just by hiding controls in the page. Keep post reading available to current visitors.
 3. Add a polished verification area to the student profile and a verified indicator to public profiles; keep roll numbers out of public profile data.
-4. Add a searchable pending/reviewed queue to the existing Admin → Users page, with contact, approve, reject, and optional admin-note actions.
+4. Add a searchable pending/reviewed queue to the existing Admin → Users page, where the CR (using an existing admin account) can review, approve, or reject requests and leave an optional note.
 5. Update the Posts experience to explain verification status and provide read-only access to unverified students. Retain normal post interactions for verified students and admins.
 6. Verify database access rules, check the changed app pages, and run the project’s available checks.
 
@@ -20,7 +20,7 @@
 - Store each application as a separate row with submitted name, roll number, status, timestamps, reviewer, and optional note. A partial unique index allows at most one pending request per student while preserving prior decisions.
 - Add a narrowly scoped `public.is_verified_student(uuid)` security-definer helper with a fixed search path. Use it in insert/update/delete policies for posts, post likes, and post comments; preserve Q&A comments and all existing read policies.
 - Extend the existing safe public-profile RPC with a verified boolean only. The private roll number is fetched from the student’s own request or the admin queue, never from the public-profile RPC.
-- Use the existing admin email lookup for a `mailto:` contact action; approval remains an explicit admin decision after contact, with no invented external contact channel.
+- Students contact their CR themselves on WhatsApp after submitting; the site does not need a CR phone number or WhatsApp integration. Explain that the request stays pending until the CR approves or rejects it in Admin → Users.
 - Record the dedicated request table and database-enforced posting gate in the project’s root `AGENTS.md` when implementation is approved.
 
 ## Acceptance checks
