@@ -1264,6 +1264,60 @@ export type Database = {
           },
         ]
       }
+      student_verification_requests: {
+        Row: {
+          created_at: string
+          id: string
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          roll_number: string
+          status: string
+          submitted_name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          roll_number: string
+          status?: string
+          submitted_name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          roll_number?: string
+          status?: string
+          submitted_name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_verification_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_verification_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subjects: {
         Row: {
           color: string | null
