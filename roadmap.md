@@ -1,2 +1,3 @@
-- [ ] Implement private student verification requests, profile roll number/status UI, CR approval in Admin → Users after students contact the CR themselves on WhatsApp, and verified-only Posts interactions.
-- [ ] Verify RLS enforcement, approval/resubmission behavior, and affected app pages.
+- [ ] Finish private student verification submission/status on profiles, admin approval/rejection in Admin → Users, and the exact guidance “Contact on WhatsApp for verification.”
+- [ ] Enforce view-only Posts participation for unverified students, including image uploads and content/reaction removal.
+- [ ] Verify approval, rejection/resubmission, roll-number privacy, and verified-only participation across affected screens and database policies.

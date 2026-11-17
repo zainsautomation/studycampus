@@ -14,6 +14,7 @@ import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { ProfileStats } from '@/components/profile/ProfileStats';
 import { ProfileEditSheet } from '@/components/profile/ProfileEditSheet';
 import { SocialLinks } from '@/components/profile/SocialLinks';
+import { StudentVerificationCard } from '@/components/profile/StudentVerificationCard';
 import { useQuery } from '@tanstack/react-query';
 
 interface ProfileData {
@@ -25,6 +26,7 @@ interface ProfileData {
   cover_url: string | null;
   email: string | null;
   created_at: string;
+  is_verified?: boolean;
   is_public?: boolean;
   show_on_leaderboard?: boolean;
   social_links: {
@@ -50,13 +52,14 @@ export default function Profile() {
   const { data: profileData, isLoading, isPending } = useQuery({
     queryKey: ['profile', user?.id],
     queryFn: async () => {
-      const [profileRes, questionsRes, answersRes, postsRes, requestsRes, emailRes] = await Promise.all([
+      const [profileRes, questionsRes, answersRes, postsRes, requestsRes, emailRes, verificationRes] = await Promise.all([
         supabase.from('profiles').select('id, full_name, username, bio, avatar_url, cover_url, created_at, is_public, show_on_leaderboard, social_links').eq('id', user!.id).single(),
         supabase.from('questions').select('id', { count: 'exact', head: true }).eq('user_id', user!.id),
         supabase.from('answers').select('id', { count: 'exact', head: true }).eq('user_id', user!.id),
         supabase.from('posts').select('id', { count: 'exact', head: true }).eq('user_id', user!.id),
         supabase.from('requests').select('id', { count: 'exact', head: true }).eq('user_id', user!.id),
         supabase.rpc('get_my_email'),
+        supabase.from('student_verification_requests').select('status').eq('user_id', user!.id).eq('status', 'approved').limit(1),
       ]);
 
       const pd = profileRes.data;
@@ -72,6 +75,7 @@ export default function Profile() {
         cover_url: pd.cover_url || null,
         email: (emailRes.data as string | null) ?? null,
         created_at: pd.created_at,
+        is_verified: (verificationRes.data?.length ?? 0) > 0,
         is_public: (pd as any).is_public !== false,
         show_on_leaderboard: (pd as any).show_on_leaderboard !== false,
         social_links: socialLinks || {},
@@ -169,6 +173,14 @@ export default function Profile() {
             transition={{ delay: 0.2 }}
           >
             <ProfileStats stats={stats} />
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.25 }}
+          >
+            <StudentVerificationCard />
           </motion.div>
 
           {points && (
